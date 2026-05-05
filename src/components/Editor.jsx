@@ -248,6 +248,24 @@ function buildHTML(data) {
   const jOpts = JUDETE.map(j => `<option value="${j}">${j}</option>`).join('')
 
   const imgTag = (src, alt) => src ? `<img src="${src}" alt="${alt || ''}" style="width:100%;display:block;object-fit:cover;max-height:350px" />` : ''
+  
+  // Hero section cu overlay beneficii
+  const heroSection = (src, data) => {
+    const benefits = (data.benefits || []).slice(0, 4)
+    const primary = data.style?.primaryColor || '#dc2626'
+    return `<div style="position:relative;background:#0a0a1a;overflow:hidden">
+      ${src ? `<img src="${src}" alt="${data.productName || ''}" style="width:100%;display:block;object-fit:cover;max-height:400px;opacity:0.7" />` : '<div style="height:400px;background:linear-gradient(135deg,#0a0a1a,#1a1a2e)"></div>'}
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to right, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.2) 100%);display:flex;align-items:center;padding:24px">
+        <div style="max-width:55%">
+          <div style="font-size:11px;font-weight:700;color:${primary};text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">✦ OFERTĂ SPECIALĂ</div>
+          <h2 style="font-size:22px;font-weight:900;color:#fff;line-height:1.2;margin:0 0 16px">${data.headline || data.productName}</h2>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${benefits.map(b => `<div style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:${primary};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">✓</span><span style="font-size:13px;color:rgba(255,255,255,0.9);line-height:1.3">${b}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
 
   const benefitRows = (data.benefits || []).map(b => `
     <div class="benefit-row">
@@ -302,8 +320,8 @@ function buildHTML(data) {
     </div>
   </div>
 
-  <!-- HERO IMAGE -->
-  ${imgTag(imgs[0], data.productName)}
+  <!-- HERO cu overlay beneficii -->
+  ${heroSection(imgs[0], data)}
 
   <!-- TITLU + PRET -->
   <div data-gjs-type="section" style="padding:24px 20px 16px">
