@@ -1,3 +1,4 @@
+// v4 - gemini-2.5-flash-image
 const https = require('https')
 
 function generateGeminiImage(prompt, apiKey) {
