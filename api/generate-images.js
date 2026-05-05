@@ -1,47 +1,62 @@
-// v4 - gemini-2.5-flash-image
+// v5 - debug version
 const https = require('https')
 
-function generateGeminiImage(prompt, apiKey) {
-  const model = 'gemini-2.5-flash-image'
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') return res.status(200).end()
+
+  const apiKey = process.env.GEMINI_API_KEY
+  
+  // Debug complet
+  console.log('=== DEBUG START ===')
+  console.log('Method:', req.method)
+  console.log('Body:', JSON.stringify(req.body))
+  console.log('ApiKey exists:', !!apiKey)
+  console.log('ApiKey prefix:', apiKey ? apiKey.substring(0, 10) : 'MISSING')
+
+  if (!apiKey) {
+    console.log('ERROR: No API key')
+    return res.status(500).json({ error: 'GEMINI_API_KEY not set', images: [] })
+  }
+
+  const productName = req.body?.productName || 'product'
+  console.log('ProductName:', productName)
+
+  // Test cu un singur request simplu
+  console.log('Making Gemini request...')
+  
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      responseModalities: ['IMAGE', 'TEXT']
-    }
+    contents: [{ parts: [{ text: `A photo of ${productName} on white background` }] }],
+    generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
   })
 
-  return new Promise((resolve) => {
-    const req = https.request({
+  const result = await new Promise((resolve) => {
+    const req2 = https.request({
       hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      path: `/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body)
-      },
-      timeout: 50000
-    }, (res) => {
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 45000
+    }, (response) => {
       const chunks = []
-      res.on('data', c => chunks.push(c))
-      res.on('end', () => {
+      response.on('data', c => chunks.push(c))
+      response.on('end', () => {
+        const raw = Buffer.concat(chunks).toString()
+        console.log('Gemini HTTP status:', response.statusCode)
+        console.log('Gemini response (first 500 chars):', raw.substring(0, 500))
         try {
-          const raw = Buffer.concat(chunks).toString()
-          console.log(`Status: ${res.statusCode}, Response: ${raw.substring(0, 200)}`)
           const data = JSON.parse(raw)
-          if (res.statusCode !== 200) {
-            console.log('Error:', data.error?.message)
-            resolve(null)
-            return
-          }
           const parts = data.candidates?.[0]?.content?.parts || []
           for (const p of parts) {
             if (p.inlineData?.mimeType?.startsWith('image/')) {
-              console.log(`Got image! Size: ${Math.round(p.inlineData.data.length / 1024)}KB`)
+              console.log('IMAGE FOUND! Size:', Math.round(p.inlineData.data.length / 1024), 'KB')
               resolve(`data:${p.inlineData.mimeType};base64,${p.inlineData.data}`)
               return
             }
           }
-          console.log('No image in parts:', JSON.stringify(parts).substring(0, 200))
+          console.log('No image in response. Parts count:', parts.length)
           resolve(null)
         } catch(e) {
           console.log('Parse error:', e.message)
@@ -49,51 +64,18 @@ function generateGeminiImage(prompt, apiKey) {
         }
       })
     })
-    req.on('error', (e) => { console.log('Request error:', e.message); resolve(null) })
-    req.on('timeout', () => { req.destroy(); console.log('Timeout'); resolve(null) })
-    req.write(body)
-    req.end()
+    req2.on('error', (e) => { console.log('Network error:', e.message); resolve(null) })
+    req2.on('timeout', () => { req2.destroy(); console.log('TIMEOUT after 45s'); resolve(null) })
+    req2.write(body)
+    req2.end()
   })
-}
 
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
-  try {
-    const { productName } = req.body
-    if (!productName) return res.status(400).json({ error: 'productName lipseste' })
-
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set' })
-
-    console.log('=== GENERATE IMAGES ===', productName)
-
-    const prompts = [
-      `Professional studio product photography of ${productName}. Pure white background, soft shadow below product, commercial quality lighting, sharp focus, photorealistic, 4K resolution. No people, no text.`,
-      `Lifestyle photo: happy man using ${productName} at home. Natural warm lighting, authentic smile, modern home setting, candid moment, photorealistic.`,
-      `Extreme close-up macro photography of ${productName} showing premium quality, texture and craftsmanship details. White background, razor sharp focus, professional studio lighting.`,
-      `Satisfied customer holding ${productName} and smiling. Home environment, warm lighting, genuine happiness, social proof photo, photorealistic portrait.`
-    ]
-
-    const images = []
-    for (let i = 0; i < prompts.length; i++) {
-      console.log(`\nGenerating image ${i + 1}/4...`)
-      const img = await generateGeminiImage(prompts[i], apiKey)
-      console.log(`Image ${i + 1}:`, img ? 'OK' : 'FAILED')
-      images.push(img)
-      // Pauza intre requesturi sa nu depasim rate limit
-      if (i < prompts.length - 1) await new Promise(r => setTimeout(r, 1000))
-    }
-
-    const count = images.filter(Boolean).length
-    console.log(`=== DONE: ${count}/4 ===`)
-    res.status(200).json({ success: true, images, count })
-  } catch(err) {
-    console.error('Error:', err.message)
-    res.status(500).json({ success: false, error: err.message })
-  }
+  console.log('=== DEBUG END === Result:', result ? 'IMAGE OK' : 'NO IMAGE')
+  
+  res.status(200).json({
+    success: true,
+    images: [result, null, null, null],
+    count: result ? 1 : 0,
+    debug: true
+  })
 }
