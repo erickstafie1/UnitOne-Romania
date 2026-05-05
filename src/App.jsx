@@ -8,7 +8,6 @@ export default function App() {
   const [screen, setScreen] = useState('generator')
   const [generatedData, setGeneratedData] = useState(null)
   const [shop, setShop] = useState('')
-  const [host, setHost] = useState('')
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -19,28 +18,20 @@ export default function App() {
     const h = params.get('host')
     const t = params.get('token')
 
-    if (s && h) {
-      setShop(s)
-      setHost(h)
-      if (t) setToken(t)
-      setLoading(false)
-
-      // Initializeaza App Bridge manual fara Provider
-      import('@shopify/app-bridge').then(({ default: createApp }) => {
-        try {
-          const app = createApp({ apiKey: API_KEY, host: h, forceRedirect: true })
-          import('@shopify/app-bridge-utils').then(({ getSessionToken }) => {
-            getSessionToken(app).then(st => setToken(st)).catch(() => {})
-          }).catch(() => {})
-        } catch(e) {
-          console.log('App Bridge init error:', e.message)
-        }
-      }).catch(() => {})
-    } else if (t && s) {
+    if (s && t) {
       setShop(s)
       setToken(t)
-      setHost(btoa(`admin.shopify.com/store/${s.replace('.myshopify.com', '')}`))
       setLoading(false)
+    } else if (s && h) {
+      setShop(s)
+      setLoading(false)
+      // Initializeaza App Bridge pentru session token
+      import('@shopify/app-bridge').then(({ default: createApp, getSessionToken }) => {
+        try {
+          const app = createApp({ apiKey: API_KEY, host: h, forceRedirect: true })
+          getSessionToken(app).then(st => setToken(st)).catch(e => console.log('Token error:', e))
+        } catch(e) { console.log('AppBridge error:', e) }
+      }).catch(() => {})
     } else {
       setError('Accesează aplicația din Shopify Admin.')
       setLoading(false)
@@ -67,20 +58,12 @@ export default function App() {
   return (
     <div style={{ minHeight:'100vh', background:'#f6f6f7' }}>
       {screen === 'generator' && (
-        <Generator
-          shop={shop}
-          token={token}
-          onGenerated={(data) => {
-            setGeneratedData(data)
-            setScreen('editor')
-          }}
+        <Generator shop={shop} token={token}
+          onGenerated={(data) => { setGeneratedData(data); setScreen('editor') }}
         />
       )}
       {screen === 'editor' && generatedData && (
-        <Editor
-          data={generatedData}
-          shop={shop}
-          token={token}
+        <Editor data={generatedData} shop={shop} token={token}
           onBack={() => setScreen('generator')}
         />
       )}
