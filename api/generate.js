@@ -1,3 +1,4 @@
+// v2 - cu Gemini images integrate
 const https = require('https')
 const http = require('http')
 
@@ -11,7 +12,7 @@ function fetchDirect(url) {
   return new Promise((resolve) => {
     const lib = url.startsWith('https') ? https : http
     const req = lib.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36' },
       timeout: 20000
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -39,12 +40,10 @@ function extractImages(html) {
     const m = html.match(/"imagePathList"\s*:\s*(\[.*?\])/s)
     if (m) JSON.parse(m[1]).forEach(u => { if (u && u.startsWith('http')) images.add(u) })
   } catch(e) {}
-  ;[/https:\/\/ae\d*\.alicdn\.com\/kf\/[A-Za-z0-9_\-]+\.jpg/gi,
-    /https:\/\/ae01\.alicdn\.com\/kf\/[^"'\s<>\\]+\.jpg/gi
-  ].forEach(p => {
+  ;[/https:\/\/ae\d*\.alicdn\.com\/kf\/[A-Za-z0-9_\-]+\.jpg/gi].forEach(p => {
     ;(html.match(p) || []).forEach(url => {
-      const clean = url.replace(/\\u002F/g, '/').replace(/\\/g, '').split(/["'<>\s]/)[0]
-      if (clean.length > 40 && !clean.includes('icon') && !clean.includes('50x50')) images.add(clean)
+      const clean = url.replace(/\\/g, '').split(/["'<>\s]/)[0]
+      if (clean.length > 40 && !clean.includes('icon')) images.add(clean)
     })
   })
   return [...images].slice(0, 6)
@@ -63,49 +62,13 @@ function callClaude(productInfo, styleDesc) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
-  const styleInstruction = styleDesc
-    ? `Clientul vrea: "${styleDesc}". Interpretează și aplică acest stil în CSS.`
-    : 'Folosește un stil roșu/negru optimizat pentru conversii COD.'
-
+  const styleInstruction = styleDesc ? `Clientul vrea: "${styleDesc}". Aplică stilul.` : 'Stil roșu/negru optimizat COD.'
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2000,
-    system: `Expert marketing COD România. ${styleInstruction} DOAR JSON valid, fără backtick-uri.`,
-    messages: [{ role: 'user', content: `Pagina COD pentru: "${productInfo.title || 'produs'}" (~${productInfo.priceUSD} USD). JSON:
-{
-  "productName": "nume scurt",
-  "headline": "titlu captivant max 10 cuvinte",
-  "subheadline": "2 propoziții convingătoare",
-  "price": ${rp},
-  "oldPrice": ${Math.round(rp * 1.6)},
-  "bumpPrice": ${Math.round(rp * 0.2)},
-  "stock": 7,
-  "timerMinutes": 14,
-  "reviewCount": 1247,
-  "style": {
-    "primaryColor": "#dc2626",
-    "secondaryColor": "#111111",
-    "fontFamily": "Inter, system-ui, sans-serif",
-    "borderRadius": "12px"
-  },
-  "benefits": ["b1", "b2", "b3", "b4", "b5", "b6"],
-  "howItWorks": [{"title": "Pas 1", "desc": "desc 1"}, {"title": "Pas 2", "desc": "desc 2"}, {"title": "Pas 3", "desc": "desc 3"}],
-  "bumpProduct": "produs complementar",
-  "testimonials": [
-    {"text": "testimonial", "name": "Nume", "city": "Oraș", "stars": 5},
-    {"text": "t2", "name": "Nume", "city": "Oraș", "stars": 5},
-    {"text": "t3", "name": "Nume", "city": "Oraș", "stars": 5},
-    {"text": "t4", "name": "Nume", "city": "Oraș", "stars": 5}
-  ],
-  "faq": [
-    {"q": "Întrebare?", "a": "Răspuns."},
-    {"q": "Cum se face plata?", "a": "La livrare, direct curierului."},
-    {"q": "Cât durează livrarea?", "a": "2-4 zile în toată România."},
-    {"q": "Pot returna?", "a": "Da, 30 zile retur gratuit."}
-  ]
-}` }]
+    system: `Expert marketing COD România. ${styleInstruction} DOAR JSON valid.`,
+    messages: [{ role: 'user', content: `Pagina COD pentru: "${productInfo.title || 'produs'}" (~${productInfo.priceUSD} USD). JSON complet cu: productName, headline, subheadline, price(${rp}), oldPrice(${Math.round(rp*1.6)}), bumpPrice, stock(7), timerMinutes(14), reviewCount(1247), style({primaryColor,secondaryColor,fontFamily,borderRadius}), benefits(6 items), howItWorks(3 steps cu title+desc), bumpProduct, testimonials(4 cu text+name+city+stars), faq(4 cu q+a)` }]
   })
-
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
@@ -132,6 +95,45 @@ function callClaude(productInfo, styleDesc) {
   })
 }
 
+function geminiImage(prompt, apiKey) {
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+  })
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 45000
+    }, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => {
+        try {
+          const raw = Buffer.concat(chunks).toString()
+          console.log('Gemini status:', res.statusCode, 'preview:', raw.substring(0, 200))
+          const data = JSON.parse(raw)
+          const parts = data.candidates?.[0]?.content?.parts || []
+          for (const p of parts) {
+            if (p.inlineData?.mimeType?.startsWith('image/')) {
+              console.log('Gemini image OK:', Math.round(p.inlineData.data.length/1024), 'KB')
+              resolve(`data:${p.inlineData.mimeType};base64,${p.inlineData.data}`)
+              return
+            }
+          }
+          resolve(null)
+        } catch(e) { resolve(null) }
+      })
+    })
+    req.on('error', () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+    req.write(body)
+    req.end()
+  })
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -143,7 +145,9 @@ module.exports = async function handler(req, res) {
     const { aliUrl, styleDesc } = req.body
     if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
 
-    console.log('=== GENERATE (fara imagini) ===', aliUrl)
+    const geminiKey = process.env.GEMINI_API_KEY
+    console.log('=== GENERATE v2 ===', aliUrl.substring(0, 50))
+    console.log('Gemini key exists:', !!geminiKey)
 
     // Fetch AliExpress + Claude in paralel
     const [html, copy] = await Promise.all([
@@ -158,22 +162,44 @@ module.exports = async function handler(req, res) {
       if (meta.title?.length > 5) copy.productName = meta.title.substring(0, 60)
       if (meta.priceUSD > 0) {
         const rp = Math.round(meta.priceUSD * 5 * 2.5 / 10) * 10
-        copy.price = rp
-        copy.oldPrice = Math.round(rp * 1.6)
-        copy.bumpPrice = Math.round(rp * 0.2)
+        copy.price = rp; copy.oldPrice = Math.round(rp*1.6); copy.bumpPrice = Math.round(rp*0.2)
       }
     }
+    console.log('AliExpress images:', aliImages.length, 'Product:', copy.productName)
 
-    // Returnam pagina FARA imagini Gemini - se genereaza separat
-    copy.images = aliImages // doar pozele AliExpress pentru acum
+    // Genereaza imagini Gemini
+    let geminiImages = []
+    if (geminiKey && copy.productName) {
+      const pName = copy.productName
+      const prompts = [
+        `Professional studio product photography of "${pName}". Pure white background, soft shadow, commercial quality, sharp focus, no text, no people, 4K.`,
+        `Lifestyle photo of a happy man using "${pName}" at home. Natural warm lighting, authentic smile, modern home, photorealistic.`,
+        `Extreme macro close-up of "${pName}" showing premium quality and texture details. White background, sharp focus, studio lighting.`,
+        `Happy satisfied customer holding "${pName}", smiling genuinely. Home environment, warm lighting, photorealistic portrait.`
+      ]
+      console.log('Starting Gemini generation...')
+      for (let i = 0; i < prompts.length; i++) {
+        const img = await geminiImage(prompts[i], geminiKey)
+        console.log(`Gemini ${i+1}:`, img ? 'OK' : 'FAIL')
+        geminiImages.push(img)
+      }
+    } else {
+      console.log('Skipping Gemini - key missing or no product name')
+    }
+
+    const goodGemini = geminiImages.filter(Boolean)
+    console.log('Gemini OK:', goodGemini.length, '/ 4')
+
+    // Combina imagini
+    copy.images = aliImages.length > 0
+      ? [aliImages[0], ...goodGemini, ...aliImages.slice(1)].slice(0, 6)
+      : goodGemini
     copy.aliImages = aliImages
-    copy.geminiImages = [] // goale - se vor genera separat
-    copy.imagesReady = false // flag ca imaginile nu sunt gata
 
-    console.log('Generate done. AliExpress images:', aliImages.length)
+    console.log('=== DONE === Total images:', copy.images.length)
     res.status(200).json({ success: true, data: copy })
   } catch(err) {
-    console.error('Generate error:', err.message)
+    console.error('Error:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 }
