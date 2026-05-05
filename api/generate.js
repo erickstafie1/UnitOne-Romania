@@ -37,6 +37,8 @@ function fetchDirect(url) {
 function extractImages(html) {
   const images = new Set()
   try {
+    console.log('v3 running - body:', JSON.stringify(req.body).substring(0, 100))
+    const { aliUrl, styleDesc } = req.body
     const m = html.match(/"imagePathList"\s*:\s*(\[.*?\])/s)
     if (m) JSON.parse(m[1]).forEach(u => { if (u && u.startsWith('http')) images.add(u) })
   } catch(e) {}
@@ -211,7 +213,6 @@ module.exports = async function handler(req, res) {
     console.log('=== DONE === Images:', copy.images.length)
     res.status(200).json({ success: true, data: copy })
   } catch(err) {
-    console.error('Error:', err.message)
-    res.status(500).json({ success: false, error: err.message })
-  }
+  console.error('CATCH ERROR:', err.message, err.stack)
+  res.status(500).json({ success: false, error: err.message })
 }
