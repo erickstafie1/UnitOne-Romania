@@ -1,245 +1,179 @@
-import { useState } from 'react'
+const https = require('https')
+const http = require('http')
 
-const STEPS_PAGE = [
-  [10, '🔍 Accesez pagina AliExpress...'],
-  [40, '🖼️ Extrag pozele produsului...'],
-  [70, '✍️ Generez copywriting în română...'],
-  [90, '📦 Construiesc pagina COD...'],
-  [100, '✅ Pagina gata!'],
-]
+function fetchWithScraper(url) {
+  const apiKey = process.env.SCRAPER_API_KEY
+  if (!apiKey) return fetchDirect(url)
+  return fetchDirect(`http://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(url)}&render=false`)
+}
 
-const STEPS_IMAGES = [
-  [10, '🎨 Pornesc generarea imaginilor AI...'],
-  [30, '📸 Generez poza 1 — Studio photography...'],
-  [50, '🏠 Generez poza 2 — Lifestyle...'],
-  [70, '🔍 Generez poza 3 — Close-up detaliu...'],
-  [90, '😊 Generez poza 4 — Client fericit...'],
-  [100, '✅ Imagini gata!'],
-]
-
-export default function Generator({ shop, token, onGenerated }) {
-  const [aliUrl, setAliUrl] = useState('')
-  const [styleDesc, setStyleDesc] = useState('')
-  const [phase, setPhase] = useState('idle') // idle | generating-page | generating-images | done
-  const [loadMsg, setLoadMsg] = useState('')
-  const [loadPct, setLoadPct] = useState(0)
-  const [error, setError] = useState('')
-
-  async function generate() {
-    if (!aliUrl.trim()) return
-    setError('')
-
-    // FAZA 1: Genereaza pagina (rapid ~10s)
-    setPhase('generating-page')
-    setLoadPct(5)
-    setLoadMsg(STEPS_PAGE[0][1])
-
-    let si = 0
-    const tid1 = setInterval(() => {
-      si = Math.min(si + 1, STEPS_PAGE.length - 2)
-      setLoadMsg(STEPS_PAGE[si][1])
-      setLoadPct(STEPS_PAGE[si][0])
-    }, 2000)
-
-    let pageData = null
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() })
-      })
-      clearInterval(tid1)
-      if (!res.ok) throw new Error('Server error ' + res.status)
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Eroare necunoscută')
-      pageData = json.data
-      setLoadPct(100)
-      setLoadMsg(STEPS_PAGE[STEPS_PAGE.length - 1][1])
-    } catch(e) {
-      clearInterval(tid1)
-      setError(e.message)
-      setPhase('idle')
-      return
-    }
-
-    // Scurta pauza sa vada "Pagina gata!"
-    await new Promise(r => setTimeout(r, 800))
-
-    // FAZA 2: Genereaza imaginile Gemini (lent ~60-120s)
-    setPhase('generating-images')
-    setLoadPct(5)
-    setLoadMsg(STEPS_IMAGES[0][1])
-
-    let si2 = 0
-    const tid2 = setInterval(() => {
-      si2 = Math.min(si2 + 1, STEPS_IMAGES.length - 2)
-      setLoadMsg(STEPS_IMAGES[si2][1])
-      setLoadPct(STEPS_IMAGES[si2][0])
-    }, 20000) // 20s per imagine
-
-    try {
-      const res = await fetch('/api/generate-images', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productName: pageData.productName,
-          benefits: pageData.benefits,
-          styleDesc: styleDesc.trim()
-        })
-      })
-      clearInterval(tid2)
-
-      if (res.ok) {
-        const json = await res.json()
-        if (json.success && json.images) {
-          // Combina: AliExpress hero + Gemini imagini
-          const aliImages = pageData.aliImages || []
-          const geminiImages = json.images.filter(Boolean)
-          pageData.images = aliImages.length > 0
-            ? [aliImages[0], ...geminiImages]
-            : geminiImages
-          pageData.geminiImages = geminiImages
-          console.log('Images combined:', pageData.images.length)
-        }
-      } else {
-        console.log('Images endpoint failed, using AliExpress only')
+function fetchDirect(url) {
+  return new Promise((resolve) => {
+    const lib = url.startsWith('https') ? https : http
+    const req = lib.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36' },
+      timeout: 20000
+    }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        const loc = res.headers.location.startsWith('http') ? res.headers.location : 'https://www.aliexpress.com' + res.headers.location
+        return fetchDirect(loc).then(resolve)
       }
-    } catch(e) {
-      clearInterval(tid2)
-      console.log('Images generation failed:', e.message)
-      // Continuam cu imaginile AliExpress
+      const chunks = []
+      const enc = res.headers['content-encoding']
+      const done = () => resolve(Buffer.concat(chunks).toString('utf8'))
+      if (enc === 'gzip') {
+        const g = require('zlib').createGunzip()
+        res.pipe(g); g.on('data', c => chunks.push(c)); g.on('end', done); g.on('error', () => resolve(''))
+      } else {
+        res.on('data', c => chunks.push(c)); res.on('end', done)
+      }
+    })
+    req.on('error', () => resolve(''))
+    req.on('timeout', () => { req.destroy(); resolve('') })
+  })
+}
+
+function extractImages(html) {
+  const images = new Set()
+  try {
+    const m = html.match(/"imagePathList"\s*:\s*(\[.*?\])/s)
+    if (m) JSON.parse(m[1]).forEach(u => { if (u && u.startsWith('http')) images.add(u) })
+  } catch(e) {}
+  ;[/https:\/\/ae\d*\.alicdn\.com\/kf\/[A-Za-z0-9_\-]+\.jpg/gi,
+    /https:\/\/ae01\.alicdn\.com\/kf\/[^"'\s<>\\]+\.jpg/gi
+  ].forEach(p => {
+    ;(html.match(p) || []).forEach(url => {
+      const clean = url.replace(/\\u002F/g, '/').replace(/\\/g, '').split(/["'<>\s]/)[0]
+      if (clean.length > 40 && !clean.includes('icon') && !clean.includes('50x50')) images.add(clean)
+    })
+  })
+  return [...images].slice(0, 6)
+}
+
+function extractMeta(html) {
+  let title = '', priceUSD = 0
+  const tm = html.match(/"subject"\s*:\s*"([^"]{10,200})"/) || html.match(/<title[^>]*>([^<|]+)/i)
+  if (tm?.[1]) title = tm[1].replace(/\s*[-|]\s*AliExpress.*$/i, '').replace(/&amp;/g, '&').trim()
+  const pm = html.match(/"discountPrice"\s*:\s*\{"value"\s*:\s*"([0-9.]+)"/) || html.match(/US \$\s*([0-9.]+)/)
+  if (pm?.[1]) priceUSD = parseFloat(pm[1])
+  return { title, priceUSD }
+}
+
+function callClaude(productInfo, styleDesc) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
+  const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
+  const styleInstruction = styleDesc
+    ? `Clientul vrea: "${styleDesc}". Interpretează și aplică acest stil în CSS.`
+    : 'Folosește un stil roșu/negru optimizat pentru conversii COD.'
+
+  const body = JSON.stringify({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2000,
+    system: `Expert marketing COD România. ${styleInstruction} DOAR JSON valid, fără backtick-uri.`,
+    messages: [{ role: 'user', content: `Pagina COD pentru: "${productInfo.title || 'produs'}" (~${productInfo.priceUSD} USD). JSON:
+{
+  "productName": "nume scurt",
+  "headline": "titlu captivant max 10 cuvinte",
+  "subheadline": "2 propoziții convingătoare",
+  "price": ${rp},
+  "oldPrice": ${Math.round(rp * 1.6)},
+  "bumpPrice": ${Math.round(rp * 0.2)},
+  "stock": 7,
+  "timerMinutes": 14,
+  "reviewCount": 1247,
+  "style": {
+    "primaryColor": "#dc2626",
+    "secondaryColor": "#111111",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "borderRadius": "12px"
+  },
+  "benefits": ["b1", "b2", "b3", "b4", "b5", "b6"],
+  "howItWorks": [{"title": "Pas 1", "desc": "desc 1"}, {"title": "Pas 2", "desc": "desc 2"}, {"title": "Pas 3", "desc": "desc 3"}],
+  "bumpProduct": "produs complementar",
+  "testimonials": [
+    {"text": "testimonial", "name": "Nume", "city": "Oraș", "stars": 5},
+    {"text": "t2", "name": "Nume", "city": "Oraș", "stars": 5},
+    {"text": "t3", "name": "Nume", "city": "Oraș", "stars": 5},
+    {"text": "t4", "name": "Nume", "city": "Oraș", "stars": 5}
+  ],
+  "faq": [
+    {"q": "Întrebare?", "a": "Răspuns."},
+    {"q": "Cum se face plata?", "a": "La livrare, direct curierului."},
+    {"q": "Cât durează livrarea?", "a": "2-4 zile în toată România."},
+    {"q": "Pot returna?", "a": "Da, 30 zile retur gratuit."}
+  ]
+}` }]
+  })
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 25000
+    }, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString())
+          if (data.error) throw new Error(data.error.message)
+          const text = (data.content || []).map(c => c.text || '').join('')
+          const match = text.match(/\{[\s\S]*\}/)
+          if (!match) throw new Error('No JSON')
+          resolve(JSON.parse(match[0]))
+        } catch(e) { reject(e) }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout')) })
+    req.write(body)
+    req.end()
+  })
+}
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  try {
+    const { aliUrl, styleDesc } = req.body
+    if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
+
+    console.log('=== GENERATE (fara imagini) ===', aliUrl)
+
+    // Fetch AliExpress + Claude in paralel
+    const [html, copy] = await Promise.all([
+      fetchWithScraper(aliUrl).catch(() => ''),
+      callClaude({ title: '', priceUSD: 0 }, styleDesc || '')
+    ])
+
+    let aliImages = []
+    if (html.length > 1000) {
+      aliImages = extractImages(html)
+      const meta = extractMeta(html)
+      if (meta.title?.length > 5) copy.productName = meta.title.substring(0, 60)
+      if (meta.priceUSD > 0) {
+        const rp = Math.round(meta.priceUSD * 5 * 2.5 / 10) * 10
+        copy.price = rp
+        copy.oldPrice = Math.round(rp * 1.6)
+        copy.bumpPrice = Math.round(rp * 0.2)
+      }
     }
 
-    setLoadPct(100)
-    setLoadMsg('✅ Tot gata! Deschid editorul...')
-    setPhase('done')
-    await new Promise(r => setTimeout(r, 600))
-    onGenerated(pageData)
+    // Returnam pagina FARA imagini Gemini - se genereaza separat
+    copy.images = aliImages // doar pozele AliExpress pentru acum
+    copy.aliImages = aliImages
+    copy.geminiImages = [] // goale - se vor genera separat
+    copy.imagesReady = false // flag ca imaginile nu sunt gata
+
+    console.log('Generate done. AliExpress images:', aliImages.length)
+    res.status(200).json({ success: true, data: copy })
+  } catch(err) {
+    console.error('Generate error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
   }
-
-  const isLoading = phase !== 'idle'
-
-  if (isLoading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a0f', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
-      <div style={{ textAlign:'center', maxWidth:480, padding:24 }}>
-        <div style={{ width:72, height:72, borderRadius:20, background:'linear-gradient(135deg,#e53e3e,#c53030)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 24px', boxShadow:'0 8px 24px rgba(229,62,62,0.3)' }}>
-          {phase === 'generating-page' ? '🤖' : '🎨'}
-        </div>
-
-        <h2 style={{ fontSize:22, fontWeight:800, marginBottom:8 }}>
-          {phase === 'generating-page' ? 'Se generează pagina...' : 'Se generează imaginile AI...'}
-        </h2>
-
-        <p style={{ color:'rgba(255,255,255,0.5)', fontSize:15, marginBottom:8, lineHeight:1.6 }}>
-          {loadMsg}
-        </p>
-
-        {phase === 'generating-images' && (
-          <p style={{ color:'rgba(255,255,255,0.3)', fontSize:13, marginBottom:24 }}>
-            ⏳ Imaginile AI durează 1-2 minute — calitate maximă, te rugăm să aștepți
-          </p>
-        )}
-
-        <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:100, height:10, overflow:'hidden', marginBottom:12 }}>
-          <div style={{ height:'100%', background: phase === 'generating-images' ? 'linear-gradient(90deg,#7c3aed,#a78bfa)' : 'linear-gradient(90deg,#e53e3e,#f87171)', borderRadius:100, width:`${loadPct}%`, transition:'width 1s ease' }} />
-        </div>
-        <p style={{ fontSize:13, color:'rgba(255,255,255,0.3)' }}>{loadPct}%</p>
-
-        {phase === 'generating-images' && (
-          <div style={{ marginTop:24, display:'flex', gap:8, justifyContent:'center' }}>
-            {[1,2,3,4].map(i => (
-              <div key={i} style={{ width:48, height:48, borderRadius:10, background: loadPct >= i * 22 ? 'rgba(124,58,237,0.4)' : 'rgba(255,255,255,0.06)', border: loadPct >= i * 22 ? '1px solid rgba(167,139,250,0.4)' : '1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, transition:'all 0.5s' }}>
-                {loadPct >= i * 22 ? ['📸','🏠','🔍','😊'][i-1] : '⏳'}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-
-  return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
-      <div style={{ padding:'20px 32px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:12 }}>
-        <div style={{ width:36, height:36, borderRadius:10, background:'linear-gradient(135deg,#e53e3e,#c53030)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🛒</div>
-        <div>
-          <div style={{ fontSize:16, fontWeight:800 }}>UnitOne Romania</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{shop}</div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth:600, margin:'0 auto', padding:'48px 24px' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
-          <h1 style={{ fontSize:32, fontWeight:900, marginBottom:12, letterSpacing:-1 }}>Generează pagină COD</h1>
-          <p style={{ color:'rgba(255,255,255,0.45)', fontSize:16, lineHeight:1.6 }}>
-            Pune linkul AliExpress și descrie stilul dorit — AI-ul generează tot în română + 4 imagini profesionale.
-          </p>
-        </div>
-
-        <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:28, display:'flex', flexDirection:'column', gap:20 }}>
-          <div>
-            <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:10 }}>Link produs AliExpress *</label>
-            <input
-              value={aliUrl}
-              onChange={e => setAliUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && aliUrl.trim() && generate()}
-              placeholder="https://www.aliexpress.com/item/..."
-              style={{ width:'100%', padding:'13px 16px', borderRadius:12, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:15, outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:10 }}>Descrie stilul paginii (opțional)</label>
-            <textarea
-              value={styleDesc}
-              onChange={e => setStyleDesc(e.target.value)}
-              rows={4}
-              placeholder="Ex: Pagina pentru bărbați 25-45 ani, culori negru și roșu, ton direct și agresiv, accent pe durabilitate și calitate, text scurt și impactant..."
-              style={{ width:'100%', padding:'13px 16px', borderRadius:12, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit', resize:'vertical', lineHeight:1.6, boxSizing:'border-box' }}
-            />
-            <p style={{ fontSize:12, color:'rgba(255,255,255,0.3)', marginTop:8 }}>
-              Dacă lași gol, AI-ul alege un stil optimizat pentru conversii COD.
-            </p>
-          </div>
-
-          {error && (
-            <div style={{ padding:'12px 16px', background:'rgba(229,62,62,0.12)', border:'1px solid rgba(229,62,62,0.3)', borderRadius:10, fontSize:14, color:'#fc8181' }}>
-              ⚠️ {error}
-            </div>
-          )}
-
-          <button
-            onClick={generate}
-            disabled={!aliUrl.trim()}
-            style={{ padding:16, borderRadius:12, background: aliUrl.trim() ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'rgba(255,255,255,0.08)', color:'#fff', border:'none', fontSize:16, fontWeight:800, cursor: aliUrl.trim() ? 'pointer' : 'not-allowed', boxShadow: aliUrl.trim() ? '0 4px 16px rgba(229,62,62,0.35)' : 'none', opacity: aliUrl.trim() ? 1 : 0.5 }}
-          >
-            Generează pagina → (40 RON la publicare)
-          </button>
-
-          <div style={{ background:'rgba(255,255,255,0.02)', borderRadius:12, padding:14, fontSize:12, color:'rgba(255,255,255,0.3)', lineHeight:1.7 }}>
-            ℹ️ <strong style={{ color:'rgba(255,255,255,0.5)' }}>Cum funcționează:</strong><br/>
-            1. Pagina + textele se generează rapid (~15s)<br/>
-            2. Imaginile AI se generează separat (~1-2 min) — calitate maximă<br/>
-            3. Editezi în editor drag & drop<br/>
-            4. Publici în Shopify (40 RON)
-          </div>
-        </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:24 }}>
-          {[
-            ['🖼️', 'Poze reale AliExpress', 'Extrase automat din link'],
-            ['🤖', '4 imagini generate AI', 'Studio, lifestyle, detaliu, social proof'],
-            ['✍️', 'Copy în română', 'Titlu, beneficii, testimoniale, FAQ'],
-            ['✏️', 'Editor drag & drop', 'Modifici orice element vizual'],
-          ].map(([ic, t, d]) => (
-            <div key={t} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:14, padding:16 }}>
-              <div style={{ fontSize:24, marginBottom:8 }}>{ic}</div>
-              <div style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>{t}</div>
-              <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', lineHeight:1.5 }}>{d}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
 }
