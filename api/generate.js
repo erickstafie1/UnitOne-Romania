@@ -180,11 +180,17 @@ module.exports = async function handler(req, res) {
     let geminiImages = []
     if (geminiKey) {
       const pName = copy.productName || 'product'
+      // Prompturi optimizate per pozitie in pagina COD
+      const benefits = (copy.benefits || []).slice(0, 3).join(', ')
       const prompts = [
-        `Professional studio product photography of "${pName}". White background, soft shadow, commercial quality, 4K, no text, no people.`,
-        `Happy man using "${pName}" at home. Natural warm lighting, authentic smile, lifestyle photo, photorealistic.`,
-        `Close-up macro of "${pName}" showing quality and texture. White background, sharp focus, studio lighting.`,
-        `Happy customer holding "${pName}", smiling. Home environment, warm light, social proof photo.`
+        // Poza 1 HERO: produs cu beneficii vizuale incluse
+        `Ultra-realistic commercial product photo of ${pName}. Pure white background, professional studio lighting, 8K quality. The product looks premium and desirable. Include subtle visual text overlays showing key benefits: "${(copy.benefits||[])[0]||''}", "${(copy.benefits||[])[1]||''}". Make it look like a high-end Amazon listing photo. No watermarks.`,
+        // Poza 2 LIFESTYLE: persoana folosind produsul
+        `Cinematic lifestyle photography. A happy Romanian man or woman, 30-45 years old, using ${pName} in their modern home. Natural golden hour lighting, shallow depth of field, photorealistic. They look genuinely satisfied and happy. The product is clearly visible. Editorial quality photo.`,
+        // Poza 3 DETALIU: calitate si texture
+        `Extreme close-up macro photography of ${pName}. Shows premium build quality, materials and fine details. Pure white background, razor sharp focus, professional studio lighting with soft shadows. Makes the product look luxurious and high quality. Commercial photography style.`,
+        // Poza 4 SOCIAL PROOF: client fericit
+        `UGC style photo. Real-looking happy Romanian customer holding ${pName} and giving thumbs up. Home setting, warm natural lighting, genuine smile, casual clothes. Looks like an authentic customer review photo. Slightly imperfect like a real person took it. High quality but candid style.`
       ]
       for (let i = 0; i < prompts.length; i++) {
         console.log('Generating Gemini image', i+1, '...')
