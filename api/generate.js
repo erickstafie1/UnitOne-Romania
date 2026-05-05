@@ -1,4 +1,4 @@
-// v2 - cu Gemini images integrate
+// v3 - fixed JSON truncation + Gemini integrated
 const https = require('https')
 const http = require('http')
 
@@ -12,7 +12,7 @@ function fetchDirect(url) {
   return new Promise((resolve) => {
     const lib = url.startsWith('https') ? https : http
     const req = lib.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36' },
+      headers: { 'User-Agent': 'Mozilla/5.0 Chrome/122.0.0.0' },
       timeout: 20000
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -62,13 +62,16 @@ function callClaude(productInfo, styleDesc) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
-  const styleInstruction = styleDesc ? `Clientul vrea: "${styleDesc}". Aplică stilul.` : 'Stil roșu/negru optimizat COD.'
+  const styleInstruction = styleDesc ? `Clientul vrea: "${styleDesc}".` : 'Stil rosu/negru optimizat COD.'
+
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 2000,
-    system: `Expert marketing COD România. ${styleInstruction} DOAR JSON valid.`,
-    messages: [{ role: 'user', content: `Pagina COD pentru: "${productInfo.title || 'produs'}" (~${productInfo.priceUSD} USD). JSON complet cu: productName, headline, subheadline, price(${rp}), oldPrice(${Math.round(rp*1.6)}), bumpPrice, stock(7), timerMinutes(14), reviewCount(1247), style({primaryColor,secondaryColor,fontFamily,borderRadius}), benefits(6 items), howItWorks(3 steps cu title+desc), bumpProduct, testimonials(4 cu text+name+city+stars), faq(4 cu q+a)` }]
+    max_tokens: 3000,
+    system: `Expert marketing COD Romania. ${styleInstruction} Returneaza DOAR JSON valid, fara backtick-uri, fara text in afara JSON.`,
+    messages: [{ role: 'user', content: `JSON pentru pagina COD produs: "${productInfo.title || 'produs'}" pret ~${productInfo.priceUSD} USD:
+{"productName":"","headline":"","subheadline":"","price":${rp},"oldPrice":${Math.round(rp*1.6)},"bumpPrice":${Math.round(rp*0.2)},"stock":7,"timerMinutes":14,"reviewCount":1247,"style":{"primaryColor":"#dc2626","secondaryColor":"#111111","fontFamily":"Inter,system-ui,sans-serif","borderRadius":"12px"},"benefits":["b1","b2","b3","b4","b5","b6"],"howItWorks":[{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"bumpProduct":"","testimonials":[{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5}],"faq":[{"q":"","a":""},{"q":"Cum se face plata?","a":"La livrare direct curierului."},{"q":"Cat dureaza livrarea?","a":"2-4 zile in toata Romania."},{"q":"Pot returna?","a":"Da, 30 zile retur gratuit."}]}` }]
   })
+
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
@@ -82,9 +85,10 @@ function callClaude(productInfo, styleDesc) {
           const data = JSON.parse(Buffer.concat(chunks).toString())
           if (data.error) throw new Error(data.error.message)
           const text = (data.content || []).map(c => c.text || '').join('')
-          const match = text.match(/\{[\s\S]*\}/)
-          if (!match) throw new Error('No JSON')
-          resolve(JSON.parse(match[0]))
+          const start = text.indexOf('{')
+          const end = text.lastIndexOf('}')
+          if (start === -1 || end === -1) throw new Error('No JSON')
+          resolve(JSON.parse(text.substring(start, end + 1)))
         } catch(e) { reject(e) }
       })
     })
@@ -113,7 +117,12 @@ function geminiImage(prompt, apiKey) {
       res.on('end', () => {
         try {
           const raw = Buffer.concat(chunks).toString()
-          console.log('Gemini status:', res.statusCode, 'preview:', raw.substring(0, 200))
+          console.log('Gemini HTTP:', res.statusCode)
+          if (res.statusCode !== 200) {
+            console.log('Gemini error:', raw.substring(0, 300))
+            resolve(null)
+            return
+          }
           const data = JSON.parse(raw)
           const parts = data.candidates?.[0]?.content?.parts || []
           for (const p of parts) {
@@ -123,12 +132,13 @@ function geminiImage(prompt, apiKey) {
               return
             }
           }
+          console.log('Gemini no image. Parts:', parts.length, 'Sample:', JSON.stringify(parts[0]).substring(0, 100))
           resolve(null)
-        } catch(e) { resolve(null) }
+        } catch(e) { console.log('Gemini parse err:', e.message); resolve(null) }
       })
     })
-    req.on('error', () => resolve(null))
-    req.on('timeout', () => { req.destroy(); resolve(null) })
+    req.on('error', (e) => { console.log('Gemini net err:', e.message); resolve(null) })
+    req.on('timeout', () => { req.destroy(); console.log('Gemini timeout'); resolve(null) })
     req.write(body)
     req.end()
   })
@@ -146,10 +156,10 @@ module.exports = async function handler(req, res) {
     if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
 
     const geminiKey = process.env.GEMINI_API_KEY
-    console.log('=== GENERATE v2 ===', aliUrl.substring(0, 50))
-    console.log('Gemini key exists:', !!geminiKey)
+    console.log('=== GENERATE v3 ===')
+    console.log('AliUrl:', aliUrl.substring(0, 60))
+    console.log('Gemini key:', geminiKey ? 'SET (' + geminiKey.substring(0,8) + '...)' : 'MISSING')
 
-    // Fetch AliExpress + Claude in paralel
     const [html, copy] = await Promise.all([
       fetchWithScraper(aliUrl).catch(() => ''),
       callClaude({ title: '', priceUSD: 0 }, styleDesc || '')
@@ -165,38 +175,34 @@ module.exports = async function handler(req, res) {
         copy.price = rp; copy.oldPrice = Math.round(rp*1.6); copy.bumpPrice = Math.round(rp*0.2)
       }
     }
-    console.log('AliExpress images:', aliImages.length, 'Product:', copy.productName)
+    console.log('Ali images:', aliImages.length, 'Product:', copy.productName)
 
-    // Genereaza imagini Gemini
     let geminiImages = []
-    if (geminiKey && copy.productName) {
-      const pName = copy.productName
+    if (geminiKey) {
+      const pName = copy.productName || 'product'
       const prompts = [
-        `Professional studio product photography of "${pName}". Pure white background, soft shadow, commercial quality, sharp focus, no text, no people, 4K.`,
-        `Lifestyle photo of a happy man using "${pName}" at home. Natural warm lighting, authentic smile, modern home, photorealistic.`,
-        `Extreme macro close-up of "${pName}" showing premium quality and texture details. White background, sharp focus, studio lighting.`,
-        `Happy satisfied customer holding "${pName}", smiling genuinely. Home environment, warm lighting, photorealistic portrait.`
+        `Professional studio product photography of "${pName}". White background, soft shadow, commercial quality, 4K, no text, no people.`,
+        `Happy man using "${pName}" at home. Natural warm lighting, authentic smile, lifestyle photo, photorealistic.`,
+        `Close-up macro of "${pName}" showing quality and texture. White background, sharp focus, studio lighting.`,
+        `Happy customer holding "${pName}", smiling. Home environment, warm light, social proof photo.`
       ]
-      console.log('Starting Gemini generation...')
       for (let i = 0; i < prompts.length; i++) {
+        console.log('Generating Gemini image', i+1, '...')
         const img = await geminiImage(prompts[i], geminiKey)
-        console.log(`Gemini ${i+1}:`, img ? 'OK' : 'FAIL')
         geminiImages.push(img)
+        console.log('Image', i+1, ':', img ? 'OK' : 'FAILED')
       }
-    } else {
-      console.log('Skipping Gemini - key missing or no product name')
     }
 
     const goodGemini = geminiImages.filter(Boolean)
-    console.log('Gemini OK:', goodGemini.length, '/ 4')
+    console.log('Gemini success:', goodGemini.length, '/4')
 
-    // Combina imagini
     copy.images = aliImages.length > 0
       ? [aliImages[0], ...goodGemini, ...aliImages.slice(1)].slice(0, 6)
       : goodGemini
     copy.aliImages = aliImages
 
-    console.log('=== DONE === Total images:', copy.images.length)
+    console.log('=== DONE === Images:', copy.images.length)
     res.status(200).json({ success: true, data: copy })
   } catch(err) {
     console.error('Error:', err.message)
