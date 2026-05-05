@@ -16,8 +16,7 @@
     }
   ],
   "functions": {
-    "api/generate.js": { "maxDuration": 30 },
-    "api/generate-images.js": { "maxDuration": 60 },
+    "api/generate.js": { "maxDuration": 60 },
     "api/publish.js": { "maxDuration": 60 },
     "api/auth.js": { "maxDuration": 30 },
     "api/auth/callback.js": { "maxDuration": 30 }
