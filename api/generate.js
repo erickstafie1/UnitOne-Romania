@@ -1,4 +1,4 @@
-// v3 - fixed JSON truncation + Gemini integrated
+// v4 - gemini active
 const https = require('https')
 const http = require('http')
 
