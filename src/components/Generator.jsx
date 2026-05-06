@@ -12,7 +12,7 @@ const STEPS = [
   [98, '📦 Finalizez pagina...'],
 ]
 
-export default function Generator({ shop, token, onGenerated }) {
+export default function Generator({ shop, token, onGenerated, onBack }) {
   const [aliUrl, setAliUrl] = useState('')
   const [styleDesc, setStyleDesc] = useState('')
   const [loading, setLoading] = useState(false)
@@ -103,9 +103,10 @@ export default function Generator({ shop, token, onGenerated }) {
   return (
     <div style={{ minHeight:'100vh', background:'#0a0a0f', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
       <div style={{ padding:'20px 32px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:12 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:13, padding:'6px 10px', borderRadius:8, marginRight:4 }}>← Înapoi</button>
         <div style={{ width:36, height:36, borderRadius:10, background:'linear-gradient(135deg,#e53e3e,#c53030)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🛒</div>
         <div>
-          <div style={{ fontSize:16, fontWeight:800 }}>UnitOne Romania</div>
+          <div style={{ fontSize:16, fontWeight:800 }}>Pagină nouă</div>
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{shop}</div>
         </div>
       </div>
