@@ -31,75 +31,60 @@ function shopifyRequest(shop, token, path, method, body) {
 // Instaleaza template de pagina fara header/footer
 async function installLandingTemplate(shop, token) {
   try {
-    // Gaseste tema activa
     const themes = await shopifyRequest(shop, token, '/themes.json', 'GET', null)
     const activeTheme = (themes.themes || []).find(t => t.role === 'main')
-    if (!activeTheme) return
-    
+    if (!activeTheme) { console.log('No active theme found'); return }
     const themeId = activeTheme.id
-    
-    // Verifica daca template-ul exista deja
-    const assets = await shopifyRequest(shop, token, `/themes/${themeId}/assets.json?asset[key]=templates/page.landing.json`, 'GET', null)
-    if (assets.asset) {
-      console.log('Landing template already exists')
-      return
-    }
+    console.log('Active theme:', themeId, activeTheme.name)
 
-    // Creeaza template fara header/footer
-    const templateContent = JSON.stringify({
+    // Creeaza layout-ul fara header/footer
+    const layoutLiquid = `<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title }}</title>
+  {{ content_for_header }}
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  {{ content_for_layout }}
+</body>
+</html>`
+
+    // Creeaza template simplu
+    const templateJson = JSON.stringify({
       sections: {
-        main: {
-          type: "main-page",
-          settings: {}
-        }
+        "main": { "type": "pagecod-main", "settings": {} }
       },
       order: ["main"]
     })
 
-    // Creeaza si fisierul CSS pentru landing (full width, fara padding tema)
-    await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
-      asset: {
-        key: 'templates/page.landing.json',
-        value: JSON.stringify({
-          sections: {
-            "pagecod-content": {
-              type: "pagecod-landing",
-              settings: {}
-            }
-          },
-          order: ["pagecod-content"]
-        })
-      }
-    })
+    // Creeaza sectiunea principala
+    const sectionLiquid = `<div class="pagecod-lp">{{ page.content }}</div>`
 
-    // Creeaza sectiunea Liquid care afiseaza doar continutul paginii fara header/footer
+    // Instaleaza toate fisierele
     await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
-      asset: {
-        key: 'sections/pagecod-landing.liquid',
-        value: `<style>
-  /* UnitOne Romania - Landing Page - Fara header/footer */
-  body { margin: 0 !important; padding: 0 !important; }
-  header, footer, nav,
-  .header, .footer, .site-header, .site-footer,
-  #shopify-section-header, #shopify-section-footer,
-  #shopify-section-announcement-bar,
-  .announcement-bar, .announcement-bar-section,
-  .header-section, .footer-section,
-  [id*="header"], [id*="footer"],
-  [class*="header"]:not([class*="subheader"]),
-  [class*="footer"]:not([class*="subfooter"]),
-  .cart-notification, .predictive-search,
-  #cart-notification, .sticky-header { display: none !important; }
-  main, .main-content, #MainContent { padding-top: 0 !important; margin-top: 0 !important; }
-  .page-width { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-</style>
-{{ page.content }}`
-      }
+      asset: { key: 'layout/pagecod.liquid', value: layoutLiquid }
     })
+    console.log('Layout created')
 
-    console.log('Landing template installed successfully')
+    await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
+      asset: { key: 'sections/pagecod-main.liquid', value: sectionLiquid }
+    })
+    console.log('Section created')
+
+    await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
+      asset: { key: 'templates/page.pagecod.json', value: templateJson }
+    })
+    console.log('Template created')
+
+    console.log('Landing template installed successfully!')
   } catch(e) {
-    console.log('Install template error (non-fatal):', e.message)
+    console.log('Install template error:', e.message)
   }
 }
 
@@ -142,9 +127,9 @@ module.exports = async function handler(req, res) {
         await installLandingTemplate(shop, token)
         try {
           await shopifyRequest(shop, token, `/pages/${result.page.id}.json`, 'PUT', {
-            page: { id: result.page.id, template_suffix: 'landing' }
+            page: { id: result.page.id, template_suffix: 'pagecod' }
           })
-          console.log('Template landing setat pe pagina')
+          console.log('Template pagecod setat pe pagina')
         } catch(e) {
           console.log('Template error (non-fatal):', e.message)
         }
