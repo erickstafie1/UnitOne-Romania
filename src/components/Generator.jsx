@@ -56,20 +56,10 @@ export default function Generator({ shop, token, onGenerated }) {
     }, 8000) // 8s per step = ~64s total
 
     try {
-      const body = tab === 'shopify' && selectedProduct
-        ? { 
-            shopifyProduct: selectedProduct,
-            aliUrl: selectedProduct.images?.[0]?.src || '',
-            styleDesc: styleDesc.trim(),
-            productName: selectedProduct.title,
-            priceRON: parseFloat(selectedProduct.variants?.[0]?.price || 0)
-          }
-        : { aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() }
-
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() })
       })
       clearInterval(tid)
       if (!res.ok) throw new Error('Server error ' + res.status)
