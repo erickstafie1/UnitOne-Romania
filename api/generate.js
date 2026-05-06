@@ -170,27 +170,37 @@ module.exports = async function handler(req, res) {
     }
     console.log('Ali images:', aliImages.length, 'Product:', copy.productName)
 
-    // Acum stim produsul - genereaza imagini Gemini cu prompturi specifice
+    // Combinam: AliExpress (pozele reale) + Gemini (lifestyle + UGC)
     const pName = copy.productName || 'produs'
-    const specificPrompts = [
-      `Ultra-realistic studio product photo of ${pName}. Pure white background, dramatic lighting, commercial quality, 8K, no text, no people.`,
-      `Lifestyle photo: happy Romanian person using ${pName} at home. Natural warm lighting, genuine smile, photorealistic, editorial quality.`,
-      `Macro close-up of ${pName} showing premium quality and fine details. White background, razor sharp focus, professional studio lighting.`,
-      `UGC photo: real customer holding ${pName}, thumbs up, genuine happy smile, casual home setting, warm natural lighting, authentic look.`
+    
+    // Genereaza doar 2 imagini Gemini: lifestyle + UGC
+    const geminiPrompts = [
+      `Lifestyle photo: happy Romanian person 30-45 years old using ${pName} at home. Natural warm golden lighting, genuine smile, modern home setting, shallow depth of field, photorealistic, editorial quality photo.`,
+      `UGC authentic photo: real Romanian customer holding ${pName}, big genuine smile, thumbs up, casual home setting, warm natural light, looks like real customer review, slightly imperfect candid style.`
     ]
 
     const geminiPromises = geminiKey
-      ? specificPrompts.map((p, i) => geminiImage(p, geminiKey).then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img }))
-      : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)]
+      ? geminiPrompts.map((p, i) => geminiImage(p, geminiKey).then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img }))
+      : [Promise.resolve(null), Promise.resolve(null)]
 
-    // Genereaza toate 4 in paralel
     const geminiImages = await Promise.all(geminiPromises)
     const goodGemini = geminiImages.filter(Boolean)
-    console.log('Gemini OK:', goodGemini.length, '/4')
+    console.log('Gemini OK:', goodGemini.length, '/2')
 
-    copy.images = aliImages.length > 0
-      ? [aliImages[0], ...goodGemini, ...aliImages.slice(1)].slice(0, 6)
-      : goodGemini
+    // Layout final:
+    // Poza 0: AliExpress hero (produsul real) + overlay beneficii
+    // Poza 1: Gemini lifestyle (persoana folosind produsul)
+    // Poza 2: AliExpress detaliu (alt unghi al produsului real)
+    // Poza 3: Gemini UGC (client fericit)
+    const ali = aliImages
+    const [gemini1, gemini2] = goodGemini
+    
+    copy.images = [
+      ali[0] || null,           // Hero - poza reala produs
+      gemini1 || ali[1] || null, // Lifestyle - Gemini sau AliExpress fallback
+      ali[2] || ali[1] || null,  // Detaliu - poza reala produs
+      gemini2 || ali[3] || null  // UGC - Gemini sau AliExpress fallback
+    ].filter(Boolean)
     copy.aliImages = aliImages
 
     console.log('=== DONE === Images:', copy.images.length)
