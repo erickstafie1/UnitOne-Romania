@@ -73,18 +73,22 @@ export default function Dashboard({ shop, token, onNew, onEdit }) {
       let title = 'Pagina Importată'
       
       if (importJson.trim()) {
-        // Incearca sa parseze ca JSON
         try {
           const data = JSON.parse(importJson)
-          html = data.body_html || data.html || ''
+          // Accepta body_html (export Shopify), html, sau content
+          html = data.body_html || data.html || data.content || ''
           title = data.title || title
         } catch(e) {
-          // Poate e HTML direct
-          html = importJson
+          // E HTML direct, nu JSON
+          if (importJson.trim().startsWith('<')) {
+            html = importJson
+          } else {
+            throw new Error('Format invalid — pune un fișier JSON exportat sau HTML direct')
+          }
         }
       }
       
-      if (!html) throw new Error('Fișierul nu conține HTML valid')
+      if (!html) throw new Error('Fișierul nu conține conținut HTML')
       
       const res = await fetch('/api/publish', {
         method: 'POST',
