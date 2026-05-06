@@ -13,6 +13,8 @@ export default function Editor({ data, shop, token, onBack }) {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [hideHeaderFooter, setHideHeaderFooter] = useState(true)
+  const [pageTitle, setPageTitle] = useState(data.title || data.productName || 'Pagina COD')
+  const isEditing = !!data.fromDashboard
 
   useEffect(() => {
     // Incarca GrapesJS dinamic
@@ -164,16 +166,14 @@ export default function Editor({ data, shop, token, onBack }) {
       })
       console.log('Final HTML size:', Math.round(finalHtml.length/1024), 'KB')
 
+      const body = isEditing
+        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter }
+        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter }
+
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shop, token,
-          title: data.productName || 'Pagina COD',
-          html: finalHtml,
-          productId: selectedProduct?.id,
-          hideHeaderFooter
-        })
+        body: JSON.stringify(body)
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error)
@@ -218,9 +218,12 @@ export default function Editor({ data, shop, token, onBack }) {
           ← Înapoi
         </button>
 
-        <span style={{ fontSize:14, fontWeight:600, color:'#fff', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-          {data.productName || 'Pagina COD'}
-        </span>
+        <input
+          value={pageTitle}
+          onChange={e => setPageTitle(e.target.value)}
+          style={{ flex:1, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'4px 10px', color:'#fff', fontSize:14, fontWeight:600, outline:'none', minWidth:0 }}
+          placeholder="Numele paginii..."
+        />
 
         {/* Device selector */}
         <div style={{ display:'flex', background:'rgba(255,255,255,0.06)', borderRadius:10, padding:3, gap:2 }}>
@@ -249,9 +252,9 @@ export default function Editor({ data, shop, token, onBack }) {
 
         {error && <span style={{ fontSize:12, color:'#fc8181' }}>⚠️ {error}</span>}
 
-        <button onClick={() => { setShowProductModal(true); if(products.length===0) loadProducts() }} disabled={publishing}
+        <button onClick={() => { if(isEditing) { publish() } else { setShowProductModal(true); if(products.length===0) loadProducts() } }} disabled={publishing}
           style={{ padding:'8px 20px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', opacity: publishing ? 0.6 : 1, boxShadow:'0 2px 8px rgba(229,62,62,0.3)', whiteSpace:'nowrap' }}>
-          {publishing ? '⏳ Se publică...' : '🚀 Publică — 40 RON'}
+          {publishing ? '⏳ ...' : isEditing ? '💾 Salvează modificările' : '🚀 Publică — 40 RON'}
         </button>
       </div>
 
