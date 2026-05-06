@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function Editor({ data, shop, onBack }) {
+export default function Editor({ data, shop, token, onBack }) {
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
   const [device, setDevice] = useState('desktop')
