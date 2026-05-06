@@ -102,16 +102,56 @@ export default function Editor({ data, shop, token, onBack }) {
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
 
-      // Nu trimitem imaginile base64 - sunt deja in HTML
-      // Trimitem doar HTML-ul final + shop + token
+      // Pasul 1: Upload imaginile Gemini (base64) in Shopify Files - una cate una
+      const images = data.images || []
+      const uploadedUrls = []
+      
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i]
+        if (!img) { uploadedUrls.push(null); continue }
+        
+        if (img.startsWith('data:')) {
+          // Imagine Gemini base64 - o uploadam in Shopify Files
+          try {
+            const uploadRes = await fetch('/api/upload-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                shop, token,
+                image: img,
+                filename: `pagecod-img-${i+1}-${Date.now()}.jpg`
+              })
+            })
+            const uploadData = await uploadRes.json()
+            uploadedUrls.push(uploadData.url || img)
+          } catch(e) {
+            console.log('Upload failed for image', i+1, e.message)
+            uploadedUrls.push(img) // fallback la base64
+          }
+        } else {
+          uploadedUrls.push(img) // URL normal AliExpress
+        }
+      }
+
+      // Pasul 2: Inlocuieste URL-urile in HTML
+      let finalHtml = fullHtml
+      images.forEach((img, i) => {
+        if (img && uploadedUrls[i] && img !== uploadedUrls[i]) {
+          // Inlocuieste base64 cu URL CDN
+          const escaped = img.substring(0, 100)
+          finalHtml = finalHtml.replace(new RegExp('src="data:image/[^"]{0,1000000}"', 'g'), (match, offset) => {
+            return `src="${uploadedUrls[i]}"`
+          })
+        }
+      })
+
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shop,
-          token,
+          shop, token,
           title: data.productName || 'Pagina COD',
-          html: fullHtml
+          html: finalHtml
         })
       })
       const json = await res.json()
