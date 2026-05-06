@@ -353,261 +353,203 @@ function buildHTML(data) {
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
   const disc = Math.round((1 - price / oldPrice) * 100)
   const imgs = data.images || []
-  const primary = data.style?.primaryColor || '#dc2626'
-
+  const primary = data.style?.primaryColor || '#e8000d'
   const JUDETE = ["Alba","Arad","Argeș","Bacău","Bihor","Bistrița-Năsăud","Botoșani","Brăila","Brașov","București","Buzău","Călărași","Caraș-Severin","Cluj","Constanța","Covasna","Dâmbovița","Dolj","Galați","Giurgiu","Gorj","Harghita","Hunedoara","Ialomița","Iași","Ilfov","Maramureș","Mehedinți","Mureș","Neamț","Olt","Prahova","Sălaj","Satu Mare","Sibiu","Suceava","Teleorman","Timiș","Tulcea","Vâlcea","Vaslui","Vrancea"]
   const jOpts = JUDETE.map(j => `<option value="${j}">${j}</option>`).join('')
+  const img = (src, style) => src ? `<img src="${src}" style="${style || 'width:100%;display:block'}" />` : ''
 
-  const imgTag = (src, alt) => src ? `<img src="${src}" alt="${alt || ''}" style="width:100%;display:block;object-fit:cover;max-height:350px" />` : ''
-  
-  // Hero section cu overlay beneficii
-  const heroSection = (src, data) => {
-    const benefits = (data.benefits || []).slice(0, 4)
-    const primary = data.style?.primaryColor || '#dc2626'
-    return `<div style="position:relative;background:#0a0a1a;overflow:hidden">
-      ${src ? `<img src="${src}" alt="${data.productName || ''}" style="width:100%;display:block;object-fit:cover;max-height:420px;opacity:0.95" />` : '<div style="height:420px;background:linear-gradient(135deg,#0a0a1a,#1a1a2e)"></div>'}
-      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to right, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.05) 100%);display:flex;align-items:center;padding:24px">
-        <div style="max-width:55%">
-          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">✦ OFERTĂ SPECIALĂ</div>
-          <h2 style="font-size:18px;font-weight:900;color:rgba(255,255,255,0.85);line-height:1.2;margin:0 0 12px;text-shadow:0 1px 4px rgba(0,0,0,0.4)">${data.headline || data.productName}</h2>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${benefits.map(b => `<div style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:50%;background:${primary};color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;flex-shrink:0;opacity:0.85">✓</span><span style="font-size:10px;color:rgba(255,255,255,0.65);line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,0.4)">${b}</span></div>`).join('')}
-          </div>
-        </div>
-      </div>
-    </div>`
-  }
+  const benefits = (data.benefits || []).slice(0, 5)
+  const benefitItems = benefits.map(b => `<li style="margin-bottom:12px;padding-left:4px;font-size:15px;line-height:1.5;color:#222"><strong style="color:#111">${b.split(':')[0] || b}</strong>${b.includes(':') ? ': ' + b.split(':').slice(1).join(':') : ''}</li>`).join('')
 
-  const benefitRows = (data.benefits || []).map(b => `
-    <div class="benefit-row">
-      <span style="color:#16a34a;font-weight:900;font-size:17px;flex-shrink:0">✓</span>
-      <span style="font-size:14px;color:#166534;line-height:1.6">${b}</span>
+  const tCards = (data.testimonials || []).map((t, i) => `
+    <div style="margin-bottom:32px">
+      ${imgs[i] ? `<div style="margin-bottom:12px">${img(imgs[i], 'width:100%;max-width:400px;display:block;margin:0 auto;border-radius:8px')}</div>` : ''}
+      <p style="font-size:13px;color:#555;margin-bottom:6px">Recenzie de la ${t.name}: ${'⭐'.repeat(t.stars||5)}</p>
+      <p style="font-size:15px;color:#222;line-height:1.6;font-style:italic">"${t.text}"</p>
     </div>`).join('')
 
-  const testimonialCards = (data.testimonials || []).map(t => `
-    <div style="background:#fff;border:1px solid #f3f4f6;border-radius:14px;padding:16px;margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div>
-          <strong style="font-size:14px;display:block">${t.name}</strong>
-          <span style="font-size:12px;color:#9ca3af">${t.city}</span>
-        </div>
-        <span style="color:#fbbf24;font-size:16px">${'★'.repeat(t.stars || 5)}</span>
-      </div>
-      <p style="font-size:14px;color:#374151;line-height:1.6;margin:0">"${t.text}"</p>
-    </div>`).join('')
-
-  const faqItems = (data.faq || []).map(f => `
-    <details style="margin-bottom:10px;border:1.5px solid #f3f4f6;border-radius:12px;overflow:hidden">
-      <summary style="padding:14px 16px;font-size:14px;font-weight:700;cursor:pointer;background:#fafafa;list-style:none;display:flex;justify-content:space-between">
-        ${f.q} <span style="color:${primary};font-size:20px">+</span>
-      </summary>
-      <div style="padding:12px 16px">
-        <p style="font-size:14px;color:#6b7280;line-height:1.7;margin:0">${f.a}</p>
-      </div>
+  const faqHtml = (data.faq || []).map(f => `
+    <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+      <summary style="padding:14px 16px;font-size:15px;font-weight:600;cursor:pointer;background:#f9fafb">${f.q}</summary>
+      <div style="padding:12px 16px;font-size:14px;color:#555;line-height:1.7">${f.a}</div>
     </details>`).join('')
 
-  const howItWorks = (data.howItWorks || []).map((s, i) => `
-    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:16px">
-      <div style="min-width:36px;height:36px;border-radius:50%;background:${primary};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0">${i + 1}</div>
-      <div>
-        <strong style="font-size:15px;font-weight:700;display:block;margin-bottom:3px">${s.title}</strong>
-        <span style="font-size:13px;color:#6b7280;line-height:1.6">${s.desc}</span>
-      </div>
-    </div>`).join('')
+  return `<div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;background:#fff;color:#111">
 
-  return `
-<div data-gjs-type="wrapper">
+<!-- TOP BAR -->
+<div style="background:#111;color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600">
+  📞 0700 000 000 &nbsp;·&nbsp; 🚚 LIVRARE RAPIDĂ ÎN TOATĂ ROMÂNIA
+</div>
 
-  <!-- URGENTA -->
-  <div data-gjs-type="section" style="background:#111;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600">
-    🚚 LIVRARE GRATUITĂ peste 200 lei · ☎ 0700 000 000
+<!-- TITLU PRINCIPAL -->
+<div style="padding:24px 20px 16px;text-align:center;border-bottom:2px solid ${primary}">
+  <h1 style="font-size:22px;font-weight:900;line-height:1.3;margin:0;color:#111">${data.headline || data.productName}</h1>
+</div>
+
+<!-- IMAGINI PRODUS - grid simplu -->
+<div style="padding:0">
+  ${imgs[0] ? `<div style="background:#f8f8f8">${img(imgs[0], 'width:100%;max-height:420px;object-fit:contain;display:block;margin:0 auto')}</div>` : ''}
+  ${imgs.length > 1 ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#e5e7eb">
+    ${imgs.slice(1, 5).map(s => img(s, 'width:100%;height:200px;object-fit:cover;display:block')).join('')}
+  </div>` : ''}
+</div>
+
+<!-- RATING + SOCIAL PROOF -->
+<div style="padding:16px 20px;text-align:center;background:#fff8f0;border-bottom:1px solid #ffe0b2">
+  <span style="font-size:18px">⭐⭐⭐⭐⭐</span>
+  <span style="font-size:14px;font-weight:700;color:#e65c00;margin-left:8px">${(data.reviewCount||1247).toLocaleString()}+ Clienți Mulțumiți!</span>
+</div>
+
+<!-- TOP 5 MOTIVE -->
+<div style="padding:24px 20px;background:#fff">
+  <div style="background:#e8000d;color:#fff;text-align:center;padding:8px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:16px">TOP ${benefits.length} MOTIVE SĂ COMANZI ACUM:</div>
+  <ul style="margin:0;padding:0 0 0 20px;list-style:none">
+    ${benefits.map(b => `<li style="margin-bottom:10px;padding-left:4px;font-size:15px;line-height:1.5;color:#222;display:flex;gap:10px;align-items:flex-start"><span style="color:#e8000d;font-weight:900;flex-shrink:0">✓</span><span>${b}</span></li>`).join('')}
+  </ul>
+</div>
+
+<!-- PRET + CTA -->
+<div style="padding:20px;background:#fff;border-top:1px solid #f3f4f6;border-bottom:3px solid #e8000d;text-align:center">
+  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px">
+    <span style="font-size:20px;color:#999;text-decoration:line-through">${oldPrice} LEI</span>
+    <span style="font-size:42px;font-weight:900;color:#e8000d">${price} LEI</span>
+    <span style="background:#e8000d;color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:700">-${disc}%</span>
+  </div>
+  <a href="#formular" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:16px 24px;border-radius:4px;font-size:18px;font-weight:900;text-decoration:none;letter-spacing:0.5px;margin-bottom:10px">COMANDĂ ACUM!</a>
+  <p style="font-size:13px;color:#666;margin:0">✅ Plată la livrare &nbsp;·&nbsp; 🚚 Livrare 2-4 zile &nbsp;·&nbsp; ↩️ Retur 30 zile</p>
+</div>
+
+<!-- DESCRIERE + IMAGINE LIFESTYLE -->
+<div style="padding:28px 20px;background:#f9fafb">
+  <div style="text-align:center;background:#e8000d;color:#fff;padding:6px;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:16px">${data.subheadline || 'DE CE SĂ COMANZI DE LA NOI?'}</div>
+  ${imgs[1] ? `<div style="margin-bottom:20px">${img(imgs[1], 'width:100%;border-radius:8px;display:block')}</div>` : ''}
+  ${(data.howItWorks || []).map((s, i) => `
+    <div style="display:flex;gap:14px;margin-bottom:16px;align-items:flex-start">
+      <div style="width:32px;height:32px;background:#e8000d;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0">${i+1}</div>
+      <div><strong style="font-size:15px;display:block;margin-bottom:3px">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>
+    </div>`).join('')}
+  <a href="#formular" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:14px;border-radius:4px;font-size:16px;font-weight:900;text-decoration:none;margin-top:20px">COMANDĂ ACUM!</a>
+</div>
+
+<!-- IMAGINE 3 - DETALIU -->
+${imgs[2] ? `<div style="background:#fff">${img(imgs[2], 'width:100%;display:block')}</div>` : ''}
+
+<!-- TRUST BADGES -->
+<div style="padding:20px;background:#fff;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;border-top:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;text-align:center">
+  <div style="font-size:13px;color:#444"><div style="font-size:28px">💳</div>Plată ramburs</div>
+  <div style="font-size:13px;color:#444"><div style="font-size:28px">✅</div>Satisfacție garantată</div>
+  <div style="font-size:13px;color:#444"><div style="font-size:28px">↩️</div>Banii înapoi 30 zile</div>
+</div>
+
+<!-- TESTIMONIALE -->
+<div style="padding:28px 20px;background:#f9fafb">
+  <div style="text-align:center;background:#111;color:#fff;padding:8px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:24px">PĂRERILE CLIENȚILOR NOȘTRI:</div>
+  ${tCards}
+</div>
+
+<!-- FAQ -->
+<div style="padding:24px 20px;background:#fff">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 16px;text-align:center">Întrebări frecvente</h3>
+  ${faqHtml}
+</div>
+
+<!-- SELECTOR CANTITATE + FORMULAR COD -->
+<div id="formular" style="padding:28px 20px;background:#fff3f3;border-top:4px solid #e8000d">
+  <h2 style="font-size:22px;font-weight:900;text-align:center;margin:0 0 6px">COMANDĂ ACUM CU ${disc}% REDUCERE</h2>
+  <p style="text-align:center;color:#555;font-size:14px;margin:0 0 24px">↓ Completează formularul de mai jos ↓</p>
+  
+  <!-- Selector bucăți -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px" id="qty-selector">
+    <div onclick="selectQty(1,${price})" id="qty1" style="border:2px solid #e8000d;border-radius:8px;padding:14px 8px;text-align:center;cursor:pointer;background:#fff">
+      <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">O BUCATĂ</div>
+      <div style="font-size:18px;font-weight:900;color:#e8000d">${price} RON</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">TOTAL: ${price} RON</div>
+    </div>
+    <div onclick="selectQty(2,${Math.round(price*0.96)})" id="qty2" style="border:2px solid #ccc;border-radius:8px;padding:14px 8px;text-align:center;cursor:pointer;background:#fff;position:relative">
+      <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#e8000d;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">CEL MAI POPULAR</div>
+      <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">DOUĂ BUCĂȚI</div>
+      <div style="font-size:18px;font-weight:900;color:#e8000d">${Math.round(price*0.96)} RON/buc</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">TOTAL: ${Math.round(price*0.96*2)} RON</div>
+    </div>
+    <div onclick="selectQty(3,${Math.round(price*0.92)})" id="qty3" style="border:2px solid #ccc;border-radius:8px;padding:14px 8px;text-align:center;cursor:pointer;background:#fff">
+      <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">TREI BUCĂȚI</div>
+      <div style="font-size:18px;font-weight:900;color:#e8000d">${Math.round(price*0.92)} RON/buc</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">TOTAL: ${Math.round(price*0.92*3)} RON</div>
+    </div>
   </div>
 
-  <div data-gjs-type="section" style="background:${primary};color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div style="font-size:13px;font-weight:700">⚡ Doar <strong>${data.stock || 7} bucăți</strong> rămase!</div>
-    <div class="timer-block" id="timer-top">
-      <div><span class="timer-val" id="tm">14</span><span class="timer-lbl">MIN</span></div>
-      <div><span class="timer-val" id="ts">00</span><span class="timer-lbl">SEC</span></div>
+  <!-- Formular -->
+  <div id="form-fields" style="display:flex;flex-direction:column;gap:12px">
+    <input id="f-name" placeholder="Nume și Prenume (Ex. Popescu Ion)" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif" />
+    <input id="f-phone" placeholder="Număr de telefon" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif" />
+    <input id="f-address" placeholder="Adresa completă (Str., Nr., Bloc, Scară, Etaj, Apt.)" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif" />
+    <input id="f-city" placeholder="Localitate (Sat, Comună)" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif" />
+    <select id="f-county" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif;color:#555;background:#fff">
+      <option value="">Județ</option>${jOpts}
+    </select>
+    
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;font-size:14px">
+      <div style="font-weight:700;margin-bottom:8px">Sumar comandă:</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span id="summary-qty">${data.productName} x1</span><span id="summary-price">${price} RON</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Livrare</span><span style="color:#16a34a;font-weight:600">GRATUITĂ</span></div>
+      <div style="border-top:1px solid #e5e7eb;padding-top:8px;display:flex;justify-content:space-between;font-weight:900;font-size:16px"><span>Total la livrare:</span><span id="summary-total" style="color:#e8000d">${price} RON</span></div>
     </div>
-  </div>
-
-  <!-- HERO cu overlay beneficii -->
-  ${heroSection(imgs[0], data)}
-
-  <!-- TITLU + PRET -->
-  <div data-gjs-type="section" style="padding:24px 20px 16px">
-    <div style="display:inline-block;background:#fef2f2;color:${primary};border:1px solid #fecaca;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;margin-bottom:12px">
-      OFERTĂ SPECIALĂ · -${disc}% REDUCERE
-    </div>
-    <h1 style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 10px">${data.headline}</h1>
-    <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 20px">${data.subheadline}</p>
-
-    <div style="background:#fafafa;border:1.5px solid #e5e7eb;border-radius:16px;padding:20px;margin-bottom:16px">
-      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
-        <span style="font-size:38px;font-weight:900;color:${primary}">${price} lei</span>
-        <span style="font-size:20px;color:#d1d5db;text-decoration:line-through">${oldPrice} lei</span>
-        <span style="background:${primary};color:#fff;border-radius:8px;padding:3px 10px;font-size:13px;font-weight:800">-${disc}%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:14px;color:#6b7280">Cantitate:</span>
-        <div style="display:flex;align-items:center;border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden">
-          <button onclick="cqty(-1)" style="width:38px;height:38px;border:none;background:#f9fafb;font-size:18px;cursor:pointer">−</button>
-          <span id="qty-disp" style="width:40px;text-align:center;font-size:17px;font-weight:800">1</span>
-          <button onclick="cqty(1)" style="width:38px;height:38px;border:none;background:#f9fafb;font-size:18px;cursor:pointer">+</button>
-        </div>
-      </div>
-    </div>
-
-    <button class="btn-main" onclick="document.getElementById('cod-form').scrollIntoView({behavior:'smooth'})">
-      🛒 COMANDĂ ACUM — PLATĂ LA LIVRARE
+    
+    <button onclick="submitOrder()" style="background:#e8000d;color:#fff;border:none;padding:18px;border-radius:6px;font-size:18px;font-weight:900;cursor:pointer;width:100%;font-family:Arial,sans-serif;letter-spacing:0.5px">
+      FINALIZEAZĂ COMANDA — PLATĂ LA LIVRARE
     </button>
-    <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:8px">
-      Nu plătești nimic acum · Livrare 2–4 zile · Ramburs curier
-    </p>
+    <p style="text-align:center;font-size:12px;color:#888;margin:0">Prin plasarea comenzii ești de acord cu Termenii și Condițiile</p>
   </div>
-
-  <!-- TRUST BADGES -->
-  <div data-gjs-type="section" style="background:#f9fafb;border-top:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;padding:16px 20px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div style="display:flex;gap:10px;align-items:center"><span style="font-size:22px">🔒</span><div><div style="font-size:13px;font-weight:700">Plată securizată</div><div style="font-size:12px;color:#9ca3af">100% sigur</div></div></div>
-      <div style="display:flex;gap:10px;align-items:center"><span style="font-size:22px">🚚</span><div><div style="font-size:13px;font-weight:700">Livrare rapidă</div><div style="font-size:12px;color:#9ca3af">2–4 zile</div></div></div>
-      <div style="display:flex;gap:10px;align-items:center"><span style="font-size:22px">↩️</span><div><div style="font-size:13px;font-weight:700">Retur gratuit</div><div style="font-size:12px;color:#9ca3af">30 de zile</div></div></div>
-      <div style="display:flex;gap:10px;align-items:center"><span style="font-size:22px">⭐</span><div><div style="font-size:13px;font-weight:700">Clienți mulțumiți</div><div style="font-size:12px;color:#9ca3af">4.9/5 stele</div></div></div>
-    </div>
+  <div id="form-success" style="display:none;text-align:center;padding:40px 20px">
+    <div style="font-size:56px;margin-bottom:12px">✅</div>
+    <h3 style="font-size:22px;font-weight:800;color:#16a34a">Comandă plasată cu succes!</h3>
+    <p style="color:#555;margin-top:8px;font-size:15px">Te vom contacta în maxim 24 ore pentru confirmare.</p>
   </div>
+</div>
 
-  <!-- IMAGINE 1 + BENEFICII 1-3 -->
-  ${imgTag(imgs[1], 'lifestyle')}
-  <div data-gjs-type="section" style="padding:24px 20px">
-    <h2 style="font-size:20px;font-weight:800;margin:0 0 16px">De ce să alegi ${data.productName}?</h2>
-    ${benefitRows}
-  </div>
-
-  <!-- CUM FUNCTIONEAZA -->
-  <div data-gjs-type="section" style="padding:24px 20px;background:#f9fafb">
-    <h2 style="font-size:20px;font-weight:800;margin:0 0 18px">Cum funcționează?</h2>
-    ${howItWorks}
-  </div>
-
-  <!-- IMAGINE 2 -->
-  ${imgTag(imgs[2], 'detaliu')}
-
-  <!-- TESTIMONIALE -->
-  ${imgTag(imgs[3], 'clienti')}
-  <div data-gjs-type="section" style="padding:24px 20px">
-    <h2 style="font-size:20px;font-weight:800;margin:0 0 6px">Ce spun clienții noștri</h2>
-    <p style="font-size:13px;color:#9ca3af;margin-bottom:18px">Peste ${(data.reviewCount || 1200).toLocaleString()} recenzii ⭐⭐⭐⭐⭐</p>
-    ${testimonialCards}
-  </div>
-
-  <!-- FAQ -->
-  <div data-gjs-type="section" style="padding:24px 20px;background:#f9fafb">
-    <h2 style="font-size:20px;font-weight:800;margin:0 0 16px">Întrebări frecvente</h2>
-    ${faqItems}
-  </div>
-
-  <!-- FORMULAR COD -->
-  <div id="cod-form" data-gjs-type="section" style="background:linear-gradient(180deg,#fef2f2,#fff);border-top:3px solid ${primary};padding:24px 20px">
-    <h2 style="font-size:22px;font-weight:900;margin:0 0 6px">Comandă acum — Plată la livrare</h2>
-    <p style="font-size:14px;color:#6b7280;margin:0 0 20px;line-height:1.6">Nu plătești nimic acum — curierul îți aduce produsul și plătești la ușă.</p>
-
-    <div id="form-fields" style="display:flex;flex-direction:column;gap:12px">
-      <input class="inp" id="f-name" placeholder="Nume și prenume *" />
-      <input class="inp" id="f-phone" placeholder="Număr de telefon *" />
-      <select class="inp" id="f-county" style="color:#9ca3af">
-        <option value="">Selectează județul *</option>
-        ${jOpts}
-      </select>
-      <input class="inp" id="f-city" placeholder="Localitatea *" />
-      <textarea class="inp" id="f-address" rows="2" placeholder="Strada, număr, bloc, apartament *" style="resize:none"></textarea>
-
-      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;padding:16px;font-size:14px">
-        <div style="font-weight:700;font-size:12px;color:#9ca3af;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Sumar comandă</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#374151">
-          <span id="prod-name-summary">${data.productName} <span id="qty-summary">×1</span></span>
-          <span id="price-summary" style="font-weight:600">${price} lei</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#374151">
-          <span>Livrare</span><span style="color:#16a34a;font-weight:700">GRATUITĂ</span>
-        </div>
-        <div style="border-top:1.5px solid #f3f4f6;padding-top:10px;display:flex;justify-content:space-between;font-weight:900;font-size:18px">
-          <span>Total la livrare</span>
-          <span id="total-summary" style="color:${primary}">${price} lei</span>
-        </div>
-      </div>
-
-      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px 14px;font-size:13px;color:#15803d;display:flex;gap:8px;align-items:center">
-        <span>🔒</span><span>Plata se face <strong>doar la livrare</strong>. Datele tale sunt în siguranță.</span>
-      </div>
-
-      <div id="form-success" style="display:none;text-align:center;padding:40px 20px">
-        <div style="font-size:56px;margin-bottom:12px">✅</div>
-        <h3 style="color:#16a34a;font-size:22px;font-weight:800">Comandă plasată!</h3>
-        <p style="color:#555;margin-top:8px">Te vom contacta în maxim 24 ore. Plata la livrare.</p>
-      </div>
-
-      <button class="btn-main" onclick="submitOrder()">
-        🛒 FINALIZEAZĂ — <span id="btn-total">${price}</span> LEI LA LIVRARE
-      </button>
-      <p style="font-size:12px;color:#9ca3af;text-align:center">Prin plasarea comenzii ești de acord cu Termenii și Condițiile</p>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
-  <div data-gjs-type="section" style="background:#111;color:#6b7280;padding:20px;text-align:center;font-size:12px">
-    <p style="margin:0 0 4px;color:#9ca3af;font-weight:600">© 2025 ${data.productName}</p>
-    <p style="margin:0">Termeni · Confidențialitate · ANPC</p>
-  </div>
-
+<!-- FOOTER -->
+<div style="background:#111;color:#888;padding:20px;text-align:center;font-size:12px">
+  <p style="margin:0 0 4px;color:#ccc;font-weight:600">© 2025 ${data.productName}</p>
+  <p style="margin:0">Termeni și Condiții · Politică de Confidențialitate · ANPC</p>
 </div>
 
 <script>
-(function(){
-  var PRICE = ${price};
-  var qty = 1;
-  var ts = ${(data.timerMinutes || 14) * 60};
+var selectedQty = 1;
+var selectedPricePerUnit = ${price};
+var productName = '${(data.productName || 'Produs').replace(/'/g, "\'")}';
 
-  function updateTimer() {
-    var m = String(Math.floor(ts/60)).padStart(2,'0');
-    var s = String(ts%60).padStart(2,'0');
-    var tm = document.getElementById('tm');
-    var tss = document.getElementById('ts');
-    if(tm) tm.textContent = m;
-    if(tss) tss.textContent = s;
-  }
-  setInterval(function(){ if(ts>0) ts--; updateTimer(); }, 1000);
-  updateTimer();
-
-  window.cqty = function(d) {
-    qty = Math.max(1, qty + d);
-    var qd = document.getElementById('qty-disp');
-    var qs = document.getElementById('qty-summary');
-    var ps = document.getElementById('price-summary');
-    var tot = document.getElementById('total-summary');
-    var btn = document.getElementById('btn-total');
-    if(qd) qd.textContent = qty;
-    if(qs) qs.textContent = '×' + qty;
-    var total = PRICE * qty;
-    if(ps) ps.textContent = total + ' lei';
-    if(tot) tot.textContent = total + ' lei';
-    if(btn) btn.textContent = total;
-  };
-
-  window.submitOrder = function() {
-    var n = document.getElementById('f-name')?.value.trim();
-    var p = document.getElementById('f-phone')?.value.trim();
-    var c = document.getElementById('f-county')?.value;
-    var a = document.getElementById('f-address')?.value.trim();
-    if(!n||!p||!c||!a){ alert('Completează toate câmpurile *'); return; }
-    var ff = document.getElementById('form-fields');
-    var fs = document.getElementById('form-success');
-    if(ff) ff.style.display = 'none';
-    if(fs) fs.style.display = 'block';
-  };
-})();
-</script>
-`
+function selectQty(qty, pricePerUnit) {
+  selectedQty = qty;
+  selectedPricePerUnit = pricePerUnit;
+  ['qty1','qty2','qty3'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.border = '2px solid #ccc';
+  });
+  var sel = document.getElementById('qty'+qty);
+  if (sel) sel.style.border = '2px solid #e8000d';
+  var total = qty * pricePerUnit;
+  var sq = document.getElementById('summary-qty');
+  var sp = document.getElementById('summary-price');
+  var st = document.getElementById('summary-total');
+  if (sq) sq.textContent = productName + ' x' + qty;
+  if (sp) sp.textContent = total + ' RON';
+  if (st) st.textContent = total + ' RON';
 }
+
+function submitOrder() {
+  var n = document.getElementById('f-name').value.trim();
+  var p = document.getElementById('f-phone').value.trim();
+  var a = document.getElementById('f-address').value.trim();
+  var c = document.getElementById('f-city').value.trim();
+  var j = document.getElementById('f-county').value;
+  if (!n || !p || !a || !c || !j) { alert('Completează toate câmpurile!'); return; }
+  document.getElementById('form-fields').style.display = 'none';
+  document.getElementById('form-success').style.display = 'block';
+}
+</script>
+</div>`
+}
+
 
 function addBlocks(editor, data) {
   const primary = data.style?.primaryColor || '#dc2626'
