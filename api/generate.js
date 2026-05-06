@@ -97,43 +97,85 @@ function callClaude(productInfo, styleDesc) {
   })
 }
 
-function geminiImage(prompt, apiKey) {
-  const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-  })
+// Descarca o imagine de la URL si o returneaza ca base64
+function fetchImageAsBase64(url) {
   return new Promise((resolve) => {
-    const req = https.request({
-      hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 45000
-    }, (res) => {
+    const lib = url.startsWith('https') ? https : http
+    const req = lib.get(url, { timeout: 15000 }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchImageAsBase64(res.headers.location).then(resolve)
+      }
       const chunks = []
       res.on('data', c => chunks.push(c))
       res.on('end', () => {
-        try {
-          const raw = Buffer.concat(chunks).toString()
-          console.log('Gemini HTTP:', res.statusCode, raw.substring(0, 150))
-          const data = JSON.parse(raw)
-          const parts = data.candidates?.[0]?.content?.parts || []
-          for (const p of parts) {
-            if (p.inlineData?.mimeType?.startsWith('image/')) {
-              console.log('Gemini image OK:', Math.round(p.inlineData.data.length/1024), 'KB')
-              resolve(`data:${p.inlineData.mimeType};base64,${p.inlineData.data}`)
-              return
-            }
-          }
-          console.log('Gemini no image, parts:', parts.length)
-          resolve(null)
-        } catch(e) { console.log('Gemini err:', e.message); resolve(null) }
+        const buffer = Buffer.concat(chunks)
+        const base64 = buffer.toString('base64')
+        const mimeType = res.headers['content-type'] || 'image/jpeg'
+        resolve({ base64, mimeType: mimeType.split(';')[0] })
       })
     })
-    req.on('error', (e) => { console.log('Gemini net err:', e.message); resolve(null) })
-    req.on('timeout', () => { req.destroy(); console.log('Gemini timeout!'); resolve(null) })
-    req.write(body)
-    req.end()
+    req.on('error', () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+  })
+}
+
+// Genereaza imagine cu Gemini - cu sau fara imagine input
+function geminiImage(prompt, apiKey, inputImageUrl) {
+  return new Promise(async (resolve) => {
+    try {
+      // Daca avem URL imagine de produs, o descarcam si o trimitem ca input
+      let parts = [{ text: prompt }]
+      
+      if (inputImageUrl) {
+        console.log('Fetching product image for Gemini input:', inputImageUrl.substring(0, 60))
+        const imgData = await fetchImageAsBase64(inputImageUrl)
+        if (imgData) {
+          // Pune imaginea INAINTE de text
+          parts = [
+            { inlineData: { mimeType: imgData.mimeType, data: imgData.base64 } },
+            { text: prompt }
+          ]
+          console.log('Product image attached to Gemini request:', Math.round(imgData.base64.length/1024), 'KB')
+        }
+      }
+
+      const body = JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+      })
+
+      const req = https.request({
+        hostname: 'generativelanguage.googleapis.com',
+        path: `/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout: 50000
+      }, (res) => {
+        const chunks = []
+        res.on('data', c => chunks.push(c))
+        res.on('end', () => {
+          try {
+            const raw = Buffer.concat(chunks).toString()
+            console.log('Gemini HTTP:', res.statusCode, raw.substring(0, 150))
+            const data = JSON.parse(raw)
+            const parts = data.candidates?.[0]?.content?.parts || []
+            for (const p of parts) {
+              if (p.inlineData?.mimeType?.startsWith('image/')) {
+                console.log('Gemini image OK:', Math.round(p.inlineData.data.length/1024), 'KB')
+                resolve(`data:${p.inlineData.mimeType};base64,${p.inlineData.data}`)
+                return
+              }
+            }
+            console.log('Gemini no image, parts:', parts.length)
+            resolve(null)
+          } catch(e) { console.log('Gemini err:', e.message); resolve(null) }
+        })
+      })
+      req.on('error', (e) => { console.log('Gemini net err:', e.message); resolve(null) })
+      req.on('timeout', () => { req.destroy(); console.log('Gemini timeout!'); resolve(null) })
+      req.write(body)
+      req.end()
+    } catch(e) { console.log('geminiImage err:', e.message); resolve(null) }
   })
 }
 
@@ -173,14 +215,21 @@ module.exports = async function handler(req, res) {
     // Combinam: AliExpress (pozele reale) + Gemini (lifestyle + UGC)
     const pName = copy.productName || 'produs'
     
-    // Genereaza doar 2 imagini Gemini: lifestyle + UGC
+    // Folosim prima poza AliExpress ca input pentru Gemini
+    // Gemini vede produsul real si face lifestyle/UGC cu el
+    const heroImageUrl = aliImages[0] || null
+    console.log('Product image for Gemini:', heroImageUrl ? 'YES' : 'NO')
+
     const geminiPrompts = [
-      `Lifestyle photo: happy Romanian person 30-45 years old using ${pName} at home. Natural warm golden lighting, genuine smile, modern home setting, shallow depth of field, photorealistic, editorial quality photo.`,
-      `UGC authentic photo: real Romanian customer holding ${pName}, big genuine smile, thumbs up, casual home setting, warm natural light, looks like real customer review, slightly imperfect candid style.`
+      `This is a product image. Create a professional lifestyle photo showing a happy Romanian person 30-45 years old naturally using or holding this exact product at home. Natural warm golden lighting, genuine smile, modern home setting, shallow depth of field, photorealistic, editorial quality. The product must be clearly visible and recognizable.`,
+      `This is a product image. Create an authentic UGC-style photo showing a real Romanian customer holding this exact product with a big genuine smile and thumbs up. Casual home setting, warm natural light. Looks like a real customer review photo, slightly candid and imperfect. Product clearly visible.`
     ]
 
     const geminiPromises = geminiKey
-      ? geminiPrompts.map((p, i) => geminiImage(p, geminiKey).then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img }))
+      ? geminiPrompts.map((p, i) => 
+          geminiImage(p, geminiKey, heroImageUrl)
+            .then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img })
+        )
       : [Promise.resolve(null), Promise.resolve(null)]
 
     const geminiImages = await Promise.all(geminiPromises)
