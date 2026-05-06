@@ -255,9 +255,13 @@ function buildHTML(data) {
     const primary = data.style?.primaryColor || '#dc2626'
     return `<div style="position:relative;background:#0a0a1a;overflow:hidden">
       ${src ? `<img src="${src}" alt="${data.productName || ''}" style="width:100%;display:block;object-fit:cover;max-height:420px;opacity:0.95" />` : '<div style="height:420px;background:linear-gradient(135deg,#0a0a1a,#1a1a2e)"></div>'}
-      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top, rgba(0,0,0,0.20) 0%, transparent 100%);padding:16px 14px 12px">
-        <div style="display:flex;flex-direction:column;gap:4px">
-          ${benefits.map(b => `<div style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:${primary};color:rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:900;flex-shrink:0">✓</span><span style="font-size:9px;color:rgba(255,255,255,0.70);line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,0.5)">${b}</span></div>`).join('')}
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to right, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.05) 100%);display:flex;align-items:center;padding:24px">
+        <div style="max-width:55%">
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">✦ OFERTĂ SPECIALĂ</div>
+          <h2 style="font-size:18px;font-weight:900;color:rgba(255,255,255,0.85);line-height:1.2;margin:0 0 12px;text-shadow:0 1px 4px rgba(0,0,0,0.4)">${data.headline || data.productName}</h2>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${benefits.map(b => `<div style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:50%;background:${primary};color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;flex-shrink:0;opacity:0.85">✓</span><span style="font-size:10px;color:rgba(255,255,255,0.65);line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,0.4)">${b}</span></div>`).join('')}
+          </div>
         </div>
       </div>
     </div>`
