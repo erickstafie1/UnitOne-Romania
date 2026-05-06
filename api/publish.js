@@ -106,15 +106,74 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ success: true, products: data.products || [] })
     }
 
+    // Update pagina existenta
+    if (action === 'update') {
+      const { pageId } = req.body
+      if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
+
+      let finalHtml = html
+      if (hideHeaderFooter !== false) {
+        const hideScript = `<script>(function(){function hide(){var s=['header','footer','nav','.header','.footer','.site-header','.site-footer','#shopify-section-header','#shopify-section-footer','#shopify-section-announcement-bar','.announcement-bar','.sticky-header'];s.forEach(function(sel){document.querySelectorAll(sel).forEach(function(el){el.style.display='none';});});document.body.style.paddingTop='0';var m=document.querySelector('main,#MainContent,.main-content');if(m){m.style.paddingTop='0';m.style.marginTop='0';}}hide();document.addEventListener('DOMContentLoaded',hide);setTimeout(hide,500);setTimeout(hide,1500);})();</script>`
+        finalHtml = hideScript + html
+      }
+
+      const result = await shopifyRequest(shop, token, `/pages/${pageId}.json`, 'PUT', {
+        page: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
+      })
+      if (result.page) {
+        return res.status(200).json({
+          success: true,
+          pageUrl: `https://${shop}/pages/${result.page.handle}`,
+          pageId: result.page.id
+        })
+      }
+      throw new Error(JSON.stringify(result.errors || 'Update failed'))
+    }
+
     if (!html) return res.status(400).json({ error: 'Missing html' })
 
     console.log('Publishing page for:', shop, 'Title:', title)
     console.log('HTML size:', Math.round(html.length / 1024), 'KB')
 
+    // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
+    let finalHtml = html
+    if (hideHeaderFooter !== false) {
+      const hideScript = `<script>
+(function(){
+  function hide(){
+    var selectors = [
+      'header','footer','nav','.header','.footer',
+      '.site-header','.site-footer','#shopify-section-header',
+      '#shopify-section-footer','#shopify-section-announcement-bar',
+      '.announcement-bar','.header-wrapper','.footer-wrapper',
+      '[id*="HeaderWrapper"]','[id*="FooterWrapper"]',
+      '.sticky-header','#StickyHeader'
+    ];
+    selectors.forEach(function(s){
+      document.querySelectorAll(s).forEach(function(el){
+        el.style.display='none';
+      });
+    });
+    // Remove padding added by sticky header
+    document.body.style.paddingTop='0';
+    var main=document.querySelector('main,#MainContent,.main-content');
+    if(main){main.style.paddingTop='0';main.style.marginTop='0';}
+  }
+  // Run immediately and on DOMContentLoaded
+  hide();
+  document.addEventListener('DOMContentLoaded',hide);
+  // Run again after 500ms in case theme loads async
+  setTimeout(hide,500);
+  setTimeout(hide,1500);
+})();
+</script>`
+      finalHtml = hideScript + html
+    }
+
     const result = await shopifyRequest(shop, token, '/pages.json', 'POST', {
       page: {
         title: title || 'Pagina COD',
-        body_html: html,
+        body_html: finalHtml,
         published: true
       }
     })
