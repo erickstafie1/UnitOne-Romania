@@ -8,6 +8,10 @@ export default function Editor({ data, shop, token, onBack }) {
   const [published, setPublished] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState('')
   const [error, setError] = useState('')
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [products, setProducts] = useState([])
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [loadingProducts, setLoadingProducts] = useState(false)
 
   useEffect(() => {
     // Incarca GrapesJS dinamic
@@ -93,6 +97,20 @@ export default function Editor({ data, shop, token, onBack }) {
     gjsRef.current.Devices.select(d === 'mobile' ? 'Mobile' : 'Desktop')
   }
 
+  async function loadProducts() {
+    setLoadingProducts(true)
+    try {
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_products', shop, token })
+      })
+      const d = await res.json()
+      setProducts(d.products || [])
+    } catch(e) { console.log('Load products error:', e.message) }
+    setLoadingProducts(false)
+  }
+
   async function publish() {
     if (!gjsRef.current) return
     setPublishing(true)
@@ -142,7 +160,8 @@ export default function Editor({ data, shop, token, onBack }) {
         body: JSON.stringify({
           shop, token,
           title: data.productName || 'Pagina COD',
-          html: finalHtml
+          html: finalHtml,
+          productId: selectedProduct?.id
         })
       })
       const json = await res.json()
@@ -212,7 +231,7 @@ export default function Editor({ data, shop, token, onBack }) {
 
         {error && <span style={{ fontSize:12, color:'#fc8181' }}>⚠️ {error}</span>}
 
-        <button onClick={publish} disabled={publishing}
+        <button onClick={() => { setShowProductModal(true); if(products.length===0) loadProducts() }} disabled={publishing}
           style={{ padding:'8px 20px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', opacity: publishing ? 0.6 : 1, boxShadow:'0 2px 8px rgba(229,62,62,0.3)', whiteSpace:'nowrap' }}>
           {publishing ? '⏳ Se publică...' : '🚀 Publică — 40 RON'}
         </button>
@@ -239,6 +258,45 @@ export default function Editor({ data, shop, token, onBack }) {
           <div id="traits-panel" />
         </div>
       </div>
+      {/* Modal selectare produs */}
+      {showProductModal && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'#1a1a2e', borderRadius:20, padding:28, width:460, maxWidth:'90vw', maxHeight:'80vh', display:'flex', flexDirection:'column', border:'1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+              <h3 style={{ color:'#fff', fontSize:17, fontWeight:800, margin:0 }}>Asociază produsul din magazin</h3>
+              <button onClick={() => setShowProductModal(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:20 }}>✕</button>
+            </div>
+            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:13, marginBottom:16, lineHeight:1.6 }}>
+              Selectează produsul căruia îi asociezi acest landing page. Când clienții vor accesa produsul, vor fi redirectați la LP.
+            </p>
+            <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
+              {loadingProducts ? (
+                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se încarcă produsele...</div>
+              ) : products.map(p => (
+                <div key={p.id} onClick={() => setSelectedProduct(p)}
+                  style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, border: selectedProduct?.id===p.id ? '1.5px solid #e53e3e' : '1px solid rgba(255,255,255,0.08)', background: selectedProduct?.id===p.id ? 'rgba(229,62,62,0.08)' : 'rgba(255,255,255,0.02)', cursor:'pointer' }}>
+                  {p.images?.[0] && <img src={p.images[0].src} alt={p.title} style={{ width:44, height:44, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.title}</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{p.variants?.[0]?.price} RON</div>
+                  </div>
+                  {selectedProduct?.id===p.id && <span style={{ color:'#e53e3e', fontSize:18 }}>✓</span>}
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setShowProductModal(false)}
+                style={{ flex:1, padding:12, borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'#fff', fontSize:14, cursor:'pointer' }}>
+                Anulează
+              </button>
+              <button onClick={() => { setShowProductModal(false); publish() }} disabled={!selectedProduct}
+                style={{ flex:2, padding:12, borderRadius:10, border:'none', background: selectedProduct ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'rgba(255,255,255,0.1)', color:'#fff', fontSize:14, fontWeight:700, cursor: selectedProduct ? 'pointer' : 'not-allowed' }}>
+                {selectedProduct ? `Publică pentru "${selectedProduct.title.substring(0,25)}..."` : 'Selectează un produs'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
