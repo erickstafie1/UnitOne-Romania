@@ -73,10 +73,13 @@ export default function Editor({ data, shop, token, onBack }) {
       gjsRef.current = editor
 
       // Daca e pagina existenta din dashboard, incarca HTML-ul ei
-      // Altfel genereaza HTML nou din data
       if (data.fromDashboard && data.body_html) {
-        editor.setComponents(data.body_html)
-        editor.setStyle('')
+        // Extrage CSS si HTML separat
+        const styleMatch = data.body_html.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
+        const css = styleMatch ? styleMatch[1] : ''
+        const htmlOnly = data.body_html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        editor.setComponents(htmlOnly)
+        if (css) editor.setStyle(css)
       } else {
         const html = buildHTML(data)
         const css = buildCSS(data)
