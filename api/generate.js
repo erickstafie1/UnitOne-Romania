@@ -225,8 +225,8 @@ module.exports = async function handler(req, res) {
       `This is a product. Create a stunning cinematic hero image showing this exact product being actively used in real life. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Show the product in action doing what it's meant to do. Magazine cover quality, 8K resolution. No text overlays.`,
       // Poza 2: lifestyle - persoana folosind produsul
       `This is a product. Create a lifestyle photo showing a happy attractive Romanian person 30-40 years old naturally and actively using this exact product in a modern home. Warm golden hour lighting, genuine joy on their face, shallow depth of field, photorealistic, editorial magazine quality. Product clearly visible in use.`,
-      // Poza 3: close-up detaliu premium
-      `This is a product. Create an extreme close-up macro photo of this exact product showing its premium quality, fine details, materials and craftsmanship. Pure white background, dramatic studio lighting with soft shadows, razor sharp focus, luxurious feel, commercial product photography at its finest.`,
+      // Poza 3: produsul simplu pe fundal alb
+      `This is a product. Create a clean simple product photo of this exact product on a pure white background. Center the product, soft even studio lighting, no shadows, no people, no props, no text. Simple commercial product photography.`,
       // Poza 4: UGC social proof
       `This is a product. Create an authentic UGC-style photo of a real-looking happy Romanian customer holding this exact product with a big smile and thumbs up. Casual modern home background, warm natural light. Very authentic and candid feel like a real person filmed it. Product must be clearly identifiable.`
     ]
