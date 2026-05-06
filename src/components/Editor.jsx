@@ -102,48 +102,39 @@ export default function Editor({ data, shop, token, onBack }) {
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
 
-      // Pasul 1: Upload imaginile Gemini (base64) in Shopify Files - una cate una
-      const images = data.images || []
-      const uploadedUrls = []
-      
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i]
-        if (!img) { uploadedUrls.push(null); continue }
-        
-        if (img.startsWith('data:')) {
-          // Imagine Gemini base64 - o uploadam in Shopify Files
-          try {
-            const uploadRes = await fetch('/api/upload-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                shop, token,
-                image: img,
-                filename: `pagecod-img-${i+1}-${Date.now()}.jpg`
-              })
-            })
-            const uploadData = await uploadRes.json()
-            uploadedUrls.push(uploadData.url || img)
-          } catch(e) {
-            console.log('Upload failed for image', i+1, e.message)
-            uploadedUrls.push(img) // fallback la base64
+      // Comprima imaginile base64 in browser inainte de a le pune in HTML
+      async function compressImage(base64, maxWidth=800, quality=0.7) {
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const ratio = Math.min(1, maxWidth / img.width)
+            canvas.width = img.width * ratio
+            canvas.height = img.height * ratio
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+            resolve(canvas.toDataURL('image/jpeg', quality))
           }
-        } else {
-          uploadedUrls.push(img) // URL normal AliExpress
-        }
+          img.onerror = () => resolve(base64)
+          img.src = base64
+        })
       }
 
-      // Pasul 2: Inlocuieste URL-urile in HTML
+      // Comprima toate imaginile Gemini
+      const images = data.images || []
+      const compressedImages = await Promise.all(
+        images.map(img => img && img.startsWith('data:') ? compressImage(img) : Promise.resolve(img))
+      )
+      console.log('Images compressed:', compressedImages.map(img => img ? Math.round(img.length/1024) + 'KB' : 'null').join(', '))
+
+      // Inlocuieste imaginile originale cu cele comprimate in HTML
       let finalHtml = fullHtml
-      images.forEach((img, i) => {
-        if (img && uploadedUrls[i] && img !== uploadedUrls[i]) {
-          // Inlocuieste base64 cu URL CDN
-          const escaped = img.substring(0, 100)
-          finalHtml = finalHtml.replace(new RegExp('src="data:image/[^"]{0,1000000}"', 'g'), (match, offset) => {
-            return `src="${uploadedUrls[i]}"`
-          })
+      images.forEach((originalImg, i) => {
+        if (originalImg && compressedImages[i] && originalImg !== compressedImages[i]) {
+          finalHtml = finalHtml.split(originalImg).join(compressedImages[i])
         }
       })
+      console.log('Final HTML size:', Math.round(finalHtml.length/1024), 'KB')
 
       const res = await fetch('/api/publish', {
         method: 'POST',
