@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { shop, token, title, html, action } = req.body || {}
+    const { shop, token, title, html, action, productId } = req.body || {}
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
@@ -61,6 +61,25 @@ module.exports = async function handler(req, res) {
 
     if (result.page) {
       console.log('Page created:', result.page.id, result.page.handle)
+      
+      // Daca avem productId, setam redirectul pe produs
+      if (productId) {
+        try {
+          // Adauga metafield pe produs cu URL-ul LP-ului
+          await shopifyRequest(shop, token, `/products/${productId}/metafields.json`, 'POST', {
+            metafield: {
+              namespace: 'pagecod',
+              key: 'landing_page_url',
+              value: `https://${shop}/pages/${result.page.handle}`,
+              type: 'url'
+            }
+          })
+          console.log('Metafield set for product:', productId)
+        } catch(e) {
+          console.log('Metafield error (non-fatal):', e.message)
+        }
+      }
+
       return res.status(200).json({
         success: true,
         pageUrl: `https://${shop}/pages/${result.page.handle}`,
