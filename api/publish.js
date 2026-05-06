@@ -36,9 +36,16 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { shop, token, title, html } = req.body || {}
+    const { shop, token, title, html, action } = req.body || {}
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
+
+    // Get products action
+    if (action === 'get_products') {
+      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,images,variants', 'GET', null)
+      return res.status(200).json({ success: true, products: data.products || [] })
+    }
+
     if (!html) return res.status(400).json({ error: 'Missing html' })
 
     console.log('Publishing page for:', shop, 'Title:', title)
