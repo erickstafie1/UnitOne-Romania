@@ -152,20 +152,7 @@ module.exports = async function handler(req, res) {
     console.log('=== GENERATE v5 ===')
     console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
 
-    // Promisiuni Gemini cu prompt generic pana stim produsul
-    const genericPrompts = [
-      'Professional studio product photography. White background, commercial quality, 4K, no text.',
-      'Happy person using a product at home. Natural warm lighting, lifestyle photo, photorealistic.',
-      'Close-up macro product detail shot. White background, sharp focus, premium quality.',
-      'Happy customer holding a product, smiling. Home setting, warm light, social proof photo.'
-    ]
-
-    // Pornim Gemini IMEDIAT in paralel cu Claude + AliExpress
-    const geminiPromises = geminiKey
-      ? genericPrompts.map((p, i) => geminiImage(p, geminiKey).then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img }))
-      : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)]
-
-    // Claude + AliExpress in paralel cu Gemini
+    // Claude + AliExpress in paralel - mai intai aflam produsul
     const [html, copy] = await Promise.all([
       fetchWithScraper(aliUrl).catch(() => ''),
       callClaude({ title: '', priceUSD: 0 }, styleDesc || '')
@@ -183,7 +170,20 @@ module.exports = async function handler(req, res) {
     }
     console.log('Ali images:', aliImages.length, 'Product:', copy.productName)
 
-    // Asteapta Gemini sa termine
+    // Acum stim produsul - genereaza imagini Gemini cu prompturi specifice
+    const pName = copy.productName || 'produs'
+    const specificPrompts = [
+      `Ultra-realistic studio product photo of ${pName}. Pure white background, dramatic lighting, commercial quality, 8K, no text, no people.`,
+      `Lifestyle photo: happy Romanian person using ${pName} at home. Natural warm lighting, genuine smile, photorealistic, editorial quality.`,
+      `Macro close-up of ${pName} showing premium quality and fine details. White background, razor sharp focus, professional studio lighting.`,
+      `UGC photo: real customer holding ${pName}, thumbs up, genuine happy smile, casual home setting, warm natural lighting, authentic look.`
+    ]
+
+    const geminiPromises = geminiKey
+      ? specificPrompts.map((p, i) => geminiImage(p, geminiKey).then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img }))
+      : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)]
+
+    // Genereaza toate 4 in paralel
     const geminiImages = await Promise.all(geminiPromises)
     const goodGemini = geminiImages.filter(Boolean)
     console.log('Gemini OK:', goodGemini.length, '/4')
