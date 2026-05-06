@@ -1,4 +1,4 @@
-// v4 - gemini active
+// v5 - gemini parallel cu claude
 const https = require('https')
 const http = require('http')
 
@@ -63,15 +63,13 @@ function callClaude(productInfo, styleDesc) {
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
   const styleInstruction = styleDesc ? `Clientul vrea: "${styleDesc}".` : 'Stil rosu/negru optimizat COD.'
-
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 3000,
-    system: `Expert marketing COD Romania. ${styleInstruction} Returneaza DOAR JSON valid, fara backtick-uri, fara text in afara JSON.`,
+    system: `Expert marketing COD Romania. ${styleInstruction} Returneaza DOAR JSON valid, fara backtick-uri.`,
     messages: [{ role: 'user', content: `JSON pentru pagina COD produs: "${productInfo.title || 'produs'}" pret ~${productInfo.priceUSD} USD:
 {"productName":"","headline":"","subheadline":"","price":${rp},"oldPrice":${Math.round(rp*1.6)},"bumpPrice":${Math.round(rp*0.2)},"stock":7,"timerMinutes":14,"reviewCount":1247,"style":{"primaryColor":"#dc2626","secondaryColor":"#111111","fontFamily":"Inter,system-ui,sans-serif","borderRadius":"12px"},"benefits":["b1","b2","b3","b4","b5","b6"],"howItWorks":[{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"bumpProduct":"","testimonials":[{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5}],"faq":[{"q":"","a":""},{"q":"Cum se face plata?","a":"La livrare direct curierului."},{"q":"Cat dureaza livrarea?","a":"2-4 zile in toata Romania."},{"q":"Pot returna?","a":"Da, 30 zile retur gratuit."}]}` }]
   })
-
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
@@ -117,12 +115,7 @@ function geminiImage(prompt, apiKey) {
       res.on('end', () => {
         try {
           const raw = Buffer.concat(chunks).toString()
-          console.log('Gemini HTTP:', res.statusCode)
-          if (res.statusCode !== 200) {
-            console.log('Gemini error:', raw.substring(0, 300))
-            resolve(null)
-            return
-          }
+          console.log('Gemini HTTP:', res.statusCode, raw.substring(0, 150))
           const data = JSON.parse(raw)
           const parts = data.candidates?.[0]?.content?.parts || []
           for (const p of parts) {
@@ -132,13 +125,13 @@ function geminiImage(prompt, apiKey) {
               return
             }
           }
-          console.log('Gemini no image. Parts:', parts.length, 'Sample:', JSON.stringify(parts[0]).substring(0, 100))
+          console.log('Gemini no image, parts:', parts.length)
           resolve(null)
-        } catch(e) { console.log('Gemini parse err:', e.message); resolve(null) }
+        } catch(e) { console.log('Gemini err:', e.message); resolve(null) }
       })
     })
     req.on('error', (e) => { console.log('Gemini net err:', e.message); resolve(null) })
-    req.on('timeout', () => { req.destroy(); console.log('Gemini timeout'); resolve(null) })
+    req.on('timeout', () => { req.destroy(); console.log('Gemini timeout!'); resolve(null) })
     req.write(body)
     req.end()
   })
@@ -156,10 +149,23 @@ module.exports = async function handler(req, res) {
     if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
 
     const geminiKey = process.env.GEMINI_API_KEY
-    console.log('=== GENERATE v3 ===')
-    console.log('AliUrl:', aliUrl.substring(0, 60))
-    console.log('Gemini key:', geminiKey ? 'SET (' + geminiKey.substring(0,8) + '...)' : 'MISSING')
+    console.log('=== GENERATE v5 ===')
+    console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
 
+    // Promisiuni Gemini cu prompt generic pana stim produsul
+    const genericPrompts = [
+      'Professional studio product photography. White background, commercial quality, 4K, no text.',
+      'Happy person using a product at home. Natural warm lighting, lifestyle photo, photorealistic.',
+      'Close-up macro product detail shot. White background, sharp focus, premium quality.',
+      'Happy customer holding a product, smiling. Home setting, warm light, social proof photo.'
+    ]
+
+    // Pornim Gemini IMEDIAT in paralel cu Claude + AliExpress
+    const geminiPromises = geminiKey
+      ? genericPrompts.map((p, i) => geminiImage(p, geminiKey).then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img }))
+      : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)]
+
+    // Claude + AliExpress in paralel cu Gemini
     const [html, copy] = await Promise.all([
       fetchWithScraper(aliUrl).catch(() => ''),
       callClaude({ title: '', priceUSD: 0 }, styleDesc || '')
@@ -177,31 +183,10 @@ module.exports = async function handler(req, res) {
     }
     console.log('Ali images:', aliImages.length, 'Product:', copy.productName)
 
-    let geminiImages = []
-    if (geminiKey) {
-      const pName = copy.productName || 'product'
-      // Prompturi optimizate per pozitie in pagina COD
-      const benefits = (copy.benefits || []).slice(0, 3).join(', ')
-      const prompts = [
-        // Poza 1 HERO: produs cu beneficii vizuale incluse
-        `Ultra-realistic commercial product photo of ${pName}. Pure white background, professional studio lighting, 8K quality. The product looks premium and desirable. Include subtle visual text overlays showing key benefits: "${(copy.benefits||[])[0]||''}", "${(copy.benefits||[])[1]||''}". Make it look like a high-end Amazon listing photo. No watermarks.`,
-        // Poza 2 LIFESTYLE: persoana folosind produsul
-        `Cinematic lifestyle photography. A happy Romanian man or woman, 30-45 years old, using ${pName} in their modern home. Natural golden hour lighting, shallow depth of field, photorealistic. They look genuinely satisfied and happy. The product is clearly visible. Editorial quality photo.`,
-        // Poza 3 DETALIU: calitate si texture
-        `Extreme close-up macro photography of ${pName}. Shows premium build quality, materials and fine details. Pure white background, razor sharp focus, professional studio lighting with soft shadows. Makes the product look luxurious and high quality. Commercial photography style.`,
-        // Poza 4 SOCIAL PROOF: client fericit
-        `UGC style photo. Real-looking happy Romanian customer holding ${pName} and giving thumbs up. Home setting, warm natural lighting, genuine smile, casual clothes. Looks like an authentic customer review photo. Slightly imperfect like a real person took it. High quality but candid style.`
-      ]
-      for (let i = 0; i < prompts.length; i++) {
-        console.log('Generating Gemini image', i+1, '...')
-        const img = await geminiImage(prompts[i], geminiKey)
-        geminiImages.push(img)
-        console.log('Image', i+1, ':', img ? 'OK' : 'FAILED')
-      }
-    }
-
+    // Asteapta Gemini sa termine
+    const geminiImages = await Promise.all(geminiPromises)
     const goodGemini = geminiImages.filter(Boolean)
-    console.log('Gemini success:', goodGemini.length, '/4')
+    console.log('Gemini OK:', goodGemini.length, '/4')
 
     copy.images = aliImages.length > 0
       ? [aliImages[0], ...goodGemini, ...aliImages.slice(1)].slice(0, 6)
