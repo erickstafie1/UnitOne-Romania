@@ -102,15 +102,16 @@ export default function Editor({ data, shop, onBack }) {
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
 
+      // Nu trimitem imaginile base64 - sunt deja in HTML
+      // Trimitem doar HTML-ul final + shop + token
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shop,
+          token,
           title: data.productName || 'Pagina COD',
-          html: fullHtml,
-          images: data.images || [],
-          pageData: data
+          html: fullHtml
         })
       })
       const json = await res.json()
