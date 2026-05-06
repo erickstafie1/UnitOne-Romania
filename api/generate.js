@@ -221,8 +221,14 @@ module.exports = async function handler(req, res) {
     console.log('Product image for Gemini:', heroImageUrl ? 'YES' : 'NO')
 
     const geminiPrompts = [
-      `This is a product image. Create a professional lifestyle photo showing a happy Romanian person 30-45 years old naturally using or holding this exact product at home. Natural warm golden lighting, genuine smile, modern home setting, shallow depth of field, photorealistic, editorial quality. The product must be clearly visible and recognizable.`,
-      `This is a product image. Create an authentic UGC-style photo showing a real Romanian customer holding this exact product with a big genuine smile and thumbs up. Casual home setting, warm natural light. Looks like a real customer review photo, slightly candid and imperfect. Product clearly visible.`
+      // Poza 1: produsul in actiune/folosinta, cinematic
+      `This is a product. Create a stunning cinematic hero image showing this exact product being actively used in real life. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Show the product in action doing what it's meant to do. Magazine cover quality, 8K resolution. No text overlays.`,
+      // Poza 2: lifestyle - persoana folosind produsul
+      `This is a product. Create a lifestyle photo showing a happy attractive Romanian person 30-40 years old naturally and actively using this exact product in a modern home. Warm golden hour lighting, genuine joy on their face, shallow depth of field, photorealistic, editorial magazine quality. Product clearly visible in use.`,
+      // Poza 3: close-up detaliu premium
+      `This is a product. Create an extreme close-up macro photo of this exact product showing its premium quality, fine details, materials and craftsmanship. Pure white background, dramatic studio lighting with soft shadows, razor sharp focus, luxurious feel, commercial product photography at its finest.`,
+      // Poza 4: UGC social proof
+      `This is a product. Create an authentic UGC-style photo of a real-looking happy Romanian customer holding this exact product with a big smile and thumbs up. Casual modern home background, warm natural light. Very authentic and candid feel like a real person filmed it. Product must be clearly identifiable.`
     ]
 
     const geminiPromises = geminiKey
@@ -230,25 +236,20 @@ module.exports = async function handler(req, res) {
           geminiImage(p, geminiKey, heroImageUrl)
             .then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img })
         )
-      : [Promise.resolve(null), Promise.resolve(null)]
+      : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)]
 
     const geminiImages = await Promise.all(geminiPromises)
     const goodGemini = geminiImages.filter(Boolean)
-    console.log('Gemini OK:', goodGemini.length, '/2')
+    console.log('Gemini OK:', goodGemini.length, '/4')
 
-    // Layout final:
-    // Poza 0: AliExpress hero (produsul real) + overlay beneficii
-    // Poza 1: Gemini lifestyle (persoana folosind produsul)
-    // Poza 2: AliExpress detaliu (alt unghi al produsului real)
-    // Poza 3: Gemini UGC (client fericit)
+    // Layout final - toate 4 imagini generate cu Gemini
+    // Fallback la AliExpress daca Gemini esueaza
     const ali = aliImages
-    const [gemini1, gemini2] = goodGemini
-    
     copy.images = [
-      ali[0] || null,           // Hero - poza reala produs
-      gemini1 || ali[1] || null, // Lifestyle - Gemini sau AliExpress fallback
-      ali[2] || ali[1] || null,  // Detaliu - poza reala produs
-      gemini2 || ali[3] || null  // UGC - Gemini sau AliExpress fallback
+      goodGemini[0] || ali[0] || null,  // Hero - produs in actiune
+      goodGemini[1] || ali[1] || null,  // Lifestyle - persoana folosind
+      goodGemini[2] || ali[2] || null,  // Detaliu - close-up premium
+      goodGemini[3] || ali[3] || null   // UGC - client fericit
     ].filter(Boolean)
     copy.aliImages = aliImages
 
