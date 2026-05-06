@@ -69,16 +69,27 @@ export default function Dashboard({ shop, token, onNew, onEdit }) {
   async function importPage() {
     setImportError('')
     try {
-      const data = JSON.parse(importJson)
-      if (!data.body_html) throw new Error('Fișier invalid — lipsește body_html')
+      let html = ''
+      let title = 'Pagina Importată'
+      
+      if (importJson.trim()) {
+        // Incearca sa parseze ca JSON
+        try {
+          const data = JSON.parse(importJson)
+          html = data.body_html || data.html || ''
+          title = data.title || title
+        } catch(e) {
+          // Poate e HTML direct
+          html = importJson
+        }
+      }
+      
+      if (!html) throw new Error('Fișierul nu conține HTML valid')
+      
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shop, token,
-          title: data.title || 'Pagina Importată',
-          html: data.body_html
-        })
+        body: JSON.stringify({ shop, token, title, html })
       })
       const result = await res.json()
       if (result.success) {
