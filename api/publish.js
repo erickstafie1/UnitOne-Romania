@@ -72,16 +72,26 @@ async function installLandingTemplate(shop, token) {
       }
     })
 
-    // Creeaza sectiunea Liquid care afiseaza doar continutul paginii
+    // Creeaza sectiunea Liquid care afiseaza doar continutul paginii fara header/footer
     await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
       asset: {
         key: 'sections/pagecod-landing.liquid',
         value: `<style>
+  /* UnitOne Romania - Landing Page - Fara header/footer */
   body { margin: 0 !important; padding: 0 !important; }
-  .shopify-section { margin: 0 !important; }
-  header, footer, .header, .footer, .site-header, .site-footer, 
+  header, footer, nav,
+  .header, .footer, .site-header, .site-footer,
   #shopify-section-header, #shopify-section-footer,
-  .announcement-bar, nav { display: none !important; }
+  #shopify-section-announcement-bar,
+  .announcement-bar, .announcement-bar-section,
+  .header-section, .footer-section,
+  [id*="header"], [id*="footer"],
+  [class*="header"]:not([class*="subheader"]),
+  [class*="footer"]:not([class*="subfooter"]),
+  .cart-notification, .predictive-search,
+  #cart-notification, .sticky-header { display: none !important; }
+  main, .main-content, #MainContent { padding-top: 0 !important; margin-top: 0 !important; }
+  .page-width { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
 </style>
 {{ page.content }}`
       }
@@ -127,7 +137,7 @@ module.exports = async function handler(req, res) {
     if (result.page) {
       console.log('Page created:', result.page.id, result.page.handle)
 
-      // Daca hideHeaderFooter e true, instaleaza si aplica template fara header/footer
+      // Daca hideHeaderFooter e true, instaleaza template fara header/footer
       if (hideHeaderFooter !== false) {
         await installLandingTemplate(shop, token)
         try {
