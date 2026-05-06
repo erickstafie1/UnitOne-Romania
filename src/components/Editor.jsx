@@ -72,11 +72,17 @@ export default function Editor({ data, shop, token, onBack }) {
 
       gjsRef.current = editor
 
-      // Seteaza HTML-ul generat
-      const html = buildHTML(data)
-      const css = buildCSS(data)
-      editor.setComponents(html)
-      editor.setStyle(css)
+      // Daca e pagina existenta din dashboard, incarca HTML-ul ei
+      // Altfel genereaza HTML nou din data
+      if (data.fromDashboard && data.body_html) {
+        editor.setComponents(data.body_html)
+        editor.setStyle('')
+      } else {
+        const html = buildHTML(data)
+        const css = buildCSS(data)
+        editor.setComponents(html)
+        editor.setStyle(css)
+      }
 
       // Adauga blocuri custom
       addBlocks(editor, data)
