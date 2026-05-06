@@ -101,7 +101,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { shop, token, title, html, action, productId } = req.body || {}
+    const { shop, token, title, html, action, productId, hideHeaderFooter } = req.body || {}
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
@@ -127,17 +127,17 @@ module.exports = async function handler(req, res) {
     if (result.page) {
       console.log('Page created:', result.page.id, result.page.handle)
 
-      // Instaleaza template fara header/footer daca nu exista
-      await installLandingTemplate(shop, token)
-
-      // Seteaza template-ul landing pe pagina creata
-      try {
-        await shopifyRequest(shop, token, `/pages/${result.page.id}.json`, 'PUT', {
-          page: { id: result.page.id, template_suffix: 'landing' }
-        })
-        console.log('Template landing setat pe pagina')
-      } catch(e) {
-        console.log('Template error (non-fatal):', e.message)
+      // Daca hideHeaderFooter e true, instaleaza si aplica template fara header/footer
+      if (hideHeaderFooter !== false) {
+        await installLandingTemplate(shop, token)
+        try {
+          await shopifyRequest(shop, token, `/pages/${result.page.id}.json`, 'PUT', {
+            page: { id: result.page.id, template_suffix: 'landing' }
+          })
+          console.log('Template landing setat pe pagina')
+        } catch(e) {
+          console.log('Template error (non-fatal):', e.message)
+        }
       }
 
       // Asociaza cu produsul daca avem productId
