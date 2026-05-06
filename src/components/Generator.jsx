@@ -19,6 +19,27 @@ export default function Generator({ shop, token, onGenerated }) {
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
   const [error, setError] = useState('')
+  const [products, setProducts] = useState([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [tab, setTab] = useState('aliexpress') // aliexpress | shopify
+
+  // Incarca produsele din Shopify
+  async function loadProducts() {
+    setLoadingProducts(true)
+    try {
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_products', shop, token })
+      })
+      const data = await res.json()
+      setProducts(data.products || [])
+    } catch(e) {
+      console.log('Load products error:', e.message)
+    }
+    setLoadingProducts(false)
+  }
 
   async function generate() {
     if (!aliUrl.trim()) return
@@ -35,10 +56,20 @@ export default function Generator({ shop, token, onGenerated }) {
     }, 8000) // 8s per step = ~64s total
 
     try {
+      const body = tab === 'shopify' && selectedProduct
+        ? { 
+            shopifyProduct: selectedProduct,
+            aliUrl: selectedProduct.images?.[0]?.src || '',
+            styleDesc: styleDesc.trim(),
+            productName: selectedProduct.title,
+            priceRON: parseFloat(selectedProduct.variants?.[0]?.price || 0)
+          }
+        : { aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() }
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() })
+        body: JSON.stringify(body)
       })
       clearInterval(tid)
       if (!res.ok) throw new Error('Server error ' + res.status)
@@ -97,20 +128,65 @@ export default function Generator({ shop, token, onGenerated }) {
           </p>
         </div>
 
+        {/* Tab selector */}
+        <div style={{ display:'flex', background:'rgba(255,255,255,0.06)', borderRadius:12, padding:4, marginBottom:4, gap:4 }}>
+          <button onClick={() => setTab('aliexpress')}
+            style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background: tab==='aliexpress' ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'transparent', color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer' }}>
+            🔗 Link AliExpress
+          </button>
+          <button onClick={() => { setTab('shopify'); if(products.length===0) loadProducts() }}
+            style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background: tab==='shopify' ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'transparent', color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer' }}>
+            🛍️ Produse magazin
+          </button>
+        </div>
+
         <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:28, display:'flex', flexDirection:'column', gap:20 }}>
-          <div>
-            <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:10 }}>Link produs AliExpress *</label>
-            <input value={aliUrl} onChange={e => setAliUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && aliUrl.trim() && generate()}
-              placeholder="https://www.aliexpress.com/item/..."
-              style={{ width:'100%', padding:'13px 16px', borderRadius:12, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:15, outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
-            />
-          </div>
+          
+          {tab === 'aliexpress' && (
+            <div>
+              <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:10 }}>Link produs AliExpress *</label>
+              <input value={aliUrl} onChange={e => setAliUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && aliUrl.trim() && generate()}
+                placeholder="https://www.aliexpress.com/item/..."
+                style={{ width:'100%', padding:'13px 16px', borderRadius:12, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:15, outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
+              />
+            </div>
+          )}
+
+          {tab === 'shopify' && (
+            <div>
+              <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:10 }}>
+                Alege produsul din magazin *
+              </label>
+              {loadingProducts ? (
+                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se încarcă produsele...</div>
+              ) : products.length === 0 ? (
+                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>
+                  Nu s-au găsit produse.
+                  <button onClick={loadProducts} style={{ display:'block', margin:'10px auto 0', padding:'8px 16px', borderRadius:8, border:'1px solid rgba(255,255,255,0.2)', background:'transparent', color:'#fff', cursor:'pointer', fontSize:13 }}>Reîncarcă</button>
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:300, overflowY:'auto' }}>
+                  {products.map(p => (
+                    <div key={p.id} onClick={() => setSelectedProduct(p)}
+                      style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, border: selectedProduct?.id === p.id ? '1.5px solid #e53e3e' : '1px solid rgba(255,255,255,0.08)', background: selectedProduct?.id === p.id ? 'rgba(229,62,62,0.08)' : 'rgba(255,255,255,0.02)', cursor:'pointer' }}>
+                      {p.images?.[0] && <img src={p.images[0].src} alt={p.title} style={{ width:44, height:44, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.title}</div>
+                        <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{p.variants?.[0]?.price} RON</div>
+                      </div>
+                      {selectedProduct?.id === p.id && <span style={{ color:'#e53e3e', fontSize:18, flexShrink:0 }}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:10 }}>Descrie stilul paginii (opțional)</label>
-            <textarea value={styleDesc} onChange={e => setStyleDesc(e.target.value)} rows={4}
-              placeholder="Ex: Pagina pentru bărbați 25-45 ani, culori negru și roșu, ton direct și agresiv, accent pe durabilitate..."
+            <textarea value={styleDesc} onChange={e => setStyleDesc(e.target.value)} rows={3}
+              placeholder="Ex: Pagina pentru bărbați 25-45 ani, culori negru și roșu, ton direct și agresiv..."
               style={{ width:'100%', padding:'13px 16px', borderRadius:12, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit', resize:'vertical', lineHeight:1.6, boxSizing:'border-box' }}
             />
           </div>
@@ -121,8 +197,9 @@ export default function Generator({ shop, token, onGenerated }) {
             </div>
           )}
 
-          <button onClick={generate} disabled={!aliUrl.trim()}
-            style={{ padding:16, borderRadius:12, background: aliUrl.trim() ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'rgba(255,255,255,0.08)', color:'#fff', border:'none', fontSize:16, fontWeight:800, cursor: aliUrl.trim() ? 'pointer' : 'not-allowed', opacity: aliUrl.trim() ? 1 : 0.5 }}>
+          <button onClick={generate}
+            disabled={tab === 'aliexpress' ? !aliUrl.trim() : !selectedProduct}
+            style={{ padding:16, borderRadius:12, background: (tab==='aliexpress' ? aliUrl.trim() : selectedProduct) ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'rgba(255,255,255,0.08)', color:'#fff', border:'none', fontSize:16, fontWeight:800, cursor: (tab==='aliexpress' ? aliUrl.trim() : selectedProduct) ? 'pointer' : 'not-allowed', opacity: (tab==='aliexpress' ? aliUrl.trim() : selectedProduct) ? 1 : 0.5 }}>
             Generează pagina → (40 RON la publicare)
           </button>
 
