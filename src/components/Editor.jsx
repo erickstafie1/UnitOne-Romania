@@ -552,58 +552,102 @@ function submitOrder() {
 
 
 function addBlocks(editor, data) {
-  const primary = data.style?.primaryColor || '#dc2626'
+  const p = data.style?.primaryColor || '#e8000d'
 
   const blocks = [
-    {
-      id: 'section-text',
-      label: '📝 Secțiune text',
-      category: 'Layout',
-      content: `<div style="padding:24px 20px"><h2 style="font-size:20px;font-weight:800;margin:0 0 12px">Titlu secțiune</h2><p style="font-size:15px;color:#555;line-height:1.7">Textul tău aici...</p></div>`
-    },
-    {
-      id: 'benefit-block',
-      label: '✅ Beneficiu',
-      category: 'Elemente',
-      content: `<div class="benefit-row"><span style="color:#16a34a;font-weight:900;font-size:17px;flex-shrink:0">✓</span><span style="font-size:14px;color:#166534;line-height:1.6">Beneficiul tău aici</span></div>`
-    },
-    {
-      id: 'testimonial-block',
-      label: '⭐ Testimonial',
-      category: 'Elemente',
-      content: `<div style="background:#fff;border:1px solid #f3f4f6;border-radius:14px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><strong style="font-size:14px;display:block">Nume Client</strong><span style="font-size:12px;color:#9ca3af">Oraș</span></div><span style="color:#fbbf24;font-size:16px">⭐⭐⭐⭐⭐</span></div><p style="font-size:14px;color:#374151;line-height:1.6;margin:0">"Testimonialul tău aici."</p></div>`
-    },
-    {
-      id: 'urgency-bar',
-      label: '⚡ Bar urgență',
-      category: 'Elemente',
-      content: `<div style="background:${primary};color:#fff;padding:10px 20px;text-align:center;font-size:14px;font-weight:700">⚡ Ofertă limitată — Mai sunt doar câteva bucăți!</div>`
-    },
-    {
-      id: 'cta-button',
-      label: '🛒 Buton CTA',
-      category: 'Elemente',
-      content: `<div style="padding:0 20px 20px"><button class="btn-main">🛒 COMANDĂ ACUM — PLATĂ LA LIVRARE</button></div>`
-    },
-    {
-      id: 'divider',
-      label: '➖ Separator',
-      category: 'Layout',
-      content: `<hr style="border:none;border-top:1px solid #f3f4f6;margin:0">`
-    },
-    {
-      id: 'spacer',
-      label: '⬜ Spațiu',
-      category: 'Layout',
-      content: `<div style="height:32px"></div>`
-    },
-    {
-      id: 'image-block',
-      label: '🖼️ Imagine',
-      category: 'Media',
-      content: `<img src="https://placehold.co/600x300/f3f4f6/999?text=Imaginea+ta" style="width:100%;display:block" />`
-    },
+    // LAYOUT
+    { id:'row-2col', label:'Row 2 Coloane', cat:'Layout', content:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px"><div style="padding:16px;background:#f9fafb;border-radius:8px;min-height:60px">Coloana 1</div><div style="padding:16px;background:#f9fafb;border-radius:8px;min-height:60px">Coloana 2</div></div>` },
+    { id:'row-3col', label:'Row 3 Coloane', cat:'Layout', content:`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:20px"><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 1</div><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 2</div><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 3</div></div>` },
+    
+    // TYPOGRAPHY
+    { id:'heading', label:'Heading', cat:'Text', content:`<h2 style="font-size:28px;font-weight:900;color:#111;padding:16px 20px;margin:0;line-height:1.2">Titlul tău aici</h2>` },
+    { id:'text-block', label:'Text Block', cat:'Text', content:`<p style="font-size:15px;color:#444;line-height:1.7;padding:12px 20px;margin:0">Textul tău aici. Modifică-l direct cu click.</p>` },
+    { id:'button', label:'Button', cat:'Text', content:`<div style="padding:16px 20px;text-align:center"><a href="#formular" style="display:inline-block;background:${p};color:#fff;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:800;text-decoration:none;letter-spacing:0.5px">COMANDĂ ACUM!</a></div>` },
+
+    // MEDIA
+    { id:'image', label:'Image', cat:'Media', content:`<div style="padding:0"><img src="https://placehold.co/650x400/f3f4f6/999?text=Imagine" style="width:100%;display:block" /></div>` },
+    { id:'video', label:'Video', cat:'Media', content:`<div style="padding:20px"><div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div></div>` },
+    { id:'video-banner', label:'Video Banner', cat:'Media', content:`<div style="position:relative;overflow:hidden;min-height:300px;background:#000"><video autoplay muted loop playsinline style="width:100%;object-fit:cover;opacity:0.7"><source src="" type="video/mp4"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px"><h2 style="color:#fff;font-size:28px;font-weight:900;text-align:center">Titlul tău peste video</h2></div></div>` },
+
+    // HERO
+    { id:'hero-banner', label:'Hero Banner', cat:'Hero', content:`<div style="background:linear-gradient(135deg,#111 0%,#333 100%);padding:60px 20px;text-align:center"><h1 style="color:#fff;font-size:32px;font-weight:900;margin:0 0 14px;line-height:1.2">Titlu Principal Hero</h1><p style="color:rgba(255,255,255,0.7);font-size:16px;margin:0 0 28px;line-height:1.6">Subtitlul sau descrierea scurtă a ofertei tale</p><a href="#formular" style="display:inline-block;background:${p};color:#fff;padding:15px 36px;border-radius:6px;font-size:17px;font-weight:800;text-decoration:none">COMANDĂ ACUM</a></div>` },
+    { id:'hero-parallax', label:'Hero Banner Parallax', cat:'Hero', content:`<div style="background-image:url('https://placehold.co/1200x500/111/fff?text=Hero+Image');background-size:cover;background-position:center;background-attachment:fixed;padding:80px 20px;text-align:center"><div style="background:rgba(0,0,0,0.55);display:inline-block;padding:32px;border-radius:10px"><h1 style="color:#fff;font-size:30px;font-weight:900;margin:0 0 12px">Titlu Parallax</h1><p style="color:rgba(255,255,255,0.8);margin:0 0 20px;font-size:15px">Descriere scurtă impactantă</p><a href="#formular" style="display:inline-block;background:${p};color:#fff;padding:13px 30px;border-radius:6px;font-size:16px;font-weight:800;text-decoration:none">COMANDĂ ACUM</a></div></div>` },
+
+    // COMPARISON
+    { id:'img-comparison', label:'Image Comparison', cat:'Media', content:`<div style="padding:20px"><div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="display:grid;grid-template-columns:1fr 1fr"><div style="text-align:center;padding:12px;background:#fef2f2"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">ÎNAINTE</div><img src="https://placehold.co/300x250/fee2e2/dc2626?text=Inainte" style="width:100%;display:block;border-radius:4px" /></div><div style="text-align:center;padding:12px;background:#f0fdf4"><div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">DUPĂ</div><img src="https://placehold.co/300x250/dcfce7/16a34a?text=Dupa" style="width:100%;display:block;border-radius:4px" /></div></div></div></div>` },
+
+    // ICONS
+    { id:'icon', label:'Icon', cat:'Elemente', content:`<div style="padding:16px 20px;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;background:${p};border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">⭐</div><div><strong style="font-size:15px;display:block">Titlu icon</strong><span style="font-size:13px;color:#666">Descriere scurtă</span></div></div>` },
+    { id:'icon-list', label:'Icon List', cat:'Elemente', content:`<div style="padding:20px"><div style="display:flex;flex-direction:column;gap:10px">${['Livrare rapidă în toată România','Plată la livrare, fără risc','Garanție 30 zile retur','Produs 100% original'].map(t=>`<div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">✓</span><span style="font-size:14px;color:#222">${t}</span></div>`).join('')}</div></div>` },
+
+    // DIVIDERS
+    { id:'line', label:'Line', cat:'Layout', content:`<hr style="border:none;border-top:2px solid #e5e7eb;margin:8px 20px" />` },
+    { id:'spacer', label:'Spațiu', cat:'Layout', content:`<div style="height:40px"></div>` },
+
+    // LISTS
+    { id:'item-list', label:'Item List', cat:'Elemente', content:`<div style="padding:20px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${['Item 1','Item 2','Item 3','Item 4'].map(t=>`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:14px;color:#333;font-weight:500">${t}</div>`).join('')}</div></div>` },
+    { id:'advanced-list', label:'Advanced List', cat:'Elemente', content:`<div style="padding:20px"><div style="display:flex;flex-direction:column;gap:12px">${[{n:'Calitate Premium',d:'Materiale de cea mai bună calitate'},{n:'Design Ergonomic',d:'Confort maxim în utilizare'},{n:'Durabilitate Ridicată',d:'Rezistent la uzură îndelungată'}].map((i,idx)=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:14px;background:#f9fafb;border-radius:8px"><div style="width:32px;height:32px;background:${p};color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0">${idx+1}</div><div><strong style="font-size:14px;display:block;margin-bottom:2px">${i.n}</strong><span style="font-size:13px;color:#666">${i.d}</span></div></div>`).join('')}</div></div>` },
+
+    // ACCORDION
+    { id:'accordion', label:'Accordion', cat:'Elemente', content:`<div style="padding:20px"><details style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb;list-style:none;display:flex;justify-content:space-between">Întrebare frecventă 1 <span>+</span></summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">Răspunsul complet la întrebarea de mai sus.</div></details><details style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb;list-style:none;display:flex;justify-content:space-between">Întrebare frecventă 2 <span>+</span></summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">Răspunsul complet la a doua întrebare.</div></details></div>` },
+
+    // CAROUSEL
+    { id:'carousel', label:'Carousel', cat:'Media', content:`<div style="padding:20px;overflow:hidden"><div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory">${[1,2,3,4].map(i=>`<div style="min-width:280px;scroll-snap-align:start;background:#f9fafb;border-radius:10px;overflow:hidden"><img src="https://placehold.co/280x200/f3f4f6/999?text=Imagine+${i}" style="width:100%;display:block"/><div style="padding:12px;font-size:14px;font-weight:600">Produs ${i}</div></div>`).join('')}</div></div>` },
+
+    // TABS
+    { id:'tabs', label:'Tab', cat:'Elemente', content:`<div style="padding:20px"><div style="display:flex;border-bottom:2px solid #e5e7eb;margin-bottom:16px;gap:0"><button onclick="this.parentElement.parentElement.querySelectorAll('[data-tab]').forEach(t=>t.style.display='none');this.parentElement.parentElement.querySelector('[data-tab=\'1\']').style.display='block'" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:700;color:${p};border-bottom:2px solid ${p};margin-bottom:-2px;cursor:pointer;font-family:inherit">Tab 1</button><button onclick="this.parentElement.parentElement.querySelectorAll('[data-tab]').forEach(t=>t.style.display='none');this.parentElement.parentElement.querySelector('[data-tab=\'2\']').style.display='block'" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:600;color:#666;cursor:pointer;font-family:inherit">Tab 2</button></div><div data-tab="1" style="font-size:14px;color:#444;line-height:1.7">Conținutul primului tab. Modifică textul cu click.</div><div data-tab="2" style="display:none;font-size:14px;color:#444;line-height:1.7">Conținutul celui de-al doilea tab.</div></div>` },
+
+    // BREADCRUMB
+    { id:'breadcrumb', label:'Breadcrumb', cat:'Navigare', content:`<div style="padding:10px 20px;font-size:13px;color:#888"><a href="/" style="color:#888;text-decoration:none">Acasă</a> <span style="margin:0 6px">›</span> <a href="/produse" style="color:#888;text-decoration:none">Produse</a> <span style="margin:0 6px">›</span> <span style="color:#333;font-weight:600">Produs Curent</span></div>` },
+
+    // MARQUEE
+    { id:'marquee', label:'Marquee', cat:'Elemente', content:`<div style="overflow:hidden;background:#111;padding:12px 0"><div style="display:flex;animation:marquee 15s linear infinite;white-space:nowrap"><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">🚚 Livrare GRATUITĂ</span><span style="color:${p};font-size:13px;font-weight:600;padding:0 24px">★</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">✅ Plată la livrare</span><span style="color:${p};font-size:13px;font-weight:600;padding:0 24px">★</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">↩️ Retur 30 zile</span><span style="color:${p};font-size:13px;font-weight:600;padding:0 24px">★</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">🚚 Livrare GRATUITĂ</span><span style="color:${p};font-size:13px;font-weight:600;padding:0 24px">★</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">✅ Plată la livrare</span></div></div><style>@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}</style>` },
+
+    // PRODUCT
+    { id:'product', label:'Product', cat:'Produs', content:`<div style="padding:20px;border:1px solid #e5e7eb;border-radius:10px;margin:16px 20px"><img src="https://placehold.co/400x300/f9fafb/999?text=Produs" style="width:100%;border-radius:8px;display:block;margin-bottom:14px"/><h3 style="font-size:18px;font-weight:800;margin:0 0 6px">Numele Produsului</h3><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><span style="font-size:26px;font-weight:900;color:${p}">149 RON</span><span style="text-decoration:line-through;color:#999;font-size:16px">249 RON</span></div><a href="#formular" style="display:block;background:${p};color:#fff;text-align:center;padding:13px;border-radius:6px;font-size:15px;font-weight:800;text-decoration:none">ADAUGĂ ÎN COȘ</a></div>` },
+    { id:'product-list', label:'Product List', cat:'Produs', content:`<div style="padding:20px"><h3 style="font-size:18px;font-weight:800;margin:0 0 16px">Produse recomandate</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${[1,2,3,4].map(i=>`<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><img src="https://placehold.co/200x160/f9fafb/999?text=P${i}" style="width:100%;display:block"/><div style="padding:10px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">Produs ${i}</div><div style="font-size:14px;font-weight:900;color:${p}">${100+i*20} RON</div></div></div>`).join('')}</div></div>` },
+    { id:'sticky-cart', label:'Sticky Add to Cart', cat:'Produs', content:`<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid ${p};padding:12px 20px;display:flex;align-items:center;justify-content:space-between;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,0.1)"><div><div style="font-size:13px;font-weight:700">Produs</div><div style="font-size:20px;font-weight:900;color:${p}">149 RON</div></div><a href="#formular" style="background:${p};color:#fff;padding:12px 24px;border-radius:6px;font-size:15px;font-weight:800;text-decoration:none;white-space:nowrap">COMANDĂ ACUM</a></div>` },
+
+    // COUNTERS
+    { id:'stock-counter', label:'Stock Counter', cat:'Urgență', content:`<div style="padding:12px 20px;background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;margin:0 20px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">📦</span><div><div style="font-size:13px;font-weight:700;color:#c2410c">Stoc limitat!</div><div style="font-size:12px;color:#ea580c">Au mai rămas doar <strong>7 bucăți</strong> la acest preț</div></div><div style="margin-left:auto;background:#fef3c7;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;color:#d97706">7 / 50</div></div>` },
+    { id:'countdown', label:'Countdown Timer', cat:'Urgență', content:`<div style="background:${p};color:#fff;padding:14px 20px;text-align:center" id="countdown-block"><div style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:8px">⚡ OFERTĂ EXPIRĂ ÎN:</div><div style="display:flex;justify-content:center;gap:10px"><div style="text-align:center"><span id="cd-h" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;opacity:0.8">ORE</div></div><span style="font-size:24px;font-weight:900;padding-top:8px">:</span><div style="text-align:center"><span id="cd-m" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">14</span><div style="font-size:10px;margin-top:3px;opacity:0.8">MIN</div></div><span style="font-size:24px;font-weight:900;padding-top:8px">:</span><div style="text-align:center"><span id="cd-s" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;opacity:0.8">SEC</div></div></div></div><script>(function(){var t=${data.timerMinutes||14}*60;function r(){var h=String(Math.floor(t/3600)).padStart(2,'0');var m=String(Math.floor((t%3600)/60)).padStart(2,'0');var s=String(t%60).padStart(2,'0');var eh=document.getElementById('cd-h');var em=document.getElementById('cd-m');var es=document.getElementById('cd-s');if(eh)eh.textContent=h;if(em)em.textContent=m;if(es)es.textContent=s;}setInterval(function(){if(t>0)t--;r();},1000);r();})();</script>` },
+
+    // POPUP
+    { id:'popup', label:'Popup', cat:'Conversie', content:`<div id="popup-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center"><div style="background:#fff;border-radius:12px;padding:28px;max-width:360px;width:90%;text-align:center;position:relative"><button onclick="document.getElementById('popup-overlay').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button><div style="font-size:40px;margin-bottom:12px">🎁</div><h3 style="font-size:20px;font-weight:800;margin:0 0 10px">Ofertă specială pentru tine!</h3><p style="font-size:14px;color:#555;margin:0 0 20px;line-height:1.6">Comandă acum și primești <strong>transport gratuit</strong> + cadou surpriză!</p><a href="#formular" onclick="document.getElementById('popup-overlay').style.display='none'" style="display:block;background:${p};color:#fff;padding:13px;border-radius:6px;font-size:15px;font-weight:800;text-decoration:none">VREAU OFERTA</a></div></div><script>setTimeout(function(){document.getElementById('popup-overlay').style.display='flex';},3000);</script>` },
+
+    // DELIVERY
+    { id:'delivery-date', label:'Delivery Date', cat:'Conversie', content:`<div style="padding:12px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin:0 20px;display:flex;align-items:center;gap:12px"><span style="font-size:24px">🚚</span><div><div style="font-size:14px;font-weight:700;color:#15803d">Livrare estimată: ${(() => { const d = new Date(); d.setDate(d.getDate() + 3); return d.toLocaleDateString('ro-RO', {weekday:'long', day:'numeric', month:'long'}) })()} </div><div style="font-size:12px;color:#16a34a">Comandă acum pentru a primi până atunci</div></div></div>` },
+
+    // BUNDLE
+    { id:'bundle', label:'Product Bundle Discount', cat:'Produs', content:`<div style="padding:20px;background:#fff8f0;border:2px solid #fed7aa;border-radius:10px;margin:16px 20px"><div style="text-align:center;font-size:12px;font-weight:700;color:#c2410c;letter-spacing:1px;margin-bottom:14px">🔥 BUNDLE SPECIAL</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #e5e7eb"><div style="font-size:14px;font-weight:600">Produs Principal</div><div style="font-size:15px;font-weight:900;color:${p}">149 RON</div></div><div style="text-align:center;font-size:18px;color:#666">+</div><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #e5e7eb"><div><div style="font-size:14px;font-weight:600">Produs Bonus</div><div style="font-size:11px;color:#16a34a;font-weight:600">GRATUIT la bundle</div></div><div style="font-size:15px;font-weight:900;text-decoration:line-through;color:#999">29 RON</div></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-size:14px;color:#555">Total bundle:</span><span style="font-size:24px;font-weight:900;color:${p}">149 RON</span></div><a href="#formular" style="display:block;background:${p};color:#fff;text-align:center;padding:13px;border-radius:6px;font-size:15px;font-weight:800;text-decoration:none">VREAU BUNDLE-UL</a></div>` },
+
+    // COUPON
+    { id:'coupon', label:'Copy Coupon Code', cat:'Conversie', content:`<div style="padding:16px 20px;background:#f0fdf4;border:2px dashed #86efac;border-radius:8px;margin:0 20px;text-align:center"><div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:8px;letter-spacing:1px">🎟️ COD REDUCERE</div><div style="display:flex;align-items:center;justify-content:center;gap:10px"><code style="background:#fff;border:1px solid #86efac;border-radius:6px;padding:8px 16px;font-size:18px;font-weight:900;letter-spacing:2px;color:#15803d">COD20</code><button onclick="navigator.clipboard.writeText('COD20');this.textContent='✓ Copiat!';setTimeout(()=>this.textContent='📋 Copiază',2000)" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📋 Copiază</button></div><p style="font-size:12px;color:#16a34a;margin:8px 0 0">Aplică codul la finalizarea comenzii</p></div>` },
+
+    // FORMS
+    { id:'contact-form', label:'Contact Form', cat:'Formulare', content:`<div style="padding:24px 20px"><h3 style="font-size:18px;font-weight:800;margin:0 0 16px">Contactează-ne</h3><div style="display:flex;flex-direction:column;gap:12px"><input placeholder="Numele tău" style="padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:inherit"/><input placeholder="Email" type="email" style="padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:inherit"/><textarea rows="4" placeholder="Mesajul tău..." style="padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:15px;outline:none;resize:vertical;font-family:inherit;width:100%;box-sizing:border-box"></textarea><button onclick="this.textContent='✓ Trimis!'" style="background:${p};color:#fff;border:none;padding:13px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Trimite mesajul</button></div></div>` },
+    { id:'newsletter', label:'Newsletter', cat:'Formulare', content:`<div style="padding:32px 20px;background:#f9fafb;text-align:center"><h3 style="font-size:20px;font-weight:800;margin:0 0 8px">Rămâi la curent cu ofertele noastre</h3><p style="font-size:14px;color:#666;margin:0 0 20px">Abonează-te și primești -10% la prima comandă</p><div style="display:flex;gap:10px;max-width:400px;margin:0 auto"><input placeholder="Adresa ta de email" type="email" style="flex:1;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;font-family:inherit"/><button onclick="this.textContent='✓';this.style.background='#16a34a'" style="background:${p};color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">Abonare</button></div></div>` },
+
+    // CUSTOM CODE
+    { id:'custom-code', label:'Custom Code', cat:'Avansat', content:`<div style="padding:16px 20px;background:#1e1e2e;border-radius:8px;margin:16px 20px"><div style="font-size:12px;color:#888;margin-bottom:8px;font-family:monospace">// Custom HTML/CSS/JS</div><code style="font-size:13px;color:#a5f3fc;font-family:monospace;display:block">&lt;div style="color:red"&gt;Codul tău personalizat&lt;/div&gt;</code></div>` },
+
+    // STICKY BACK TO TOP
+    { id:'back-to-top', label:'Sticky Back to Top', cat:'Navigare', content:`<div style="position:fixed;bottom:24px;right:20px;z-index:998"><button onclick="window.scrollTo({top:0,behavior:'smooth'})" style="width:44px;height:44px;background:${p};color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center">↑</button></div>` },
   ]
 
-  blocks.forEach(b => editor.Blocks.add(b.id, b))
+  // Group blocks by category
+  const cats = {}
+  blocks.forEach(b => {
+    if (!cats[b.cat]) cats[b.cat] = []
+    cats[b.cat].push(b)
+  })
+
+  blocks.forEach(b => {
+    editor.Blocks.add(b.id, {
+      label: b.label,
+      category: b.cat,
+      content: b.content,
+      attributes: { class: 'gjs-block-section' }
+    })
+  })
 }
