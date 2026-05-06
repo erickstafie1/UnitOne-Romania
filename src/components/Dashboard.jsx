@@ -159,7 +159,20 @@ export default function Dashboard({ shop, token, onNew, onEdit }) {
                     style={{ padding:'6px 12px', borderRadius:8, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:12, textDecoration:'none', fontWeight:600 }}>
                     👁️ Vezi
                   </a>
-                  <button onClick={() => onEdit({ ...page, fromDashboard: true })}
+                  <button onClick={async () => {
+                      // Incarca HTML-ul complet al paginii
+                      try {
+                        const res = await fetch('/api/pages', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'get', shop, token, pageId: page.id })
+                        })
+                        const d = await res.json()
+                        onEdit({ ...d.page, fromDashboard: true })
+                      } catch(e) {
+                        onEdit({ ...page, fromDashboard: true })
+                      }
+                    }}
                     style={{ padding:'6px 12px', borderRadius:8, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:12, cursor:'pointer', fontWeight:600 }}>
                     ✏️ Editează
                   </button>
@@ -193,8 +206,22 @@ export default function Dashboard({ shop, token, onNew, onEdit }) {
             <p style={{ color:'rgba(255,255,255,0.45)', fontSize:13, marginBottom:16 }}>
               Lipește conținutul fișierului JSON exportat dintr-o altă pagină sau magazin.
             </p>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:13, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:8 }}>Încarcă fișier JSON:</label>
+              <input type="file" accept=".json"
+                onChange={e => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = ev => setImportJson(ev.target.result)
+                  reader.readAsText(file)
+                }}
+                style={{ color:'rgba(255,255,255,0.7)', fontSize:13, width:'100%' }}
+              />
+            </div>
+            <p style={{ color:'rgba(255,255,255,0.3)', fontSize:12, marginBottom:8 }}>Sau lipește JSON direct:</p>
             <textarea value={importJson} onChange={e => setImportJson(e.target.value)}
-              rows={8} placeholder='{"title":"...", "body_html":"..."}'
+              rows={5} placeholder='{"title":"...", "body_html":"..."}'
               style={{ width:'100%', padding:'12px', borderRadius:10, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:13, outline:'none', fontFamily:'monospace', resize:'vertical', boxSizing:'border-box' }}
             />
             {importError && <p style={{ color:'#f87171', fontSize:13, marginTop:8 }}>⚠️ {importError}</p>}
