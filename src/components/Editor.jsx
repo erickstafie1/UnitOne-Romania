@@ -12,6 +12,7 @@ export default function Editor({ data, shop, token, onBack }) {
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
+  const [hideHeaderFooter, setHideHeaderFooter] = useState(true)
 
   useEffect(() => {
     // Incarca GrapesJS dinamic
@@ -161,7 +162,8 @@ export default function Editor({ data, shop, token, onBack }) {
           shop, token,
           title: data.productName || 'Pagina COD',
           html: finalHtml,
-          productId: selectedProduct?.id
+          productId: selectedProduct?.id,
+          hideHeaderFooter
         })
       })
       const json = await res.json()
@@ -220,6 +222,13 @@ export default function Editor({ data, shop, token, onBack }) {
             </button>
           ))}
         </div>
+
+        {/* Toggle header/footer */}
+        <button onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
+          title={hideHeaderFooter ? 'Header/Footer ascuns' : 'Header/Footer vizibil'}
+          style={{ padding:'5px 12px', borderRadius:8, border:'none', background: hideHeaderFooter ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)', color: hideHeaderFooter ? '#4ade80' : 'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', fontWeight:600, whiteSpace:'nowrap' }}>
+          {hideHeaderFooter ? '✓ Fără H/F' : 'Cu H/F'}
+        </button>
 
         {/* Undo/Redo */}
         <div style={{ display:'flex', gap:4 }}>
