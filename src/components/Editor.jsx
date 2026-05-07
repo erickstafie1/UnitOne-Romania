@@ -193,6 +193,13 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
         console.log('[Publish] Replaced VARIANT_ID with:', variantId)
       }
+      
+      // Injecteaza product handle pentru drawer
+      if (productHandle) {
+        const handleScript = '<script>window._PRODUCT_HANDLE = "' + productHandle + '";</script>'
+        finalHtml = handleScript + finalHtml
+        console.log('[Publish] Product handle injected:', productHandle)
+      }
 
       const body = isEditing
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, productHandle }
