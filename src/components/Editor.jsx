@@ -186,11 +186,14 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       console.log('[Publish] selectedProduct:', selectedProduct?.title, selectedProduct?.variants?.[0]?.id)
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
       const productHandle = selectedProduct?.handle || null
-      console.log('[Publish] codFormApp:', codFormApp, 'variantId:', variantId, 'handle:', productHandle)
+      
+      // Citim codFormApp direct din localStorage ca sa fim siguri ca e corect
+      const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
+      console.log('[Publish] finalCodFormApp:', finalCodFormApp, 'variantId:', variantId)
 
       const body = isEditing
-        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId, productHandle }
-        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp, variantId, productHandle }
+        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, productHandle }
+        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, productHandle }
 
       const res = await fetch('/api/publish', {
         method: 'POST',
