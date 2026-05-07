@@ -1,3 +1,4 @@
+// v2 - releasit trigger
 const https = require('https')
 
 function shopifyRequest(shop, token, path, method, body) {
