@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function Editor({ data, shop, token, codFormApp, onBack }) {
+export default function Editor({ data, shop, token, codFormApp: codFormAppProp, onBack }) {
+  // Citim codFormApp din localStorage ca fallback
+  const codFormApp = codFormAppProp || localStorage.getItem('codform_' + shop) || null
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
   const [device, setDevice] = useState('desktop')
