@@ -181,15 +181,13 @@ export default function Editor({ data, shop, token, codFormApp, onBack }) {
         console.log('After removal:', Math.round(finalHtml.length/1024), 'KB')
       }
 
-      // Ia variant ID din produsul selectat
-      const variantId = selectedProduct?.variants?.[0]?.id 
-        || data.variantId 
-        || null
-      console.log('Publishing with variantId:', variantId, 'codFormApp:', codFormApp)
+      const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
+      const productHandle = selectedProduct?.handle || null
+      console.log('Publishing with variantId:', variantId, 'handle:', productHandle, 'codFormApp:', codFormApp)
 
       const body = isEditing
-        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId }
-        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp, variantId }
+        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId, productHandle }
+        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp, variantId, productHandle }
 
       const res = await fetch('/api/publish', {
         method: 'POST',
