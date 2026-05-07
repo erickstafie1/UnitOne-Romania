@@ -138,27 +138,66 @@ module.exports = async function handler(req, res) {
     // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
     let finalHtml = html
 
-    // Injecteaza scripturile aplicatiei COD form direct din CDN-ul Shopify
-    if (codFormApp === 'releasit') {
-      const releasitEmbed = `
-<link type="text/css" rel="stylesheet" href="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/style.min.css">
-<link type="text/css" rel="stylesheet" href="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/datepicker.min.css">
-<script>
-  var _RSI_COD_FORM_SWIFFY_JS_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/swiffy-slider.min.js";
-  var _RSI_COD_FORM_SWIFFY_CSS_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/swiffy-slider.min.css";
-  var _RSI_COD_FORM_CSS_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/style.min.css";
-  var _RSI_COD_FORM_CSS_DATE_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/datepicker.min.css";
-<\/script>
-<script src="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/datepicker.min.js" defer></script>
-<script src="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/get-form-script.min.js" defer></script>`
-      finalHtml = releasitEmbed + finalHtml
-      console.log('Releasit scripts injected')
-    } else if (codFormApp === 'easysell') {
-      // EasySell - scripturile lor standard
-      const easysellEmbed = `
-<script src="https://cdn.easysell.app/embed.js" defer></script>`
-      finalHtml = easysellEmbed + finalHtml
-      console.log('EasySell scripts injected')
+    // Injecteaza trigger script pentru COD form
+    if (codFormApp === 'releasit' || codFormApp === 'easysell') {
+      const vid = variantId || '0'
+      const triggerScript = `<script>
+(function(){
+  var VARIANT_ID = '${vid}';
+  
+  function triggerCODForm(varId) {
+    // Adauga in cart via Shopify AJAX API
+    fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ id: varId, quantity: 1 })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(item) {
+      console.log('Added to cart:', item);
+      ${codFormApp === 'releasit' ? `
+      // Releasit events
+      document.dispatchEvent(new CustomEvent('releasit:open', { detail: { variantId: varId } }));
+      document.dispatchEvent(new CustomEvent('releasit:openForm', { detail: { variantId: varId } }));
+      // Trigger click pe butonul hidden al Releasit daca exista
+      var rBtn = document.querySelector('[data-releasit-trigger],[class*="releasit"][class*="btn"],[class*="releasit"][class*="button"]');
+      if (rBtn) { rBtn.click(); }
+      // Trigger pe body pentru Releasit
+      document.body.dispatchEvent(new CustomEvent('releasit:open', { bubbles: true, detail: { variantId: varId } }));
+      window.dispatchEvent(new CustomEvent('releasit:open', { detail: { variantId: varId } }));
+      ` : `
+      // EasySell events  
+      document.dispatchEvent(new CustomEvent('easysell:open', { detail: { variantId: varId } }));
+      var esBtn = document.querySelector('[data-easysell-trigger],[class*="easysell"]');
+      if (esBtn) { esBtn.click(); }
+      window.dispatchEvent(new CustomEvent('easysell:open', { detail: { variantId: varId } }));
+      `}
+    })
+    .catch(function(err) {
+      console.error('Cart error:', err);
+      // Fallback - deschide pagina produsului
+      window.location.href = '/cart';
+    });
+  }
+
+  // Ascult click pe toate butoanele COD din pagina
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.releasit-button, .es-cod-button, [data-cod-trigger]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var varId = btn.getAttribute('data-variant-id') || VARIANT_ID;
+    triggerCODForm(varId);
+  });
+
+  // Asculta si dupa ce pagina se incarca complet
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('COD trigger ready, variant:', VARIANT_ID);
+  });
+})();
+</script>`
+      finalHtml = triggerScript + finalHtml
+      console.log('COD trigger script injected for:', codFormApp, 'variant:', vid)
     }
 
     // Inlocuieste VARIANT_ID cu variantId real daca avem
