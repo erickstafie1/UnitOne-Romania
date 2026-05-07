@@ -20,8 +20,8 @@ export default function App() {
     const t = params.get('token')
     if (s && t) {
       setShop(s); setToken(t); setLoading(false)
-      // Verifica daca a configurat deja COD form app
-      const saved = localStorage.getItem(`codform_${s}`)
+      const saved = localStorage.getItem('codform_' + s)
+      console.log('codFormApp from localStorage:', saved, 'shop:', s)
       if (saved) {
         setCodFormApp(saved)
         setScreen('dashboard')
@@ -29,7 +29,7 @@ export default function App() {
         setScreen('setup')
       }
     }
-    else if (s) { window.location.href = `/api/auth?shop=${s}` }
+    else if (s) { window.location.href = '/api/auth?shop=' + s }
     else { setError('Accesează aplicația din Shopify Admin.'); setLoading(false) }
   }, [])
 
