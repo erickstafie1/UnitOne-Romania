@@ -183,9 +183,10 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         console.log('After removal:', Math.round(finalHtml.length/1024), 'KB')
       }
 
+      console.log('[Publish] selectedProduct:', selectedProduct?.title, selectedProduct?.variants?.[0]?.id)
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
       const productHandle = selectedProduct?.handle || null
-      console.log('[Publish] codFormApp:', codFormApp, 'variantId:', variantId, 'handle:', productHandle, 'shop:', shop)
+      console.log('[Publish] codFormApp:', codFormApp, 'variantId:', variantId, 'handle:', productHandle)
 
       const body = isEditing
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId, productHandle }
@@ -273,7 +274,15 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
         {error && <span style={{ fontSize:12, color:'#fc8181' }}>⚠️ {error}</span>}
 
-        <button onClick={() => { if(isEditing) { publish() } else { setShowProductModal(true); if(products.length===0) loadProducts() } }} disabled={publishing}
+        <button onClick={() => { 
+          if(isEditing) { 
+            publish() 
+          } else { 
+            setSelectedProduct(null)
+            setShowProductModal(true)
+            if(products.length===0) loadProducts() 
+          } 
+        }} disabled={publishing}
           style={{ padding:'8px 20px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', opacity: publishing ? 0.6 : 1, boxShadow:'0 2px 8px rgba(229,62,62,0.3)', whiteSpace:'nowrap' }}>
           {publishing ? '⏳ ...' : isEditing ? '💾 Salvează modificările' : '🚀 Publică — 40 RON'}
         </button>
@@ -315,7 +324,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
               {loadingProducts ? (
                 <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se încarcă produsele...</div>
               ) : products.map(p => (
-                <div key={p.id} onClick={() => setSelectedProduct(p)}
+                <div key={p.id} onClick={() => { console.log('[Modal] Selected product:', p.title, 'variantId:', p.variants?.[0]?.id); setSelectedProduct(p); }}
                   style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, border: selectedProduct?.id===p.id ? '1.5px solid #e53e3e' : '1px solid rgba(255,255,255,0.08)', background: selectedProduct?.id===p.id ? 'rgba(229,62,62,0.08)' : 'rgba(255,255,255,0.02)', cursor:'pointer' }}>
                   {p.images?.[0] && <img src={p.images[0].src} alt={p.title} style={{ width:44, height:44, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
                   <div style={{ flex:1, minWidth:0 }}>
