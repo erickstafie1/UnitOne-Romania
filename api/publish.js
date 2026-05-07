@@ -97,14 +97,17 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId, productHandle } = req.body || {}
+    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp: bodyApp, variantId: bodyVariant, productHandle: bodyHandle } = req.body || {}
+    
+    // Citim din query params ca fallback
+    const codFormApp = bodyApp || req.query?.codFormApp || null
+    const variantId = bodyVariant || req.query?.variantId || null
+    const productHandle = bodyHandle || req.query?.productHandle || null
     
     console.log('=== PUBLISH REQUEST ===')
     console.log('action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId)
     
-    // Daca codFormApp nu vine din frontend, citim din headers sau folosim releasit ca default
-    // pentru magazinele care au Releasit instalat
-    const effectiveCodFormApp = codFormApp || null
+    const effectiveCodFormApp = codFormApp
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
