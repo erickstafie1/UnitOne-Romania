@@ -181,9 +181,12 @@ export default function Editor({ data, shop, token, codFormApp, onBack }) {
         console.log('After removal:', Math.round(finalHtml.length/1024), 'KB')
       }
 
+      // Ia variant ID din produsul selectat
+      const variantId = selectedProduct?.variants?.[0]?.id || null
+
       const body = isEditing
-        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter }
-        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter }
+        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId }
+        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp, variantId }
 
       const res = await fetch('/api/publish', {
         method: 'POST',
