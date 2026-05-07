@@ -60,12 +60,13 @@ export default function App() {
         <Setup shop={shop} onComplete={(app) => {
           setCodFormApp(app)
           setScreen('dashboard')
-        }} />
+        }} isReconfigure={codFormApp !== null} />
       )}
       {screen === 'dashboard' && (
         <Dashboard shop={shop} token={token}
           onNew={() => setScreen('generator')}
           onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
+          onReconfigure={() => setScreen('setup')}
         />
       )}
       {screen === 'generator' && (
