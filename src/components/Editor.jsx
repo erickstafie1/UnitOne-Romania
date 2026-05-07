@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function Editor({ data, shop, token, onBack }) {
+export default function Editor({ data, shop, token, codFormApp, onBack }) {
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
   const [device, setDevice] = useState('desktop')
@@ -83,7 +83,7 @@ export default function Editor({ data, shop, token, onBack }) {
         editor.setComponents(htmlOnly)
         if (css) editor.setStyle(css)
       } else {
-        const html = buildHTML(data)
+        const html = buildHTML(data, codFormApp)
         const css = buildCSS(data)
         editor.setComponents(html)
         editor.setStyle(css)
@@ -348,7 +348,7 @@ function adjustColor(hex, amount) {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
 
-function buildHTML(data) {
+function buildHTML(data, codFormApp) {
   const price = data.price || 149
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
   const disc = Math.round((1 - price / oldPrice) * 100)
@@ -454,7 +454,7 @@ ${imgs[2] ? `<div style="background:#fff">${img(imgs[2], 'width:100%;display:blo
 </div>
 
 <!-- SELECTOR CANTITATE + FORMULAR COD -->
-<div id="formular" style="padding:28px 20px;background:#fff3f3;border-top:4px solid #e8000d">
+<div id="formular" style="${codFormApp && codFormApp !== 'none' ? 'display:none' : ''}" style="padding:28px 20px;background:#fff3f3;border-top:4px solid #e8000d">
   <h2 style="font-size:22px;font-weight:900;text-align:center;margin:0 0 6px">COMANDĂ ACUM CU ${disc}% REDUCERE</h2>
   <p style="text-align:center;color:#555;font-size:14px;margin:0 0 24px">↓ Completează formularul de mai jos ↓</p>
   
