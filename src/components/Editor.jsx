@@ -185,7 +185,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
       const productHandle = selectedProduct?.handle || null
-      console.log('Publishing with variantId:', variantId, 'handle:', productHandle, 'codFormApp:', codFormApp)
+      console.log('[Publish] codFormApp:', codFormApp, 'variantId:', variantId, 'handle:', productHandle, 'shop:', shop)
 
       const body = isEditing
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId, productHandle }
