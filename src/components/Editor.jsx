@@ -182,7 +182,10 @@ export default function Editor({ data, shop, token, codFormApp, onBack }) {
       }
 
       // Ia variant ID din produsul selectat
-      const variantId = selectedProduct?.variants?.[0]?.id || null
+      const variantId = selectedProduct?.variants?.[0]?.id 
+        || data.variantId 
+        || null
+      console.log('Publishing with variantId:', variantId, 'codFormApp:', codFormApp)
 
       const body = isEditing
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp, variantId }
@@ -323,6 +326,12 @@ export default function Editor({ data, shop, token, codFormApp, onBack }) {
                 </div>
               ))}
             </div>
+            {codFormApp && codFormApp !== 'none' && !selectedProduct && (
+              <div style={{ padding:'10px 14px', background:'rgba(251,191,36,0.08)', border:'1px solid rgba(251,191,36,0.2)', borderRadius:10, fontSize:13, color:'#fbbf24', marginBottom:12, display:'flex', gap:8 }}>
+                <span>⚠️</span>
+                <span>Selectează produsul pentru a conecta {codFormApp === 'releasit' ? 'Releasit' : 'EasySell'} la butonul de comandă.</span>
+              </div>
+            )}
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setShowProductModal(false)}
                 style={{ flex:1, padding:12, borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'#fff', fontSize:14, cursor:'pointer' }}>
