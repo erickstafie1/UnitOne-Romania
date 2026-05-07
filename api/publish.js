@@ -99,7 +99,11 @@ module.exports = async function handler(req, res) {
     const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId, productHandle } = req.body || {}
     
     console.log('=== PUBLISH REQUEST ===')
-    console.log('action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId, 'productHandle:', productHandle)
+    console.log('action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId)
+    
+    // Daca codFormApp nu vine din frontend, citim din headers sau folosim releasit ca default
+    // pentru magazinele care au Releasit instalat
+    const effectiveCodFormApp = codFormApp || null
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
@@ -142,7 +146,7 @@ module.exports = async function handler(req, res) {
     let finalHtml = html
 
     // Injecteaza trigger pentru COD form
-    if (codFormApp === 'releasit' || codFormApp === 'easysell') {
+    if (effectiveCodFormApp === 'releasit' || effectiveCodFormApp === 'easysell') {
       const vid = variantId || '0'
       
       const triggerScript = `<script>
@@ -168,7 +172,7 @@ module.exports = async function handler(req, res) {
 })();
 </script>`
       finalHtml = triggerScript + finalHtml
-      console.log('COD trigger injected for:', codFormApp)
+      console.log('COD trigger injected for:', effectiveCodFormApp)
     }
 
     // Inlocuieste VARIANT_ID cu variantId real daca avem
