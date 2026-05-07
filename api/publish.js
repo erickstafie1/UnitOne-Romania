@@ -36,6 +36,32 @@ function buildHideScript() {
 function buildReleasitScript(variantId) {
   const vid = variantId || '0'
   return `<script>(function(){
+  // Re-init Releasit dupa ce pagina noastra e incarcata
+  function reinitReleasit() {
+    window.dispatchEvent(new Event('load'));
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    // Daca Releasit are init public
+    if (window.RSI && window.RSI.init) window.RSI.init();
+    if (window._rsi && window._rsi.init) window._rsi.init();
+  }
+  
+  // MutationObserver - detecteaza cand butoanele noastre apar in DOM
+  var observer = new MutationObserver(function() {
+    var btns = document.querySelectorAll('._rsi-cod-form-pagefly-button-overwrite-v2');
+    if (btns.length > 0) {
+      observer.disconnect();
+      setTimeout(reinitReleasit, 200);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  
+  // Si la load normal
+  window.addEventListener('load', function() {
+    setTimeout(reinitReleasit, 500);
+    setTimeout(reinitReleasit, 1500);
+  });
+  
+  // Fallback - drawer cu pagina produsului
   var V='${vid}';
   
   // Cand user apasa butonul, deschidem pagina produsului in drawer overlay
