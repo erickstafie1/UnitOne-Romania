@@ -35,7 +35,55 @@ function buildHideScript() {
 
 function buildReleasitScript(variantId) {
   const vid = variantId || '0'
-  return `<script>(function(){var V='${vid}';function init(){document.querySelectorAll('.releasit-button,[data-cod-trigger]').forEach(function(b){b.classList.add('_rsi-cod-form-pagefly-button-overwrite-v2');if(V&&V!=='0')b.setAttribute('data-variant-id',V);});}init();document.addEventListener('DOMContentLoaded',init);setTimeout(init,500);setTimeout(init,1500);console.log('[UnitOne] Releasit ready, variant:',V);})();</script>`
+  return `<script>(function(){
+  var V='${vid}';
+  
+  // Cand user apasa butonul, deschidem pagina produsului in drawer overlay
+  // Releasit e activ pe pagina produsului si deschide formularul automat
+  function openProductDrawer(varId) {
+    // Creeaza overlay
+    var ov = document.getElementById('unitone-drawer');
+    if (ov) { ov.remove(); }
+    
+    var drawer = document.createElement('div');
+    drawer.id = 'unitone-drawer';
+    drawer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;display:flex;flex-direction:column;animation:uFadeIn 0.25s ease';
+    drawer.innerHTML = '<style>@keyframes uFadeIn{from{opacity:0}to{opacity:1}}</style>' +
+      '<div style="background:rgba(0,0,0,0.6);position:absolute;inset:0" onclick="document.getElementById(\'unitone-drawer\').remove()"></div>' +
+      '<div style="position:relative;margin:auto;width:100%;max-width:480px;height:100%;background:#fff;display:flex;flex-direction:column;box-shadow:-4px 0 30px rgba(0,0,0,0.2)">' +
+        '<div style="padding:12px 16px;background:#fff;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">' +
+          '<span style="font-size:14px;font-weight:700;color:#111">Finalizează comanda</span>' +
+          '<button onclick="document.getElementById(\'unitone-drawer\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#666;padding:4px">✕</button>' +
+        '</div>' +
+        '<iframe id="unitone-iframe" src="/products/' + (window._PRODUCT_HANDLE || '') + '?variant=' + varId + '" style="flex:1;border:none;width:100%" allowfullscreen></iframe>' +
+      '</div>';
+    document.body.appendChild(drawer);
+    
+    // Dupa ce iframe se incarca, da click pe butonul Releasit
+    document.getElementById('unitone-iframe').addEventListener('load', function() {
+      try {
+        var ifrDoc = this.contentDocument || this.contentWindow.document;
+        setTimeout(function() {
+          var rsiBtn = ifrDoc.querySelector('._rsi-buy-now-button');
+          if (rsiBtn) { rsiBtn.click(); }
+        }, 1000);
+      } catch(e) {}
+    });
+  }
+  
+  window._PRODUCT_HANDLE = window._PRODUCT_HANDLE || '';
+  
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('._rsi-cod-form-pagefly-button-overwrite-v2, .releasit-button, [data-cod-trigger]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var varId = btn.getAttribute('data-variant-id') || V;
+    openProductDrawer(varId);
+  });
+  
+  console.log('[UnitOne] Drawer ready, variant:', V);
+})();</script>`
 }
 
 async function installLandingTemplate(shop, token) {
