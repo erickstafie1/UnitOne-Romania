@@ -96,7 +96,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = req.body || {}
+    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId, productHandle } = req.body || {}
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
@@ -138,82 +138,60 @@ module.exports = async function handler(req, res) {
     // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
     let finalHtml = html
 
-    // Injecteaza trigger script pentru COD form
+    // Injecteaza trigger pentru COD form - iframe overlay
     if (codFormApp === 'releasit' || codFormApp === 'easysell') {
       const vid = variantId || '0'
-      const isReleasit = codFormApp === 'releasit'
-
+      const productHandle = variantId ? 'products/unknown' : ''
+      
       const triggerScript = `<script>
 (function(){
   var VARIANT_ID = '${vid}';
+  window._PRODUCT_HANDLE = '${productHandle || ''}';
 
-  function openReleasitForm(varId) {
-    // Pasul 1: Adauga produsul in cart
-    fetch('/cart/clear.js', { method: 'POST' })
-    .then(function() {
-      return fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: varId, quantity: 1 })
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(item) {
-      console.log('[UnitOne] Added to cart:', item.title);
-      ${isReleasit ? `
-      // Pasul 2: Cauta butonul floating Releasit si da click pe el
-      // Releasit randeaza un iframe sau un div cu clasa rsi-*
-      var attempts = 0;
-      var interval = setInterval(function() {
-        attempts++;
-        // Cauta toate variantele posibile de butoane Releasit
-        // Cauta butonul nativ Releasit _rsi-buy-now-button
-        var rsiBtn = document.querySelector('._rsi-buy-now-button');
-        console.log('[UnitOne] Looking for _rsi-buy-now-button, attempt:', attempts, 'found:', !!rsiBtn);
-        if (rsiBtn) {
-          clearInterval(interval);
-          // Click pe butonul Releasit nativ - el stie sa deschida formularul
-          rsiBtn.click();
-          console.log('[UnitOne] Clicked _rsi-buy-now-button!');
-        } else if (attempts > 30) {
-          clearInterval(interval);
-          console.log('[UnitOne] Releasit button not found, going to cart');
-          window.location.href = '/cart';
-        }
-      }, 100);
-      ` : `
-      // EasySell
-      var attempts = 0;
-      var interval = setInterval(function() {
-        attempts++;
-        var btn = document.querySelector('[class*="easysell"], [id*="easysell"], [data-easysell]');
-        if (btn) { clearInterval(interval); btn.click(); }
-        else if (attempts > 20) { clearInterval(interval); window.location.href = '/cart'; }
-      }, 100);
-      `}
-    })
-    .catch(function(err) {
-      console.error('[UnitOne] Error:', err);
-      window.location.href = '/cart';
-    });
+  function openCODForm(varId) {
+    console.log('[UnitOne] Opening COD form for variant:', varId);
+    
+    // Creeaza overlay fullscreen cu iframe la pagina produsului
+    var overlay = document.createElement('div');
+    overlay.id = 'unitone-cod-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999999;display:flex;flex-direction:column;animation:fadeIn 0.2s ease';
+    
+    // Header overlay cu buton inchidere
+    var header = document.createElement('div');
+    header.style.cssText = 'background:#111;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
+    header.innerHTML = '<span style="color:#fff;font-size:14px;font-weight:600">Finalizează comanda</span><button onclick="document.getElementById(\'unitone-cod-overlay\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">✕ Închide</button>';
+    
+    // Iframe cu pagina produsului - Releasit e activ acolo
+    var iframe = document.createElement('iframe');
+    iframe.style.cssText = 'flex:1;width:100%;border:none;background:#fff';
+    iframe.src = '/products/' + (window._PRODUCT_HANDLE || '') + '?variant=' + varId + '&rsi_cod_open=1';
+    
+    overlay.appendChild(header);
+    overlay.appendChild(iframe);
+    document.body.appendChild(overlay);
+    
+    // Adauga CSS animatie
+    var style = document.createElement('style');
+    style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}';
+    document.head.appendChild(style);
+    
+    console.log('[UnitOne] Overlay created, loading product page with Releasit');
   }
 
-  // Intercepteaza click pe butoanele noastre
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.releasit-button, .es-cod-button, [data-cod-trigger]');
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
     var varId = btn.getAttribute('data-variant-id') || VARIANT_ID;
-    console.log('[UnitOne] Button clicked, variantId:', varId);
-    openReleasitForm(varId);
+    openCODForm(varId);
   });
 
-  console.log('[UnitOne] COD trigger ready. Variant:', VARIANT_ID, 'App: ${codFormApp}');
+  console.log('[UnitOne] COD overlay ready. Variant:', VARIANT_ID);
 })();
 </script>`
       finalHtml = triggerScript + finalHtml
-      console.log('COD trigger script injected for:', codFormApp, 'variant:', vid)
+      console.log('COD overlay script injected for:', codFormApp, 'variant:', vid)
     }
 
     // Inlocuieste VARIANT_ID cu variantId real daca avem
