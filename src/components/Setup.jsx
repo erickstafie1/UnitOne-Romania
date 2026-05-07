@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function Setup({ shop, onComplete }) {
+export default function Setup({ shop, onComplete, isReconfigure }) {
   const [step, setStep] = useState(1) // 1=alegere, 2=instructiuni, 3=confirmare
   const [selected, setSelected] = useState(null) // 'releasit' | 'easysell' | 'none'
   const [hover, setHover] = useState(null)
@@ -65,9 +65,11 @@ export default function Setup({ shop, onComplete }) {
             <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
             <div style={{ textAlign:'center', marginBottom:40 }}>
               <div style={{ width:56, height:56, borderRadius:14, background:'linear-gradient(135deg,#3b82f6,#2563eb)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', boxShadow:'0 8px 24px rgba(59,130,246,0.35)', fontSize:24 }}>🛒</div>
-              <h1 style={{ fontSize:28, fontWeight:800, letterSpacing:-0.8, marginBottom:10 }}>Configurare rapidă</h1>
+              <h1 style={{ fontSize:28, fontWeight:800, letterSpacing:-0.8, marginBottom:10 }}>
+                {isReconfigure ? 'Schimbă formularul COD' : 'Configurare rapidă'}
+              </h1>
               <p style={{ color:'rgba(255,255,255,0.5)', fontSize:15, lineHeight:1.6 }}>
-                Ce aplicație de formular COD folosești în magazinul tău?
+                {isReconfigure ? 'Alege o altă aplicație de formular COD pentru butoanele din LP-urile tale.' : 'Ce aplicație de formular COD folosești în magazinul tău?'}
               </p>
             </div>
 
