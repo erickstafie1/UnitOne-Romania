@@ -138,62 +138,27 @@ module.exports = async function handler(req, res) {
     // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
     let finalHtml = html
 
-    // Injecteaza scriptul aplicatiei COD form
+    // Injecteaza scripturile aplicatiei COD form direct din CDN-ul Shopify
     if (codFormApp === 'releasit') {
-      // Releasit incarca scriptul lor din tema - trebuie sa il adaugam manual pe paginile custom
-      const releasitScript = `<script>
-(function(){
-  // Trigger Releasit on button click
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.releasit-button');
-    if (!btn) return;
-    e.preventDefault();
-    var variantId = btn.getAttribute('data-variant-id') || btn.getAttribute('data-variant');
-    if (window.releasit && window.releasit.openForm) {
-      window.releasit.openForm({ variantId: variantId });
-    } else {
-      // Fallback - adauga la cos si redirecteaza
-      var form = document.createElement('form');
-      form.method = 'post'; form.action = '/cart/add';
-      var inp = document.createElement('input');
-      inp.type = 'hidden'; inp.name = 'id'; inp.value = variantId;
-      form.appendChild(inp);
-      var qty = document.createElement('input');
-      qty.type = 'hidden'; qty.name = 'quantity'; qty.value = '1';
-      form.appendChild(qty);
-      document.body.appendChild(form);
-      form.submit();
-    }
-  });
-})();
-</script>`
-      finalHtml = releasitScript + finalHtml
+      const releasitEmbed = `
+<link type="text/css" rel="stylesheet" href="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/style.min.css">
+<link type="text/css" rel="stylesheet" href="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/datepicker.min.css">
+<script>
+  var _RSI_COD_FORM_SWIFFY_JS_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/swiffy-slider.min.js";
+  var _RSI_COD_FORM_SWIFFY_CSS_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/swiffy-slider.min.css";
+  var _RSI_COD_FORM_CSS_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/style.min.css";
+  var _RSI_COD_FORM_CSS_DATE_URL = "https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/datepicker.min.css";
+<\/script>
+<script src="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/datepicker.min.js" defer></script>
+<script src="https://cdn.shopify.com/extensions/019df846-34ef-73d0-98ba-9677996435af/releasit-cod-form-415/assets/get-form-script.min.js" defer></script>`
+      finalHtml = releasitEmbed + finalHtml
+      console.log('Releasit scripts injected')
     } else if (codFormApp === 'easysell') {
-      const easysellScript = `<script>
-(function(){
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.es-cod-button');
-    if (!btn) return;
-    e.preventDefault();
-    var variantId = btn.getAttribute('data-variant-id') || btn.getAttribute('data-variant');
-    if (window.EasySell && window.EasySell.openForm) {
-      window.EasySell.openForm({ variantId: variantId });
-    } else {
-      var form = document.createElement('form');
-      form.method = 'post'; form.action = '/cart/add';
-      var inp = document.createElement('input');
-      inp.type = 'hidden'; inp.name = 'id'; inp.value = variantId;
-      form.appendChild(inp);
-      var qty = document.createElement('input');
-      qty.type = 'hidden'; qty.name = 'quantity'; qty.value = '1';
-      form.appendChild(qty);
-      document.body.appendChild(form);
-      form.submit();
-    }
-  });
-})();
-</script>`
-      finalHtml = easysellScript + finalHtml
+      // EasySell - scripturile lor standard
+      const easysellEmbed = `
+<script src="https://cdn.easysell.app/embed.js" defer></script>`
+      finalHtml = easysellEmbed + finalHtml
+      console.log('EasySell scripts injected')
     }
 
     // Inlocuieste VARIANT_ID cu variantId real daca avem
