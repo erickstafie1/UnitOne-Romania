@@ -1,3 +1,4 @@
+// v3 - clean rewrite with Releasit support
 const https = require('https')
 
 function shopifyRequest(shop, token, path, method, body) {
@@ -18,115 +19,101 @@ function shopifyRequest(shop, token, path, method, body) {
       res.on('data', c => chunks.push(c))
       res.on('end', () => {
         try { resolve(JSON.parse(Buffer.concat(chunks).toString())) }
-        catch(e) { reject(new Error('Parse error: ' + Buffer.concat(chunks).toString().substring(0, 100))) }
+        catch(e) { reject(new Error(Buffer.concat(chunks).toString().substring(0, 200))) }
       })
     })
     req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Shopify timeout')) })
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')) })
     if (data) req.write(data)
     req.end()
   })
 }
 
-// Instaleaza template de pagina fara header/footer
+function buildHideScript() {
+  return `<script>(function(){function h(){var s=['header','footer','nav','.header','.footer','.site-header','.site-footer','#shopify-section-header','#shopify-section-footer','.announcement-bar','.sticky-header','.page-header','.page__title','h1.title'];s.forEach(function(sel){document.querySelectorAll(sel).forEach(function(el){el.style.display='none';});});document.body.style.paddingTop='0';var m=document.querySelector('main,#MainContent,.main-content');if(m){m.style.paddingTop='0';m.style.marginTop='0';}}h();document.addEventListener('DOMContentLoaded',h);setTimeout(h,500);setTimeout(h,1500);})();</script>`
+}
+
+function buildReleasitScript(variantId) {
+  const vid = variantId || '0'
+  return `<script>(function(){var V='${vid}';function init(){document.querySelectorAll('.releasit-button,[data-cod-trigger]').forEach(function(b){b.classList.add('_rsi-cod-form-pagefly-button-overwrite-v2');if(V&&V!=='0')b.setAttribute('data-variant-id',V);});}init();document.addEventListener('DOMContentLoaded',init);setTimeout(init,500);setTimeout(init,1500);console.log('[UnitOne] Releasit ready, variant:',V);})();</script>`
+}
+
 async function installLandingTemplate(shop, token) {
   try {
     const themes = await shopifyRequest(shop, token, '/themes.json', 'GET', null)
-    const activeTheme = (themes.themes || []).find(t => t.role === 'main')
-    if (!activeTheme) { console.log('No active theme found'); return }
-    const themeId = activeTheme.id
-    console.log('Active theme:', themeId, activeTheme.name)
+    const active = (themes.themes || []).find(t => t.role === 'main')
+    if (!active) return
+    const id = active.id
 
-    // Creeaza layout-ul fara header/footer
-    const layoutLiquid = `<!DOCTYPE html>
-<html lang="ro">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page.title }}</title>
-  {{ content_for_header }}
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; }
-  </style>
-</head>
-<body>
-  {{ content_for_layout }}
-</body>
-</html>`
-
-    // Creeaza template simplu
-    const templateJson = JSON.stringify({
-      sections: {
-        "main": { "type": "pagecod-main", "settings": {} }
-      },
-      order: ["main"]
+    await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
+      asset: {
+        key: 'layout/pagecod.liquid',
+        value: `<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ page.title }}</title>{{ content_for_header }}<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif}</style></head><body>{{ content_for_layout }}</body></html>`
+      }
     })
 
-    // Creeaza sectiunea principala
-    const sectionLiquid = `<div class="pagecod-lp">{{ page.content }}</div>`
-
-    // Instaleaza toate fisierele
-    await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
-      asset: { key: 'layout/pagecod.liquid', value: layoutLiquid }
+    await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
+      asset: {
+        key: 'sections/pagecod-main.liquid',
+        value: `{{ page.content }}`
+      }
     })
-    console.log('Layout created')
 
-    await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
-      asset: { key: 'sections/pagecod-main.liquid', value: sectionLiquid }
+    await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
+      asset: {
+        key: 'templates/page.pagecod.json',
+        value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] })
+      }
     })
-    console.log('Section created')
-
-    await shopifyRequest(shop, token, `/themes/${themeId}/assets.json`, 'PUT', {
-      asset: { key: 'templates/page.pagecod.json', value: templateJson }
-    })
-    console.log('Template created')
-
-    console.log('Landing template installed successfully!')
   } catch(e) {
-    console.log('Install template error:', e.message)
+    console.log('Template install error (non-fatal):', e.message)
   }
 }
 
 module.exports = async function handler(req, res) {
-  console.log('PUBLISH HANDLER CALLED method:', req.method, 'body keys:', Object.keys(req.body || {}))
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  console.log('=== PUBLISH HANDLER ===')
+  console.log('query:', JSON.stringify(req.query))
 
   try {
-    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp: bodyApp, variantId: bodyVariant, productHandle: bodyHandle } = req.body || {}
+    const body = req.body || {}
+    const query = req.query || {}
+
+    const shop = body.shop
+    const token = body.token
+    const title = body.title
+    const html = body.html
+    const action = body.action
+    const productId = body.productId
+    const hideHeaderFooter = body.hideHeaderFooter !== false
     
-    // Citim din query params ca fallback
-    const codFormApp = bodyApp || req.query?.codFormApp || null
-    const variantId = bodyVariant || req.query?.variantId || null
-    const productHandle = bodyHandle || req.query?.productHandle || null
-    
-    console.log('=== PUBLISH REQUEST ===')
-    console.log('action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId)
-    
-    const effectiveCodFormApp = codFormApp
-    
+    // codFormApp si variantId - din body sau query params
+    const codFormApp = body.codFormApp || query.codFormApp || null
+    const variantId = body.variantId || query.variantId || null
+    const productHandle = body.productHandle || query.productHandle || null
+
+    console.log('action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId, 'shop:', shop)
+
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
-    // Get products action
+    // GET PRODUCTS
     if (action === 'get_products') {
-      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,images,variants', 'GET', null)
+      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,handle,images,variants', 'GET', null)
       return res.status(200).json({ success: true, products: data.products || [] })
     }
 
-    // Update pagina existenta
+    // UPDATE pagina existenta
     if (action === 'update') {
-      const { pageId } = req.body
+      const pageId = body.pageId
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
 
       let finalHtml = html
-      if (hideHeaderFooter !== false) {
-        const hideScript = `<script>(function(){function hide(){var s=['header','footer','nav','.header','.footer','.site-header','.site-footer','#shopify-section-header','#shopify-section-footer','#shopify-section-announcement-bar','.announcement-bar','.sticky-header','.page-header','.page__title','.page-title','h1.title','h1.page-title','.section-header','[class*="page-header"]'];s.forEach(function(sel){document.querySelectorAll(sel).forEach(function(el){el.style.display='none';});});document.body.style.paddingTop='0';var m=document.querySelector('main,#MainContent,.main-content');if(m){m.style.paddingTop='0';m.style.marginTop='0';}}hide();document.addEventListener('DOMContentLoaded',hide);setTimeout(hide,500);setTimeout(hide,1500);})();</script>`
-        finalHtml = hideScript + html
-      }
+      if (codFormApp === 'releasit') finalHtml = buildReleasitScript(variantId) + finalHtml
+      if (hideHeaderFooter) finalHtml = buildHideScript() + finalHtml
 
       const result = await shopifyRequest(shop, token, `/pages/${pageId}.json`, 'PUT', {
         page: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
@@ -134,139 +121,77 @@ module.exports = async function handler(req, res) {
       if (result.page) {
         return res.status(200).json({
           success: true,
-          pageUrl: `https://${shop}/pages/${result.page.handle}`,
-          pageId: result.page.id
+          pageUrl: `https://${shop}/pages/${result.page.handle}`
         })
       }
       throw new Error(JSON.stringify(result.errors || 'Update failed'))
     }
 
+    // PUBLISH pagina noua
     if (!html) return res.status(400).json({ error: 'Missing html' })
 
-    console.log('Publishing page for:', shop, 'Title:', title)
-    console.log('HTML size:', Math.round(html.length / 1024), 'KB')
-
-    // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
     let finalHtml = html
 
-    // Injecteaza trigger pentru COD form
-    if (effectiveCodFormApp === 'releasit' || effectiveCodFormApp === 'easysell') {
-      const vid = variantId || '0'
-      
-      const triggerScript = `<script>
-(function(){
-  var VARIANT_ID = '${vid}';
-  // Releasit: adauga clasa speciala pe butoanele noastre
-  // _rsi-cod-form-pagefly-button-overwrite-v2 este clasa recunoscuta de Releasit
-  function initButtons() {
-    document.querySelectorAll('.releasit-button, .es-cod-button, [data-cod-trigger]').forEach(function(btn) {
-      ${codFormApp === 'releasit' 
-        ? "btn.classList.add('_rsi-cod-form-pagefly-button-overwrite-v2');"
-        : "btn.classList.add('es-cod-button');"}
-      if (VARIANT_ID && VARIANT_ID !== '0') {
-        btn.setAttribute('data-variant-id', VARIANT_ID);
-      }
-    });
-  }
-  initButtons();
-  document.addEventListener('DOMContentLoaded', initButtons);
-  setTimeout(initButtons, 500);
-  setTimeout(initButtons, 1500);
-  console.log('[UnitOne] COD buttons initialized for ${codFormApp}');
-})();
-</script>`
-      finalHtml = triggerScript + finalHtml
-      console.log('COD trigger injected for:', effectiveCodFormApp)
+    // Injecteaza Releasit trigger
+    if (codFormApp === 'releasit') {
+      finalHtml = buildReleasitScript(variantId) + finalHtml
+      console.log('Releasit script injected, variantId:', variantId)
+    } else if (codFormApp === 'easysell') {
+      finalHtml = `<script>(function(){function i(){document.querySelectorAll('.es-cod-button').forEach(function(b){if('${variantId}')b.setAttribute('data-variant-id','${variantId}');});}i();document.addEventListener('DOMContentLoaded',i);setTimeout(i,500);})();</script>` + finalHtml
+      console.log('EasySell script injected')
     }
 
-    // Inlocuieste VARIANT_ID cu variantId real daca avem
+    // Injecteaza hide header/footer
+    if (hideHeaderFooter) {
+      finalHtml = buildHideScript() + finalHtml
+    }
+
+    // Inlocuieste VARIANT_ID cu variantId real
     if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-      console.log('Variant ID set:', variantId)
+      console.log('Replaced VARIANT_ID with:', variantId)
     }
 
-    if (hideHeaderFooter !== false) {
-      const hideScript = `<script>
-(function(){
-  function hide(){
-    var selectors = [
-      'header','footer','nav','.header','.footer',
-      '.site-header','.site-footer','#shopify-section-header',
-      '#shopify-section-footer','#shopify-section-announcement-bar',
-      '.announcement-bar','.header-wrapper','.footer-wrapper',
-      '[id*="HeaderWrapper"]','[id*="FooterWrapper"]',
-      '.sticky-header','#StickyHeader',
-      '.page-header','.page__title','.page-title',
-      'h1.title','h1.page-title','.section-header',
-      '[class*="page-header"]','[class*="page__header"]'
-    ];
-    selectors.forEach(function(s){
-      document.querySelectorAll(s).forEach(function(el){
-        el.style.display='none';
-      });
-    });
-    document.body.style.paddingTop='0';
-    var main=document.querySelector('main,#MainContent,.main-content');
-    if(main){main.style.paddingTop='0';main.style.marginTop='0';}
-  }
-  hide();
-  document.addEventListener('DOMContentLoaded',hide);
-  setTimeout(hide,500);
-  setTimeout(hide,1500);
-})();
-</script>`
-      finalHtml = hideScript + html
-    }
+    // Instaleaza template fara header/footer
+    await installLandingTemplate(shop, token)
 
+    // Creeaza pagina
     const result = await shopifyRequest(shop, token, '/pages.json', 'POST', {
       page: {
         title: title || 'Pagina COD',
         body_html: finalHtml,
-        published: true
+        published: true,
+        template_suffix: 'pagecod'
       }
     })
 
-    if (result.page) {
-      console.log('Page created:', result.page.id, result.page.handle)
+    if (!result.page) throw new Error(JSON.stringify(result.errors || 'Page creation failed'))
 
-      // Daca hideHeaderFooter e true, instaleaza template fara header/footer
-      if (hideHeaderFooter !== false) {
-        await installLandingTemplate(shop, token)
-        try {
-          await shopifyRequest(shop, token, `/pages/${result.page.id}.json`, 'PUT', {
-            page: { id: result.page.id, template_suffix: 'pagecod' }
-          })
-          console.log('Template pagecod setat pe pagina')
-        } catch(e) {
-          console.log('Template error (non-fatal):', e.message)
-        }
+    console.log('Page created:', result.page.id, result.page.handle)
+
+    // Asociaza cu produsul via metafield
+    if (productId) {
+      try {
+        await shopifyRequest(shop, token, `/products/${productId}/metafields.json`, 'POST', {
+          metafield: {
+            namespace: 'pagecod',
+            key: 'landing_page_url',
+            value: `https://${shop}/pages/${result.page.handle}`,
+            type: 'url'
+          }
+        })
+        console.log('Metafield set for product:', productId)
+      } catch(e) {
+        console.log('Metafield error (non-fatal):', e.message)
       }
-
-      // Asociaza cu produsul daca avem productId
-      if (productId) {
-        try {
-          await shopifyRequest(shop, token, `/products/${productId}/metafields.json`, 'POST', {
-            metafield: {
-              namespace: 'pagecod',
-              key: 'landing_page_url',
-              value: `https://${shop}/pages/${result.page.handle}`,
-              type: 'url'
-            }
-          })
-          console.log('Metafield set for product:', productId)
-        } catch(e) {
-          console.log('Metafield error (non-fatal):', e.message)
-        }
-      }
-
-      return res.status(200).json({
-        success: true,
-        pageUrl: `https://${shop}/pages/${result.page.handle}`,
-        pageId: result.page.id
-      })
     }
 
-    throw new Error(JSON.stringify(result.errors || 'Unknown error'))
+    res.status(200).json({
+      success: true,
+      pageUrl: `https://${shop}/pages/${result.page.handle}`,
+      pageId: result.page.id
+    })
+
   } catch(err) {
     console.error('Publish error:', err.message)
     res.status(500).json({ success: false, error: err.message })
