@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function Dashboard({ shop, token, onNew, onEdit }) {
+export default function Dashboard({ shop, token, onNew, onEdit, onReconfigure }) {
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
@@ -8,6 +8,9 @@ export default function Dashboard({ shop, token, onNew, onEdit }) {
   const [importJson, setImportJson] = useState('')
   const [importError, setImportError] = useState('')
   const [hoveredCard, setHoveredCard] = useState(null)
+  
+  const codFormApp = localStorage.getItem(`codform_${shop}`)
+  const codFormLabels = { releasit: 'Releasit COD', easysell: 'EasySell COD', none: 'Formular propriu' }
 
   useEffect(() => { loadPages() }, [])
 
@@ -101,7 +104,16 @@ export default function Dashboard({ shop, token, onNew, onEdit }) {
               <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', fontWeight:500 }}>{shop}</div>
             </div>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            {codFormApp && (
+              <button onClick={onReconfigure}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.03)', color:'rgba(255,255,255,0.5)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='rgba(255,255,255,0.8)' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.03)'; e.currentTarget.style.color='rgba(255,255,255,0.5)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10"/><path d="M12 8v4l3 3M21 12a9 9 0 01-9 9"/></svg>
+                {codFormLabels[codFormApp]}
+              </button>
+            )}
             <PremiumBtn onClick={() => setImportModal(true)} variant="ghost">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
               Import
