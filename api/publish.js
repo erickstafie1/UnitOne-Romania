@@ -167,22 +167,16 @@ module.exports = async function handler(req, res) {
       var interval = setInterval(function() {
         attempts++;
         // Cauta toate variantele posibile de butoane Releasit
-        var btn = document.querySelector(
-          '[class*="rsi-buy-now"], [class*="rsi-cod"], [id*="rsi-"], ' +
-          '[class*="releasit-buy"], [data-rsi-variant], ' +
-          'button[class*="rsi"], div[class*="rsi-form-trigger"]'
-        );
-        console.log('[UnitOne] Looking for Releasit button, attempt:', attempts, 'found:', btn);
-        if (btn) {
+        // Cauta butonul nativ Releasit _rsi-buy-now-button
+        var rsiBtn = document.querySelector('._rsi-buy-now-button');
+        console.log('[UnitOne] Looking for _rsi-buy-now-button, attempt:', attempts, 'found:', !!rsiBtn);
+        if (rsiBtn) {
           clearInterval(interval);
-          btn.click();
-        } else if (attempts > 20) {
+          // Click pe butonul Releasit nativ - el stie sa deschida formularul
+          rsiBtn.click();
+          console.log('[UnitOne] Clicked _rsi-buy-now-button!');
+        } else if (attempts > 30) {
           clearInterval(interval);
-          // Fallback: triggereaza evenimentele Releasit
-          var evt = new CustomEvent('rsi:openForm', { bubbles: true, detail: { variantId: varId } });
-          document.dispatchEvent(evt);
-          window.dispatchEvent(new CustomEvent('rsi:open', { detail: { variantId: varId } }));
-          // Ultimul fallback - mergi la checkout
           console.log('[UnitOne] Releasit button not found, going to cart');
           window.location.href = '/cart';
         }
