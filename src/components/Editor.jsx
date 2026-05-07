@@ -132,39 +132,54 @@ export default function Editor({ data, shop, token, codFormApp, onBack }) {
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
 
-      // Comprima imaginile base64 in browser inainte de a le pune in HTML
-      async function compressImage(base64, maxWidth=800, quality=0.7) {
+      // Comprima agresiv imaginile base64 - max 600px, quality 0.5
+      async function compressImage(base64, maxWidth=600, quality=0.5) {
         return new Promise((resolve) => {
           const img = new Image()
           img.onload = () => {
             const canvas = document.createElement('canvas')
             const ratio = Math.min(1, maxWidth / img.width)
-            canvas.width = img.width * ratio
-            canvas.height = img.height * ratio
+            canvas.width = Math.round(img.width * ratio)
+            canvas.height = Math.round(img.height * ratio)
             const ctx = canvas.getContext('2d')
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-            resolve(canvas.toDataURL('image/jpeg', quality))
+            // Incearca sa fie sub 80KB
+            let q = quality
+            let result = canvas.toDataURL('image/jpeg', q)
+            while (result.length > 80000 && q > 0.2) {
+              q -= 0.1
+              result = canvas.toDataURL('image/jpeg', q)
+            }
+            resolve(result)
           }
           img.onerror = () => resolve(base64)
           img.src = base64
         })
       }
 
-      // Comprima toate imaginile Gemini
+      // Comprima toate imaginile
       const images = data.images || []
       const compressedImages = await Promise.all(
         images.map(img => img && img.startsWith('data:') ? compressImage(img) : Promise.resolve(img))
       )
-      console.log('Images compressed:', compressedImages.map(img => img ? Math.round(img.length/1024) + 'KB' : 'null').join(', '))
+      const sizes = compressedImages.map(img => img ? Math.round(img.length/1024) + 'KB' : 'null')
+      console.log('Compressed sizes:', sizes.join(', '))
 
-      // Inlocuieste imaginile originale cu cele comprimate in HTML
+      // Inlocuieste in HTML
       let finalHtml = fullHtml
       images.forEach((originalImg, i) => {
-        if (originalImg && compressedImages[i] && originalImg !== compressedImages[i]) {
+        if (originalImg && compressedImages[i]) {
           finalHtml = finalHtml.split(originalImg).join(compressedImages[i])
         }
       })
       console.log('Final HTML size:', Math.round(finalHtml.length/1024), 'KB')
+      
+      // Daca tot e prea mare, scoatem imaginile base64 complet
+      if (finalHtml.length > 450000) {
+        console.log('Still too big, removing base64 images')
+        finalHtml = finalHtml.replace(/src="data:image\/[^"]{100,}"/g, 'src="https://placehold.co/600x400/f3f4f6/999?text=Imagine"')
+        console.log('After removal:', Math.round(finalHtml.length/1024), 'KB')
+      }
 
       const body = isEditing
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter }
