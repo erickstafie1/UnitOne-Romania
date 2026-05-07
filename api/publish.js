@@ -98,6 +98,9 @@ module.exports = async function handler(req, res) {
   try {
     const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId, productHandle } = req.body || {}
     
+    console.log('=== PUBLISH REQUEST ===')
+    console.log('action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId, 'productHandle:', productHandle)
+    
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     // Get products action
