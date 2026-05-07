@@ -138,60 +138,34 @@ module.exports = async function handler(req, res) {
     // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
     let finalHtml = html
 
-    // Injecteaza trigger pentru COD form - iframe overlay
+    // Injecteaza trigger pentru COD form
     if (codFormApp === 'releasit' || codFormApp === 'easysell') {
       const vid = variantId || '0'
-      const productHandle = variantId ? 'products/unknown' : ''
       
       const triggerScript = `<script>
 (function(){
   var VARIANT_ID = '${vid}';
-  window._PRODUCT_HANDLE = '${productHandle || ''}';
-
-  function openCODForm(varId) {
-    console.log('[UnitOne] Opening COD form for variant:', varId);
-    
-    // Creeaza overlay fullscreen cu iframe la pagina produsului
-    var overlay = document.createElement('div');
-    overlay.id = 'unitone-cod-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999999;display:flex;flex-direction:column;animation:fadeIn 0.2s ease';
-    
-    // Header overlay cu buton inchidere
-    var header = document.createElement('div');
-    header.style.cssText = 'background:#111;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
-    header.innerHTML = '<span style="color:#fff;font-size:14px;font-weight:600">Finalizează comanda</span><button onclick="document.getElementById(\'unitone-cod-overlay\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">✕ Închide</button>';
-    
-    // Iframe cu pagina produsului - Releasit e activ acolo
-    var iframe = document.createElement('iframe');
-    iframe.style.cssText = 'flex:1;width:100%;border:none;background:#fff';
-    iframe.src = '/products/' + (window._PRODUCT_HANDLE || '') + '?variant=' + varId + '&rsi_cod_open=1';
-    
-    overlay.appendChild(header);
-    overlay.appendChild(iframe);
-    document.body.appendChild(overlay);
-    
-    // Adauga CSS animatie
-    var style = document.createElement('style');
-    style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}';
-    document.head.appendChild(style);
-    
-    console.log('[UnitOne] Overlay created, loading product page with Releasit');
+  // Releasit: adauga clasa speciala pe butoanele noastre
+  // _rsi-cod-form-pagefly-button-overwrite-v2 este clasa recunoscuta de Releasit
+  function initButtons() {
+    document.querySelectorAll('.releasit-button, .es-cod-button, [data-cod-trigger]').forEach(function(btn) {
+      ${codFormApp === 'releasit' 
+        ? "btn.classList.add('_rsi-cod-form-pagefly-button-overwrite-v2');"
+        : "btn.classList.add('es-cod-button');"}
+      if (VARIANT_ID && VARIANT_ID !== '0') {
+        btn.setAttribute('data-variant-id', VARIANT_ID);
+      }
+    });
   }
-
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.releasit-button, .es-cod-button, [data-cod-trigger]');
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    var varId = btn.getAttribute('data-variant-id') || VARIANT_ID;
-    openCODForm(varId);
-  });
-
-  console.log('[UnitOne] COD overlay ready. Variant:', VARIANT_ID);
+  initButtons();
+  document.addEventListener('DOMContentLoaded', initButtons);
+  setTimeout(initButtons, 500);
+  setTimeout(initButtons, 1500);
+  console.log('[UnitOne] COD buttons initialized for ${codFormApp}');
 })();
 </script>`
       finalHtml = triggerScript + finalHtml
-      console.log('COD overlay script injected for:', codFormApp, 'variant:', vid)
+      console.log('COD trigger injected for:', codFormApp)
     }
 
     // Inlocuieste VARIANT_ID cu variantId real daca avem
