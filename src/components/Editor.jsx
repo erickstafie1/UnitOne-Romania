@@ -183,13 +183,16 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         console.log('After removal:', Math.round(finalHtml.length/1024), 'KB')
       }
 
-      console.log('[Publish] selectedProduct:', selectedProduct?.title, selectedProduct?.variants?.[0]?.id)
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
       const productHandle = selectedProduct?.handle || null
-      
-      // Citim codFormApp direct din localStorage ca sa fim siguri ca e corect
       const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
       console.log('[Publish] finalCodFormApp:', finalCodFormApp, 'variantId:', variantId)
+      
+      // Inlocuieste VARIANT_ID cu variantId real DIRECT IN BROWSER
+      if (variantId) {
+        finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
+        console.log('[Publish] Replaced VARIANT_ID with:', variantId)
+      }
 
       const body = isEditing
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, productHandle }
@@ -395,6 +398,12 @@ function adjustColor(hex, amount) {
 }
 
 function buildHTML(data, codFormApp) {
+  // Butonul COD - cu clasa Releasit direct in HTML
+  const codBtnClass = codFormApp === 'releasit' 
+    ? '_rsi-cod-form-pagefly-button-overwrite-v2 releasit-button'
+    : codFormApp === 'easysell'
+    ? 'es-cod-button'
+    : 'cod-button'
   const price = data.price || 149
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
   const disc = Math.round((1 - price / oldPrice) * 100)
@@ -461,7 +470,7 @@ function buildHTML(data, codFormApp) {
     <span style="font-size:42px;font-weight:900;color:#e8000d">${price} LEI</span>
     <span style="background:#e8000d;color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:700">-${disc}%</span>
   </div>
-  <a href="#formular" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:16px 24px;border-radius:4px;font-size:18px;font-weight:900;text-decoration:none;letter-spacing:0.5px;margin-bottom:10px">COMANDĂ ACUM!</a>
+  <button class="${codBtnClass}" data-variant-id="VARIANT_ID" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:16px 24px;border-radius:4px;font-size:18px;font-weight:900;text-decoration:none;letter-spacing:0.5px;margin-bottom:10px" style="border:none;cursor:pointer;font-family:inherit">COMANDĂ ACUM!</button>
   <p style="font-size:13px;color:#666;margin:0">✅ Plată la livrare &nbsp;·&nbsp; 🚚 Livrare 2-4 zile &nbsp;·&nbsp; ↩️ Retur 30 zile</p>
 </div>
 
@@ -474,7 +483,7 @@ function buildHTML(data, codFormApp) {
       <div style="width:32px;height:32px;background:#e8000d;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0">${i+1}</div>
       <div><strong style="font-size:15px;display:block;margin-bottom:3px">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>
     </div>`).join('')}
-  <a href="#formular" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:14px;border-radius:4px;font-size:16px;font-weight:900;text-decoration:none;margin-top:20px">COMANDĂ ACUM!</a>
+  <button class="${codBtnClass}" data-variant-id="VARIANT_ID" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:14px;border-radius:4px;font-size:16px;font-weight:900;text-decoration:none;margin-top:20px" style="border:none;cursor:pointer;font-family:inherit">COMANDĂ ACUM!</button>
 </div>
 
 <!-- IMAGINE 3 - DETALIU -->
@@ -608,7 +617,7 @@ function addBlocks(editor, data) {
     // TYPOGRAPHY
     { id:'heading', label:'Heading', cat:'Text', content:`<h2 style="font-size:28px;font-weight:900;color:#111;padding:16px 20px;margin:0;line-height:1.2">Titlul tău aici</h2>` },
     { id:'text-block', label:'Text Block', cat:'Text', content:`<p style="font-size:15px;color:#444;line-height:1.7;padding:12px 20px;margin:0">Textul tău aici. Modifică-l direct cu click.</p>` },
-    { id:'button', label:'Button', cat:'Text', content:`<div style="padding:16px 20px;text-align:center"><a href="#formular" style="display:inline-block;background:${p};color:#fff;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:800;text-decoration:none;letter-spacing:0.5px">COMANDĂ ACUM!</a></div>` },
+    { id:'button', label:'Button', cat:'Text', content:`<div style="padding:16px 20px;text-align:center"><button class="${codBtnClass}" data-variant-id="VARIANT_ID" style="display:inline-block;background:${p};color:#fff;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:800;text-decoration:none;letter-spacing:0.5px" style="border:none;cursor:pointer;font-family:inherit">COMANDĂ ACUM!</button></div>` },
 
     // MEDIA
     { id:'image', label:'Image', cat:'Media', content:`<div style="padding:0"><img src="https://placehold.co/650x400/f3f4f6/999?text=Imagine" style="width:100%;display:block" /></div>` },
