@@ -195,7 +195,14 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, productHandle }
         : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, productHandle }
 
-      const res = await fetch('/api/publish', {
+      // Trimitem codFormApp si variantId in URL ca sa fie sigur ca ajung
+      const queryParams = new URLSearchParams({
+        codFormApp: finalCodFormApp || '',
+        variantId: variantId || '',
+        productHandle: productHandle || ''
+      }).toString()
+
+      const res = await fetch('/api/publish?' + queryParams, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
