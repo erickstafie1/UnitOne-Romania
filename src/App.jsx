@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
+import Setup from './components/Setup.jsx'
 
 export default function App() {
-  const [screen, setScreen] = useState('dashboard') // dashboard | generator | editor
+  const [screen, setScreen] = useState('loading') // loading | setup | dashboard | generator | editor
+  const [codFormApp, setCodFormApp] = useState(null)
   const [generatedData, setGeneratedData] = useState(null)
   const [editingPage, setEditingPage] = useState(null) // pagina din dashboard de editat
   const [shop, setShop] = useState('')
@@ -16,7 +18,17 @@ export default function App() {
     const params = new URLSearchParams(window.location.search)
     const s = params.get('shop')
     const t = params.get('token')
-    if (s && t) { setShop(s); setToken(t); setLoading(false) }
+    if (s && t) {
+      setShop(s); setToken(t); setLoading(false)
+      // Verifica daca a configurat deja COD form app
+      const saved = localStorage.getItem(`codform_${s}`)
+      if (saved) {
+        setCodFormApp(saved)
+        setScreen('dashboard')
+      } else {
+        setScreen('setup')
+      }
+    }
     else if (s) { window.location.href = `/api/auth?shop=${s}` }
     else { setError('Accesează aplicația din Shopify Admin.'); setLoading(false) }
   }, [])
@@ -44,6 +56,12 @@ export default function App() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#0a0a0f' }}>
+      {screen === 'setup' && (
+        <Setup shop={shop} onComplete={(app) => {
+          setCodFormApp(app)
+          setScreen('dashboard')
+        }} />
+      )}
       {screen === 'dashboard' && (
         <Dashboard shop={shop} token={token}
           onNew={() => setScreen('generator')}
@@ -61,6 +79,7 @@ export default function App() {
           data={editingPage || generatedData}
           shop={shop}
           token={token}
+          codFormApp={codFormApp}
           onBack={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
           onPublished={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
         />
