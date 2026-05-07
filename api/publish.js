@@ -1,4 +1,3 @@
-// v2 - releasit trigger
 const https = require('https')
 
 function shopifyRequest(shop, token, path, method, body) {
@@ -90,6 +89,7 @@ async function installLandingTemplate(shop, token) {
 }
 
 module.exports = async function handler(req, res) {
+  console.log('PUBLISH HANDLER CALLED method:', req.method, 'body keys:', Object.keys(req.body || {}))
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
