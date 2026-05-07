@@ -194,11 +194,48 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         console.log('[Publish] Replaced VARIANT_ID with:', variantId)
       }
       
-      // Injecteaza product handle pentru drawer
-      if (productHandle) {
-        const handleScript = '<script>window._PRODUCT_HANDLE = "' + productHandle + '";</script>'
-        finalHtml = handleScript + finalHtml
-        console.log('[Publish] Product handle injected:', productHandle)
+      // Injecteaza scriptul COD form direct in browser
+      if (finalCodFormApp === 'releasit' && productHandle) {
+        const vid = variantId || '0'
+        const handle = productHandle || ''
+        const codScript = `<script>
+(function(){
+  var V="${vid}";
+  var H="${handle}";
+  window._PRODUCT_HANDLE = H;
+  
+  function openDrawer(varId) {
+    var old = document.getElementById('unitone-drawer');
+    if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'unitone-drawer';
+    d.innerHTML = '<style>@keyframes uSlide{from{transform:translateX(100%)}to{transform:translateX(0)}}</style><div onclick="document.getElementById(\'unitone-drawer\').remove()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2147483646"></div><div style="position:fixed;top:0;right:0;width:100%;max-width:480px;height:100%;background:#fff;z-index:2147483647;display:flex;flex-direction:column;animation:uSlide 0.3s ease;box-shadow:-4px 0 30px rgba(0,0,0,0.2)"><div style="padding:14px 16px;background:#fff;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700">Finalizează comanda</span><button onclick="document.getElementById(\'unitone-drawer\').remove()" style="background:rgba(0,0,0,0.06);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button></div><iframe src="/products/'+H+'?variant='+varId+'" style="flex:1;border:none;width:100%" id="unitone-iframe"></iframe></div>';
+    document.body.appendChild(d);
+    // Dupa load, click pe butonul Releasit din iframe
+    document.getElementById('unitone-iframe').onload = function() {
+      try {
+        var iDoc = this.contentDocument;
+        setTimeout(function(){
+          var b = iDoc.querySelector('._rsi-buy-now-button');
+          if(b){b.click();console.log('[UnitOne] Releasit button clicked in iframe');}
+        }, 1500);
+      } catch(e){}
+    };
+  }
+  
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('._rsi-cod-form-pagefly-button-overwrite-v2, .releasit-button');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openDrawer(btn.getAttribute('data-variant-id') || V);
+  }, true);
+  
+  console.log('[UnitOne] Drawer ready, handle:', H, 'variant:', V);
+})();
+</script>`
+        finalHtml = codScript + finalHtml
+        console.log('[Publish] COD drawer script injected in browser')
       }
 
       const body = isEditing
