@@ -96,7 +96,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { shop, token, title, html, action, productId, hideHeaderFooter } = req.body || {}
+    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = req.body || {}
     
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
@@ -137,6 +137,71 @@ module.exports = async function handler(req, res) {
 
     // Daca hideHeaderFooter, injecteaza script care ascunde header/footer dupa load
     let finalHtml = html
+
+    // Injecteaza scriptul aplicatiei COD form
+    if (codFormApp === 'releasit') {
+      // Releasit incarca scriptul lor din tema - trebuie sa il adaugam manual pe paginile custom
+      const releasitScript = `<script>
+(function(){
+  // Trigger Releasit on button click
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.releasit-button');
+    if (!btn) return;
+    e.preventDefault();
+    var variantId = btn.getAttribute('data-variant-id') || btn.getAttribute('data-variant');
+    if (window.releasit && window.releasit.openForm) {
+      window.releasit.openForm({ variantId: variantId });
+    } else {
+      // Fallback - adauga la cos si redirecteaza
+      var form = document.createElement('form');
+      form.method = 'post'; form.action = '/cart/add';
+      var inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'id'; inp.value = variantId;
+      form.appendChild(inp);
+      var qty = document.createElement('input');
+      qty.type = 'hidden'; qty.name = 'quantity'; qty.value = '1';
+      form.appendChild(qty);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
+})();
+</script>`
+      finalHtml = releasitScript + finalHtml
+    } else if (codFormApp === 'easysell') {
+      const easysellScript = `<script>
+(function(){
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.es-cod-button');
+    if (!btn) return;
+    e.preventDefault();
+    var variantId = btn.getAttribute('data-variant-id') || btn.getAttribute('data-variant');
+    if (window.EasySell && window.EasySell.openForm) {
+      window.EasySell.openForm({ variantId: variantId });
+    } else {
+      var form = document.createElement('form');
+      form.method = 'post'; form.action = '/cart/add';
+      var inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'id'; inp.value = variantId;
+      form.appendChild(inp);
+      var qty = document.createElement('input');
+      qty.type = 'hidden'; qty.name = 'quantity'; qty.value = '1';
+      form.appendChild(qty);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
+})();
+</script>`
+      finalHtml = easysellScript + finalHtml
+    }
+
+    // Inlocuieste VARIANT_ID cu variantId real daca avem
+    if (variantId) {
+      finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
+      console.log('Variant ID set:', variantId)
+    }
+
     if (hideHeaderFooter !== false) {
       const hideScript = `<script>
 (function(){
