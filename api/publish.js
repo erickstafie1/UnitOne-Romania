@@ -141,59 +141,81 @@ module.exports = async function handler(req, res) {
     // Injecteaza trigger script pentru COD form
     if (codFormApp === 'releasit' || codFormApp === 'easysell') {
       const vid = variantId || '0'
+      const isReleasit = codFormApp === 'releasit'
+
       const triggerScript = `<script>
 (function(){
   var VARIANT_ID = '${vid}';
-  
-  function triggerCODForm(varId) {
-    // Adauga in cart via Shopify AJAX API
-    fetch('/cart/add.js', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ id: varId, quantity: 1 })
+
+  function openReleasitForm(varId) {
+    // Pasul 1: Adauga produsul in cart
+    fetch('/cart/clear.js', { method: 'POST' })
+    .then(function() {
+      return fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: varId, quantity: 1 })
+      })
     })
     .then(function(r) { return r.json(); })
     .then(function(item) {
-      console.log('Added to cart:', item);
-      ${codFormApp === 'releasit' ? `
-      // Releasit events
-      document.dispatchEvent(new CustomEvent('releasit:open', { detail: { variantId: varId } }));
-      document.dispatchEvent(new CustomEvent('releasit:openForm', { detail: { variantId: varId } }));
-      // Trigger click pe butonul hidden al Releasit daca exista
-      var rBtn = document.querySelector('[data-releasit-trigger],[class*="releasit"][class*="btn"],[class*="releasit"][class*="button"]');
-      if (rBtn) { rBtn.click(); }
-      // Trigger pe body pentru Releasit
-      document.body.dispatchEvent(new CustomEvent('releasit:open', { bubbles: true, detail: { variantId: varId } }));
-      window.dispatchEvent(new CustomEvent('releasit:open', { detail: { variantId: varId } }));
+      console.log('[UnitOne] Added to cart:', item.title);
+      ${isReleasit ? `
+      // Pasul 2: Cauta butonul floating Releasit si da click pe el
+      // Releasit randeaza un iframe sau un div cu clasa rsi-*
+      var attempts = 0;
+      var interval = setInterval(function() {
+        attempts++;
+        // Cauta toate variantele posibile de butoane Releasit
+        var btn = document.querySelector(
+          '[class*="rsi-buy-now"], [class*="rsi-cod"], [id*="rsi-"], ' +
+          '[class*="releasit-buy"], [data-rsi-variant], ' +
+          'button[class*="rsi"], div[class*="rsi-form-trigger"]'
+        );
+        console.log('[UnitOne] Looking for Releasit button, attempt:', attempts, 'found:', btn);
+        if (btn) {
+          clearInterval(interval);
+          btn.click();
+        } else if (attempts > 20) {
+          clearInterval(interval);
+          // Fallback: triggereaza evenimentele Releasit
+          var evt = new CustomEvent('rsi:openForm', { bubbles: true, detail: { variantId: varId } });
+          document.dispatchEvent(evt);
+          window.dispatchEvent(new CustomEvent('rsi:open', { detail: { variantId: varId } }));
+          // Ultimul fallback - mergi la checkout
+          console.log('[UnitOne] Releasit button not found, going to cart');
+          window.location.href = '/cart';
+        }
+      }, 100);
       ` : `
-      // EasySell events  
-      document.dispatchEvent(new CustomEvent('easysell:open', { detail: { variantId: varId } }));
-      var esBtn = document.querySelector('[data-easysell-trigger],[class*="easysell"]');
-      if (esBtn) { esBtn.click(); }
-      window.dispatchEvent(new CustomEvent('easysell:open', { detail: { variantId: varId } }));
+      // EasySell
+      var attempts = 0;
+      var interval = setInterval(function() {
+        attempts++;
+        var btn = document.querySelector('[class*="easysell"], [id*="easysell"], [data-easysell]');
+        if (btn) { clearInterval(interval); btn.click(); }
+        else if (attempts > 20) { clearInterval(interval); window.location.href = '/cart'; }
+      }, 100);
       `}
     })
     .catch(function(err) {
-      console.error('Cart error:', err);
-      // Fallback - deschide pagina produsului
+      console.error('[UnitOne] Error:', err);
       window.location.href = '/cart';
     });
   }
 
-  // Ascult click pe toate butoanele COD din pagina
+  // Intercepteaza click pe butoanele noastre
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.releasit-button, .es-cod-button, [data-cod-trigger]');
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
     var varId = btn.getAttribute('data-variant-id') || VARIANT_ID;
-    triggerCODForm(varId);
+    console.log('[UnitOne] Button clicked, variantId:', varId);
+    openReleasitForm(varId);
   });
 
-  // Asculta si dupa ce pagina se incarca complet
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('COD trigger ready, variant:', VARIANT_ID);
-  });
+  console.log('[UnitOne] COD trigger ready. Variant:', VARIANT_ID, 'App: ${codFormApp}');
 })();
 </script>`
       finalHtml = triggerScript + finalHtml
