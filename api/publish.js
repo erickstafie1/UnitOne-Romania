@@ -135,7 +135,7 @@ async function installProductTemplate(shop, token) {
 
     console.log('Product template installed')
   } catch(e) {
-    console.log('Product template error:', e.message)
+    console.log('Product template error FULL:', e.message, JSON.stringify(e))
   }
 }
 
