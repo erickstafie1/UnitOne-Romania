@@ -4,8 +4,7 @@ application_url = "https://unitone-romania.vercel.app"
 embedded = true
 
 [access_scopes]
-scopes = "write_online_store_pages,read_online_store_pages,read_products,write_content"
-
+scopes = "write_online_store_pages,read_online_store_pages,read_products,write_content,write_products"
 [auth]
 redirect_urls = ["https://unitone-romania.vercel.app/api/auth/callback"]
 
