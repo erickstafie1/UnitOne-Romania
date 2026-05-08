@@ -39,18 +39,19 @@ module.exports = async function handler(req, res) {
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      // Listeaza produsele cu tag pagecod
-      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,handle,status,created_at,updated_at,template_suffix&template_suffix=pagecod', 'GET', null)
-      // Converteste la format compatibil cu dashboard
-      const pages = (data.products || []).map(p => ({
-        id: p.id,
-        title: p.title,
-        handle: p.handle,
-        published: p.status === 'active',
-        created_at: p.created_at,
-        updated_at: p.updated_at,
-        isProduct: true
-      }))
+      // Listeaza doar produsele cu template_suffix pagecod (LP-urile noastre)
+      const data = await shopifyRequest(shop, token, '/products.json?limit=250&fields=id,title,handle,status,created_at,updated_at,template_suffix', 'GET', null)
+      const pages = (data.products || [])
+        .filter(p => p.template_suffix === 'pagecod')
+        .map(p => ({
+          id: p.id,
+          title: p.title,
+          handle: p.handle,
+          published: p.status === 'active',
+          created_at: p.created_at,
+          updated_at: p.updated_at,
+          isProduct: true
+        }))
       return res.status(200).json({ success: true, pages })
     }
 
