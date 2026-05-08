@@ -253,7 +253,7 @@ function PageCard({ page, shop, hovered, onHover, onLeave, onEdit, onExport, onT
       </div>
       {/* Actions */}
       <div style={{ display:'flex', gap:6, opacity: hovered ? 1 : 0.7, transition:'opacity 0.15s' }}>
-        <IconBtn href={`https://${shop}/pages/${page.handle}`} title="Vezi pagina">
+        <IconBtn href={`https://${shop}/products/${page.handle}`} title="Vezi pagina">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </IconBtn>
         <IconBtn onClick={onEdit} title="Editează">
