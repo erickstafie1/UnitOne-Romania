@@ -524,7 +524,7 @@ function buildHTML(data, codFormApp) {
     <span style="font-size:42px;font-weight:900;color:#e8000d">${price} LEI</span>
     <span style="background:#e8000d;color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:700">-${disc}%</span>
   </div>
-  <button class="${codBtnClass}" data-variant-id="VARIANT_ID" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:16px 24px;border-radius:4px;font-size:18px;font-weight:900;text-decoration:none;letter-spacing:0.5px;margin-bottom:10px" style="border:none;cursor:pointer;font-family:inherit">COMANDĂ ACUM!</button>
+  <div class="unitone-releasit-btn" style="margin-bottom:10px"></div>
   <p style="font-size:13px;color:#666;margin:0">✅ Plată la livrare &nbsp;·&nbsp; 🚚 Livrare 2-4 zile &nbsp;·&nbsp; ↩️ Retur 30 zile</p>
 </div>
 
@@ -537,7 +537,7 @@ function buildHTML(data, codFormApp) {
       <div style="width:32px;height:32px;background:#e8000d;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0">${i+1}</div>
       <div><strong style="font-size:15px;display:block;margin-bottom:3px">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>
     </div>`).join('')}
-  <button class="${codBtnClass}" data-variant-id="VARIANT_ID" style="display:block;background:#e8000d;color:#fff;text-align:center;padding:14px;border-radius:4px;font-size:16px;font-weight:900;text-decoration:none;margin-top:20px" style="border:none;cursor:pointer;font-family:inherit">COMANDĂ ACUM!</button>
+  <div class="unitone-releasit-btn" style="margin-top:20px"></div>
 </div>
 
 <!-- IMAGINE 3 - DETALIU -->
