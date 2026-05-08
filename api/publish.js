@@ -91,10 +91,13 @@ main, #MainContent, .main-content {
 
 async function installProductTemplate(shop, token) {
   try {
+    console.log('Installing product template...')
     const themes = await shopifyRequest(shop, token, '/themes.json', 'GET', null)
+    console.log('Themes found:', themes.themes?.length, 'active:', themes.themes?.find(t=>t.role==='main')?.name)
     const active = (themes.themes || []).find(t => t.role === 'main')
-    if (!active) return
+    if (!active) { console.log('No active theme!'); return }
     const id = active.id
+    console.log('Theme ID:', id)
 
     await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
       asset: {
