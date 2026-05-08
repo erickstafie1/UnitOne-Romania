@@ -455,11 +455,6 @@ function adjustColor(hex, amount) {
 }
 
 function buildHTML(data, codFormApp) {
-  const codBtnClass = (codFormApp === 'releasit' 
-    ? 'rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage releasit-button'
-    : codFormApp === 'easysell'
-    ? 'es-cod-button'
-    : 'cod-button')
   const price = data.price || 149
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
   const disc = Math.round((1 - price / oldPrice) * 100)
