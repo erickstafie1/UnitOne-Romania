@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import LogRocket from 'logrocket'
+LogRocket.init('mc7jbj/unitone')
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
