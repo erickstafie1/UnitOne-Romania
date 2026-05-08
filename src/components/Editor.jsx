@@ -524,7 +524,7 @@ function buildHTML(data, codFormApp) {
     <span style="font-size:42px;font-weight:900;color:#e8000d">${price} LEI</span>
     <span style="background:#e8000d;color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:700">-${disc}%</span>
   </div>
-  <div class="unitone-releasit-btn" style="margin-bottom:10px"></div>
+  <!-- Adauga bloc "Buton COD Form" din editor -->
   <p style="font-size:13px;color:#666;margin:0">✅ Plată la livrare &nbsp;·&nbsp; 🚚 Livrare 2-4 zile &nbsp;·&nbsp; ↩️ Retur 30 zile</p>
 </div>
 
@@ -537,7 +537,7 @@ function buildHTML(data, codFormApp) {
       <div style="width:32px;height:32px;background:#e8000d;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0">${i+1}</div>
       <div><strong style="font-size:15px;display:block;margin-bottom:3px">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>
     </div>`).join('')}
-  <div class="unitone-releasit-btn" style="margin-top:20px"></div>
+  <!-- Adauga bloc "Buton COD Form" din editor -->
 </div>
 
 <!-- IMAGINE 3 - DETALIU -->
@@ -664,6 +664,10 @@ function addBlocks(editor, data) {
   const p = data.style?.primaryColor || '#e8000d'
 
   const blocks = [
+    // COD FORM BUTTON - primul bloc
+    { id:'releasit-btn', label:'🛒 Buton COD Form', cat:'COD Form', content:`<div class="unitone-releasit-btn" style="margin:10px 0;min-height:50px;display:block"></div>` },
+    { id:'releasit-btn-full', label:'🛒 Buton COD Form (Full)', cat:'COD Form', content:`<div style="padding:10px 0"><div class="unitone-releasit-btn" style="width:100%;display:block"></div></div>` },
+
     // LAYOUT
     { id:'row-2col', label:'Row 2 Coloane', cat:'Layout', content:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px"><div style="padding:16px;background:#f9fafb;border-radius:8px;min-height:60px">Coloana 1</div><div style="padding:16px;background:#f9fafb;border-radius:8px;min-height:60px">Coloana 2</div></div>` },
     { id:'row-3col', label:'Row 3 Coloane', cat:'Layout', content:`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:20px"><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 1</div><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 2</div><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 3</div></div>` },
