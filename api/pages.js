@@ -39,25 +39,44 @@ module.exports = async function handler(req, res) {
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      const data = await shopifyRequest(shop, token, '/pages.json?limit=50&fields=id,title,handle,published,created_at,updated_at', 'GET', null)
-      return res.status(200).json({ success: true, pages: data.pages || [] })
+      // Listeaza produsele cu tag pagecod
+      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,handle,status,created_at,updated_at,template_suffix&template_suffix=pagecod', 'GET', null)
+      // Converteste la format compatibil cu dashboard
+      const pages = (data.products || []).map(p => ({
+        id: p.id,
+        title: p.title,
+        handle: p.handle,
+        published: p.status === 'active',
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        isProduct: true
+      }))
+      return res.status(200).json({ success: true, pages })
     }
 
     if (action === 'delete') {
-      await shopifyRequest(shop, token, `/pages/${pageId}.json`, 'DELETE', null)
+      await shopifyRequest(shop, token, `/products/${pageId}.json`, 'DELETE', null)
       return res.status(200).json({ success: true })
     }
 
     if (action === 'toggle') {
-      const data = await shopifyRequest(shop, token, `/pages/${pageId}.json`, 'PUT', {
-        page: { id: pageId, published }
+      const data = await shopifyRequest(shop, token, `/products/${pageId}.json`, 'PUT', {
+        product: { id: pageId, status: published ? 'active' : 'draft' }
       })
-      return res.status(200).json({ success: true, page: data.page })
+      return res.status(200).json({ success: true, page: data.product })
     }
 
     if (action === 'get') {
-      const data = await shopifyRequest(shop, token, `/pages/${pageId}.json`, 'GET', null)
-      return res.status(200).json({ success: true, page: data.page })
+      const data = await shopifyRequest(shop, token, `/products/${pageId}.json`, 'GET', null)
+      const p = data.product
+      return res.status(200).json({ 
+        success: true, 
+        page: { 
+          id: p.id, title: p.title, handle: p.handle,
+          body_html: p.body_html, published: p.status === 'active',
+          isProduct: true
+        } 
+      })
     }
 
     res.status(400).json({ error: 'Unknown action' })
