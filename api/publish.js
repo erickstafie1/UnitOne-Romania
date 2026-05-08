@@ -1,101 +1,54 @@
-// api/publish.js
-// Publică LP-ul pe un produs Shopify cu template_suffix=pagecod
-// Fix: MutationObserver mutat în HTML-ul generat, nu executat server-side
+// api/pages.js
+// Fix: folosim template_suffix=pagecod direct în URL query param
+// Shopify nu returnează template_suffix prin fields= filter
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
-  const { shop, token, productId, html, title } = req.body;
-
-  if (!shop || !token || !productId || !html) {
-    return res.status(400).json({ error: "Missing required fields: shop, token, productId, html" });
-  }
+  const { shop, token } = req.query;
+  if (!shop || !token) return res.status(400).json({ error: "Missing shop or token" });
 
   try {
-    // Script MutationObserver care mută butonul Releasit în placeholder-ul corect
-    const releasitScript = `
-<script>
-(function() {
-  function moveReleasitButton() {
-    var placeholder = document.querySelector('.unitone-releasit-btn');
-    if (!placeholder) return;
-    var btn = document.querySelector('._rsi-buy-now-button-app-block-hook');
-    if (btn) {
-      placeholder.innerHTML = '';
-      placeholder.appendChild(btn);
-      return true;
-    }
-    return false;
-  }
+    const url = `https://${shop}/admin/api/2024-01/products.json?template_suffix=pagecod&limit=250&fields=id,title,handle,status,image,updated_at,template_suffix`;
 
-  // Încearcă imediat
-  if (!moveReleasitButton()) {
-    // Dacă nu găsește, observă DOM-ul
-    var observer = new MutationObserver(function(mutations, obs) {
-      if (moveReleasitButton()) {
-        obs.disconnect();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Timeout de siguranță după 10s
-    setTimeout(function() { observer.disconnect(); }, 10000);
-  }
-})();
-</script>`;
-
-    // Injectăm scriptul înainte de </body> sau la final
-    const htmlWithScript = html.includes("</body>")
-      ? html.replace("</body>", releasitScript + "</body>")
-      : html + releasitScript;
-
-    // Update produs: description = HTML landing page, template_suffix = pagecod
-    const updateResponse = await fetch(
-      `https://${shop}/admin/api/2024-01/products/${productId}.json`,
-      {
-        method: "PUT",
-        headers: {
-          "X-Shopify-Access-Token": token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          product: {
-            id: productId,
-            body_html: htmlWithScript,
-            template_suffix: "pagecod",
-            ...(title && { title }),
-          },
-        }),
-      }
-    );
-
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text();
-      console.error("Shopify publish error:", updateResponse.status, errorText);
-      return res.status(updateResponse.status).json({
-        error: "Failed to publish to Shopify",
-        details: errorText,
-      });
-    }
-
-    const updatedProduct = await updateResponse.json();
-
-    return res.status(200).json({
-      success: true,
-      product: {
-        id: updatedProduct.product.id,
-        title: updatedProduct.product.title,
-        handle: updatedProduct.product.handle,
-        shopUrl: `https://${shop}/products/${updatedProduct.product.handle}?view=pagecod`,
+    const response = await fetch(url, {
+      headers: {
+        "X-Shopify-Access-Token": token,
+        "Content-Type": "application/json",
       },
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Shopify API error:", response.status, errorText);
+      return res.status(response.status).json({ error: "Shopify API error", details: errorText });
+    }
+
+    const data = await response.json();
+
+    // Filtrare dublă client-side ca siguranță
+    const landingPages = (data.products || []).filter(
+      (p) => p.template_suffix === "pagecod"
+    );
+
+    const pages = landingPages.map((product) => ({
+      id: product.id,
+      title: product.title,
+      handle: product.handle,
+      status: product.status,
+      image: product.image?.src || null,
+      updatedAt: product.updated_at,
+      shopUrl: `https://${shop}/products/${product.handle}?view=pagecod`,
+    }));
+
+    return res.status(200).json({ pages, total: pages.length });
   } catch (err) {
-    console.error("publish.js error:", err);
+    console.error("pages.js error:", err);
     return res.status(500).json({ error: "Internal server error", message: err.message });
   }
 }
