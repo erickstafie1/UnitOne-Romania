@@ -1,188 +1,101 @@
-const https = require('https')
+// api/publish.js
+// Publică LP-ul pe un produs Shopify cu template_suffix=pagecod
+// Fix: MutationObserver mutat în HTML-ul generat, nu executat server-side
 
-function shopifyRequest(shop, token, path, method, body) {
-  return new Promise((resolve, reject) => {
-    const data = body ? JSON.stringify(body) : null
-    const req = https.request({
-      hostname: shop,
-      path: `/admin/api/2024-01${path}`,
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': token,
-        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
-      },
-      timeout: 30000
-    }, (res) => {
-      const chunks = []
-      res.on('data', c => chunks.push(c))
-      res.on('end', () => {
-        try { resolve(JSON.parse(Buffer.concat(chunks).toString())) }
-        catch(e) { reject(new Error(Buffer.concat(chunks).toString().substring(0, 200))) }
-      })
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')) })
-    if (data) req.write(data)
-    req.end()
-  })
-}
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-function buildHideScript() {
-  return `<style>
-header,footer,nav,.header,.footer,.site-header,.site-footer,
-#shopify-section-header,#shopify-section-footer,
-.announcement-bar,.sticky-header,
-.product__title,.product__media-wrapper,
-.price--listing,.product-form__quantity,
-.shopify-payment-button,
-[class*="recommendations"],.you-may-also-like,
-[class*="related-products"],.complementary-products
-{display:none!important}
-body{padding-top:0!important}
-main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}
-.page-width{max-width:100%!important;padding:0!important}
-</style>
-<script>(function(){
-function h(){
-  ['header','footer','nav','.header','.footer','.site-header','.site-footer',
-  '#shopify-section-header','#shopify-section-footer','.announcement-bar',
-  '.sticky-header','.product__title','.price--listing',
-  '.product__media-wrapper','.product-form__quantity',
-  '.shopify-payment-button','[class*="recommendations"]',
-  '.you-may-also-like','[class*="related"]','.complementary-products'
-  ].forEach(function(s){
-    document.querySelectorAll(s).forEach(function(el){
-      el.style.setProperty('display','none','important');
-    });
-  });
-  document.body.style.paddingTop='0';
-  var m=document.querySelector('main,#MainContent,.main-content');
-  if(m){m.style.paddingTop='0';m.style.marginTop='0';}
-}
-h();
-document.addEventListener('DOMContentLoaded',h);
-setTimeout(h,300);setTimeout(h,800);setTimeout(h,2000);
-})();</script>`
-}
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-function buildReleasitMover() {
-  return `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>
-<script>
-(function(){
-  var moved = false;
-  function moveBtn(){
-    if(moved) return;
-    var rsiContainer = document.querySelector('._rsi-buy-now-button-app-block-hook');
-    var placeholders = document.querySelectorAll('.unitone-releasit-btn');
-    if(rsiContainer && placeholders.length > 0){
-      moved = true;
-      placeholders.forEach(function(ph, i){
-        if(i === 0){
-          ph.appendChild(rsiContainer);
-          rsiContainer.style.cssText = 'width:100%;display:block';
-        } else {
-          var clone = rsiContainer.cloneNode(true);
-          clone.style.cssText = 'width:100%;display:block';
-          ph.appendChild(clone);
-        }
-      });
-      console.log('[UnitOne] Releasit button moved to',placeholders.length,'placeholders');
-    }
+  const { shop, token, productId, html, title } = req.body;
+
+  if (!shop || !token || !productId || !html) {
+    return res.status(400).json({ error: "Missing required fields: shop, token, productId, html" });
   }
-  var observer = new MutationObserver(function(){
-    if(document.querySelector('._rsi-buy-now-button-app-block-hook')){
-      moveBtn();
-    }
-  });
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(moveBtn,500);
-  setTimeout(moveBtn,1000);
-  setTimeout(moveBtn,2000);
-  setTimeout(moveBtn,4000);
-})();
-</script>`
-}
-
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST') return res.status(200).json({ ok: true })
 
   try {
-    const body = req.body || {}
-    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = body
-
-    console.log('PUBLISH action:', action, 'codFormApp:', codFormApp, 'variantId:', variantId, 'productId:', productId)
-
-    if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
-
-    if (action === 'get_products') {
-      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,handle,images,variants', 'GET', null)
-      return res.status(200).json({ success: true, products: data.products || [] })
+    // Script MutationObserver care mută butonul Releasit în placeholder-ul corect
+    const releasitScript = `
+<script>
+(function() {
+  function moveReleasitButton() {
+    var placeholder = document.querySelector('.unitone-releasit-btn');
+    if (!placeholder) return;
+    var btn = document.querySelector('._rsi-buy-now-button-app-block-hook');
+    if (btn) {
+      placeholder.innerHTML = '';
+      placeholder.appendChild(btn);
+      return true;
     }
+    return false;
+  }
 
-    if (action === 'update') {
-      const { pageId } = body
-      if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
-      let finalHtml = html
-      if (codFormApp === 'releasit') finalHtml = buildReleasitMover() + finalHtml
-      if (hideHeaderFooter !== false) finalHtml = buildHideScript() + finalHtml
-      if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-      const result = await shopifyRequest(shop, token, `/products/${pageId}.json`, 'PUT', {
-        product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
-      })
-      if (result.product) {
-        return res.status(200).json({
-          success: true,
-          pageUrl: `https://${shop}/products/${result.product.handle}`
-        })
+  // Încearcă imediat
+  if (!moveReleasitButton()) {
+    // Dacă nu găsește, observă DOM-ul
+    var observer = new MutationObserver(function(mutations, obs) {
+      if (moveReleasitButton()) {
+        obs.disconnect();
       }
-      throw new Error(JSON.stringify(result.errors || 'Update failed'))
-    }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    if (!html) return res.status(400).json({ error: 'Missing html' })
-    if (!productId) return res.status(400).json({ error: 'Selecteaza un produs!' })
+    // Timeout de siguranță după 10s
+    setTimeout(function() { observer.disconnect(); }, 10000);
+  }
+})();
+</script>`;
 
-    let finalHtml = html
+    // Injectăm scriptul înainte de </body> sau la final
+    const htmlWithScript = html.includes("</body>")
+      ? html.replace("</body>", releasitScript + "</body>")
+      : html + releasitScript;
 
-    if (codFormApp === 'releasit') {
-      finalHtml = buildReleasitMover() + finalHtml
-      if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-      console.log('Releasit mover added, variantId:', variantId)
-    } else if (variantId) {
-      finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-    }
-
-    if (hideHeaderFooter !== false) {
-      finalHtml = buildHideScript() + finalHtml
-    }
-
-    console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB')
-
-    const result = await shopifyRequest(shop, token, `/products/${productId}.json`, 'PUT', {
-      product: {
-        id: productId,
-        body_html: finalHtml,
-        template_suffix: 'pagecod'
+    // Update produs: description = HTML landing page, template_suffix = pagecod
+    const updateResponse = await fetch(
+      `https://${shop}/admin/api/2024-01/products/${productId}.json`,
+      {
+        method: "PUT",
+        headers: {
+          "X-Shopify-Access-Token": token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product: {
+            id: productId,
+            body_html: htmlWithScript,
+            template_suffix: "pagecod",
+            ...(title && { title }),
+          },
+        }),
       }
-    })
+    );
 
-    if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      console.error("Shopify publish error:", updateResponse.status, errorText);
+      return res.status(updateResponse.status).json({
+        error: "Failed to publish to Shopify",
+        details: errorText,
+      });
+    }
 
-    console.log('LP published on product:', result.product.id, result.product.handle)
+    const updatedProduct = await updateResponse.json();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      pageUrl: `https://${shop}/products/${result.product.handle}`,
-      pageId: result.product.id,
-      variantId: result.product.variants?.[0]?.id
-    })
-
-  } catch(err) {
-    console.error('Publish error:', err.message)
-    res.status(500).json({ success: false, error: err.message })
+      product: {
+        id: updatedProduct.product.id,
+        title: updatedProduct.product.title,
+        handle: updatedProduct.product.handle,
+        shopUrl: `https://${shop}/products/${updatedProduct.product.handle}?view=pagecod`,
+      },
+    });
+  } catch (err) {
+    console.error("publish.js error:", err);
+    return res.status(500).json({ error: "Internal server error", message: err.message });
   }
 }
