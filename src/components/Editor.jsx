@@ -114,10 +114,10 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   async function loadProducts() {
     setLoadingProducts(true)
     try {
-      const res = await fetch('/api/publish', {
+      const res = await fetch('/api/get-products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_products', shop, token })
+        body: JSON.stringify({ shop, token })
       })
       const d = await res.json()
       setProducts(d.products || [])
