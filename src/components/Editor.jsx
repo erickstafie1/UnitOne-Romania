@@ -443,6 +443,10 @@ function buildCSS(data) {
 }
 
 function adjustColor(hex, amount) {
+  let btnClass = 'cod-button'
+  if (codFormApp === 'releasit') btnClass = 'rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage'
+  else if (codFormApp === 'easysell') btnClass = 'es-cod-button'
+  const codBtnClass = btnClass
   const num = parseInt(hex.replace('#', ''), 16)
   const r = Math.max(0, Math.min(255, (num >> 16) + amount))
   const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount))
