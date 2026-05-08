@@ -481,7 +481,8 @@ function buildHTML(data, codFormApp) {
       <div style="padding:12px 16px;font-size:14px;color:#555;line-height:1.7">${f.a}</div>
     </details>`).join('')
 
-  return `<div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;background:#fff;color:#111">
+  return `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;background:#fff;color:#111">
 
 <!-- TOP BAR -->
 <div style="background:#111;color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600">
