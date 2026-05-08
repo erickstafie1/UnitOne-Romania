@@ -188,6 +188,22 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
       console.log('[Publish] finalCodFormApp:', finalCodFormApp, 'variantId:', variantId)
       
+      // Adauga clasa si div-ul Releasit GemPages
+      if (finalCodFormApp === 'releasit') {
+        // Inlocuieste toate butoanele de comanda cu clasa Releasit
+        finalHtml = finalHtml
+          .replace(/href="#formular"([^>]*)>COMANDĂ ACUM/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage"$1>COMANDĂ ACUM')
+          .replace(/class="cod-button([^"]*)"/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage$1"')
+          .replace(/class="releasit-button([^"]*)"/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage$1"')
+        // Adauga div-ul magic GemPages care declanseaza Releasit
+        finalHtml = '<div class="_rsi-cod-form-is-gempage"></div>' + finalHtml
+        console.log('[Publish] Releasit GemPages integration added')
+      } else if (finalCodFormApp === 'easysell') {
+        finalHtml = finalHtml
+          .replace(/href="#formular"([^>]*)>COMANDĂ ACUM/g, 'class="es-cod-button"$1>COMANDĂ ACUM')
+        console.log('[Publish] EasySell integration added')
+      }
+      
       // Inlocuieste VARIANT_ID cu variantId real DIRECT IN BROWSER
       if (variantId) {
         finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
@@ -443,7 +459,7 @@ function adjustColor(hex, amount) {
 
 function buildHTML(data, codFormApp) {
   const codBtnClass = (codFormApp === 'releasit' 
-    ? '_rsi-cod-form-pagefly-button-overwrite-v2 releasit-button'
+    ? 'rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage releasit-button'
     : codFormApp === 'easysell'
     ? 'es-cod-button'
     : 'cod-button')
