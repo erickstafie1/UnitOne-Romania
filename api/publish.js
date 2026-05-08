@@ -34,17 +34,74 @@ header,footer,nav,.header,.footer,.site-header,.site-footer,
 #shopify-section-header,#shopify-section-footer,
 .announcement-bar,.sticky-header,
 .product__title,.product__media-wrapper,
-.product-form__quantity,.price--listing,
-._rsi-buy-now-button,
-[class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),
-[class*="recommendations"],.you-may-also-like,[class*="related-products"],
-.complementary-products,.shopify-payment-button
+.price--listing,.product-form__quantity,
+.shopify-payment-button,
+[class*="recommendations"],.you-may-also-like,
+[class*="related-products"],.complementary-products
 {display:none!important}
 body{padding-top:0!important}
 main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}
 .page-width{max-width:100%!important;padding:0!important}
 </style>
-<script>(function(){function h(){var s=['header','footer','nav','.header','.footer','.site-header','.site-footer','#shopify-section-header','#shopify-section-footer','.announcement-bar','.sticky-header','.product__title','.price--listing','._rsi-buy-now-button','.product__media-wrapper','.product-form__quantity','[class*="recommendations"]','.you-may-also-like','[class*="related"]','.shopify-payment-button'];s.forEach(function(sel){document.querySelectorAll(sel).forEach(function(el){el.style.setProperty('display','none','important');});});document.body.style.paddingTop='0';var m=document.querySelector('main,#MainContent,.main-content');if(m){m.style.paddingTop='0';m.style.marginTop='0';}}h();document.addEventListener('DOMContentLoaded',h);setTimeout(h,300);setTimeout(h,800);setTimeout(h,2000);})();</script>`
+<script>(function(){
+function h(){
+  ['header','footer','nav','.header','.footer','.site-header','.site-footer',
+  '#shopify-section-header','#shopify-section-footer','.announcement-bar',
+  '.sticky-header','.product__title','.price--listing',
+  '.product__media-wrapper','.product-form__quantity',
+  '.shopify-payment-button','[class*="recommendations"]',
+  '.you-may-also-like','[class*="related"]','.complementary-products'
+  ].forEach(function(s){
+    document.querySelectorAll(s).forEach(function(el){
+      el.style.setProperty('display','none','important');
+    });
+  });
+  document.body.style.paddingTop='0';
+  var m=document.querySelector('main,#MainContent,.main-content');
+  if(m){m.style.paddingTop='0';m.style.marginTop='0';}
+}
+h();
+document.addEventListener('DOMContentLoaded',h);
+setTimeout(h,300);setTimeout(h,800);setTimeout(h,2000);
+})();</script>`
+}
+
+function buildReleasitMover() {
+  return `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>
+<script>
+(function(){
+  var moved = false;
+  function moveBtn(){
+    if(moved) return;
+    var rsiContainer = document.querySelector('._rsi-buy-now-button-app-block-hook');
+    var placeholders = document.querySelectorAll('.unitone-releasit-btn');
+    if(rsiContainer && placeholders.length > 0){
+      moved = true;
+      placeholders.forEach(function(ph, i){
+        if(i === 0){
+          ph.appendChild(rsiContainer);
+          rsiContainer.style.cssText = 'width:100%;display:block';
+        } else {
+          var clone = rsiContainer.cloneNode(true);
+          clone.style.cssText = 'width:100%;display:block';
+          ph.appendChild(clone);
+        }
+      });
+      console.log('[UnitOne] Releasit button moved to',placeholders.length,'placeholders');
+    }
+  }
+  var observer = new MutationObserver(function(){
+    if(document.querySelector('._rsi-buy-now-button-app-block-hook')){
+      moveBtn();
+    }
+  });
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(moveBtn,500);
+  setTimeout(moveBtn,1000);
+  setTimeout(moveBtn,2000);
+  setTimeout(moveBtn,4000);
+})();
+</script>`
 }
 
 module.exports = async function handler(req, res) {
@@ -71,9 +128,9 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
+      if (codFormApp === 'releasit') finalHtml = buildReleasitMover() + finalHtml
       if (hideHeaderFooter !== false) finalHtml = buildHideScript() + finalHtml
       if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-      // Update ca produs
       const result = await shopifyRequest(shop, token, `/products/${pageId}.json`, 'PUT', {
         product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
       })
@@ -83,41 +140,28 @@ module.exports = async function handler(req, res) {
           pageUrl: `https://${shop}/products/${result.product.handle}`
         })
       }
-      // Fallback la pages
-      const pageResult = await shopifyRequest(shop, token, `/pages/${pageId}.json`, 'PUT', {
-        page: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
-      })
-      if (pageResult.page) {
-        return res.status(200).json({
-          success: true,
-          pageUrl: `https://${shop}/pages/${pageResult.page.handle}`
-        })
-      }
-      throw new Error('Update failed')
+      throw new Error(JSON.stringify(result.errors || 'Update failed'))
     }
 
     if (!html) return res.status(400).json({ error: 'Missing html' })
-    if (!productId) return res.status(400).json({ error: 'Selectează un produs!' })
+    if (!productId) return res.status(400).json({ error: 'Selecteaza un produs!' })
 
     let finalHtml = html
 
-    // Adauga div Releasit GemPages
     if (codFormApp === 'releasit') {
-      finalHtml = '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' + finalHtml
+      finalHtml = buildReleasitMover() + finalHtml
       if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-      console.log('Releasit integration added, variantId:', variantId)
+      console.log('Releasit mover added, variantId:', variantId)
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
 
-    // Ascunde elemente tema
     if (hideHeaderFooter !== false) {
       finalHtml = buildHideScript() + finalHtml
     }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB')
 
-    // Actualizeaza produsul selectat cu LP-ul si template pagecod
     const result = await shopifyRequest(shop, token, `/products/${productId}.json`, 'PUT', {
       product: {
         id: productId,
@@ -128,7 +172,7 @@ module.exports = async function handler(req, res) {
 
     if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
 
-    console.log('Product LP published:', result.product.id, result.product.handle)
+    console.log('LP published on product:', result.product.id, result.product.handle)
 
     res.status(200).json({
       success: true,
