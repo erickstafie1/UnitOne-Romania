@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   const clientId = process.env.SHOPIFY_CLIENT_ID
   const appUrl = process.env.APP_URL || 'https://unitone-romania.vercel.app'
   const redirectUri = `${appUrl}/api/auth/callback`
-  const scopes = 'write_online_store_pages,read_online_store_pages,read_products,write_content'
+  const scopes = 'write_online_store_pages,read_online_store_pages,read_products,write_content,write_products'
   const state = crypto.randomBytes(16).toString('hex')
 
   res.setHeader('Set-Cookie', `shopify_state=${state}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=600`)
