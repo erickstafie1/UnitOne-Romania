@@ -29,7 +29,64 @@ function shopifyRequest(shop, token, path, method, body) {
 }
 
 function buildHideScript() {
-  return `<script>(function(){function h(){var s=['header','footer','nav','.header','.footer','.site-header','.site-footer','#shopify-section-header','#shopify-section-footer','.announcement-bar','.sticky-header','.page-header','.page__title','h1.title'];s.forEach(function(sel){document.querySelectorAll(sel).forEach(function(el){el.style.display='none';});});document.body.style.paddingTop='0';var m=document.querySelector('main,#MainContent,.main-content');if(m){m.style.paddingTop='0';m.style.marginTop='0';}}h();document.addEventListener('DOMContentLoaded',h);setTimeout(h,500);setTimeout(h,1500);})();</script>`
+  return `<style>
+/* UnitOne - Ascunde elementele temei Shopify */
+header, footer, nav,
+.header, .footer, .site-header, .site-footer,
+#shopify-section-header, #shopify-section-footer,
+.announcement-bar, .sticky-header,
+.product__info-container > *:not(.unitone-lp),
+.product-form__buttons:not(.unitone-keep),
+.product__media-wrapper,
+.product-form__quantity,
+.product__title,
+.price, .product__price,
+[class*="product-form"],
+[class*="quantity"],
+.shopify-section:not(#shopify-section-template),
+section[id*="product-recommendations"],
+.product-recommendations,
+[class*="recommendations"],
+.you-may-also-like,
+[class*="related"],
+.complementary-products {
+  display: none !important;
+}
+body { padding-top: 0 !important; margin-top: 0 !important; }
+main, #MainContent, .main-content { 
+  padding: 0 !important; 
+  margin: 0 !important; 
+  max-width: 100% !important;
+}
+.page-width { max-width: 100% !important; padding: 0 !important; }
+</style>
+<script>(function(){
+  function h(){
+    var hide = [
+      'header','footer','nav','.header','.footer',
+      '.site-header','.site-footer',
+      '#shopify-section-header','#shopify-section-footer',
+      '.announcement-bar','.sticky-header',
+      '.product__title','.price--listing',
+      '.product-form__quantity','.product__media-wrapper',
+      '[class*="recommendations"]','.you-may-also-like',
+      '[class*="related-products"]','.complementary-products'
+    ];
+    hide.forEach(function(s){
+      document.querySelectorAll(s).forEach(function(el){
+        el.style.setProperty('display','none','important');
+      });
+    });
+    document.body.style.paddingTop='0';
+    var m=document.querySelector('main,#MainContent,.main-content');
+    if(m){m.style.paddingTop='0';m.style.marginTop='0';}
+  }
+  h();
+  document.addEventListener('DOMContentLoaded',h);
+  setTimeout(h,300);
+  setTimeout(h,800);
+  setTimeout(h,2000);
+})();</script>`
 }
 
 async function installProductTemplate(shop, token) {
