@@ -455,6 +455,8 @@ function buildHTML(data, codFormApp) {
   if (codFormApp === 'releasit') btnClass = 'rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage'
   else if (codFormApp === 'easysell') btnClass = 'es-cod-button'
   const codBtnClass = btnClass
+  // Stilul butonului - arata la fel dar foloseste clasa COD form
+  const btnStyle = `display:block;width:100%;background:${data.style?.primaryColor || '#e8000d'};color:#fff;text-align:center;padding:16px 24px;border-radius:4px;font-size:18px;font-weight:900;letter-spacing:0.5px;margin-bottom:10px;border:none;cursor:pointer;font-family:inherit`
   const price = data.price || 149
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
   const disc = Math.round((1 - price / oldPrice) * 100)
