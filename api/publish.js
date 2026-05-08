@@ -119,7 +119,7 @@ async function installProductTemplate(shop, token) {
     await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
       asset: {
         key: 'sections/pagecod-product.liquid',
-        value: `{{ product.description }}`
+        value: `<div class="pagecod-lp">{{ product.description }}</div>`
       }
     })
 
@@ -186,30 +186,31 @@ module.exports = async function handler(req, res) {
     }
 
     if (!html) return res.status(400).json({ error: 'Missing html' })
+    
+    const productId = body.productId
+    if (!productId) return res.status(400).json({ error: 'Selectează un produs din magazin!' })
 
     let finalHtml = html
-
     if (hideHeaderFooter) finalHtml = buildHideScript() + finalHtml
     if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB')
 
+    // Instaleaza template
     await installProductTemplate(shop, token)
 
-    const result = await shopifyRequest(shop, token, '/products.json', 'POST', {
+    // Actualizeaza produsul existent cu LP-ul
+    const result = await shopifyRequest(shop, token, `/products/${productId}.json`, 'PUT', {
       product: {
-        title: title || 'Pagina COD',
+        id: productId,
         body_html: finalHtml,
-        published: true,
-        status: 'active',
-        template_suffix: 'pagecod',
-        variants: [{ price: '1.00', inventory_management: null }]
+        template_suffix: 'pagecod'
       }
     })
 
-    if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product creation failed'))
+    if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
 
-    console.log('Product created:', result.product.id, result.product.handle)
+    console.log('Product updated:', result.product.id, result.product.handle)
 
     res.status(200).json({
       success: true,
