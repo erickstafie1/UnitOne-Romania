@@ -29,57 +29,102 @@ function shopifyRequest(shop, token, path, method, body) {
   })
 }
 
+// Ascunde elementele native ale temei Shopify
 function buildHideScript() {
-  return `<style>
-header,footer,nav,.header,.footer,.site-header,.site-footer,
-#shopify-section-header,#shopify-section-footer,
-.announcement-bar,.sticky-header,
-.product__title,.product__media-wrapper,
-.product-form__quantity,.price--listing,.price__container,
-.price-item,.price__regular,.price__sale,
-[class*='price--'],[class*='Price'],
-.product__info-container h1,.product__info-container h2,
-.product-single__title,.product_title,
-[class*='product-title'],[class*='ProductTitle'],
-._rsi-buy-now-button,
-[class*='product-form__button']:not(.rsi-cod-form-gempages-button-overwrite),
-.shopify-payment-button,
-[class*='recommendations'],.you-may-also-like,
-[class*='related-products'],.complementary-products,
-.product__view-details,.product__pickup-availabilities
-{display:none!important}
-body{padding-top:0!important}
-main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}
-.page-width{max-width:100%!important;padding:0!important}
-</style>
-<script>(function(){
-  var H=['header','footer','nav','.header','.footer','.site-header','.site-footer',
-    '#shopify-section-header','#shopify-section-footer','.announcement-bar','.sticky-header',
-    '.product__title','.product__media-wrapper','.product-form__quantity',
-    '.price--listing','.price__container','.price-item','.price__regular','.price__sale',
-    '._rsi-buy-now-button','.shopify-payment-button',
-    '.you-may-also-like','.complementary-products',
-    '.product__pickup-availabilities','.product__view-details'];
-  function hide(){
-    H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.setProperty('display','none','important');});}catch(e){}}); 
-    document.querySelectorAll('.product__info-container h1,.product__info-container h2,.product-single__title,.product_title').forEach(function(el){el.style.setProperty('display','none','important');});
-    document.querySelectorAll('[class*='price']').forEach(function(el){if(!el.closest('[data-unitone]'))el.style.setProperty('display','none','important');});
-    document.body.style.paddingTop='0';
-    var m=document.querySelector('main,#MainContent,.main-content');
-    if(m){m.style.paddingTop='0';m.style.marginTop='0';}
-  }
-  hide();document.addEventListener('DOMContentLoaded',hide);
-  setTimeout(hide,100);setTimeout(hide,500);setTimeout(hide,1500);
-})();<\/script>`
+  return '<style>\n' +
+    'header,footer,nav,.header,.footer,.site-header,.site-footer,\n' +
+    '#shopify-section-header,#shopify-section-footer,\n' +
+    '.announcement-bar,.sticky-header,\n' +
+    '.product__title,.product__media-wrapper,\n' +
+    '.product-form__quantity,.price--listing,.price__container,\n' +
+    '.price-item,.price__regular,.price__sale,\n' +
+    '.product__info-container h1,.product__info-container h2,\n' +
+    '.product-single__title,.product_title,\n' +
+    '._rsi-buy-now-button,\n' +
+    '[class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),\n' +
+    '.shopify-payment-button,\n' +
+    '[class*="recommendations"],.you-may-also-like,\n' +
+    '[class*="related-products"],.complementary-products,\n' +
+    '.product__view-details,.product__pickup-availabilities\n' +
+    '{display:none!important}\n' +
+    'body{padding-top:0!important}\n' +
+    'main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}\n' +
+    '.page-width{max-width:100%!important;padding:0!important}\n' +
+    '</style>\n' +
+    '<script>(function(){\n' +
+    'var H=["header","footer","nav",".header",".footer",".site-header",".site-footer",\n' +
+    '"#shopify-section-header","#shopify-section-footer",".announcement-bar",".sticky-header",\n' +
+    '".product__title",".product__media-wrapper",".product-form__quantity",\n' +
+    '".price--listing",".price__container",".price-item",".price__regular",".price__sale",\n' +
+    '"._rsi-buy-now-button",".shopify-payment-button",\n' +
+    '".you-may-also-like",".complementary-products",\n' +
+    '".product__pickup-availabilities",".product__view-details"];\n' +
+    'function hide(){\n' +
+    'H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.setProperty("display","none","important");});}catch(e){}});\n' +
+    'document.querySelectorAll(".product__info-container h1,.product__info-container h2,.product-single__title,.product_title").forEach(function(el){el.style.setProperty("display","none","important");});\n' +
+    'document.body.style.paddingTop="0";\n' +
+    'var m=document.querySelector("main,#MainContent,.main-content");\n' +
+    'if(m){m.style.paddingTop="0";m.style.marginTop="0";}\n' +
+    '}\n' +
+    'hide();document.addEventListener("DOMContentLoaded",hide);\n' +
+    'setTimeout(hide,100);setTimeout(hide,500);setTimeout(hide,1500);\n' +
+    '})();<\/script>'
 }
 
-// Releasit GemPages integration
-// Releasit detecteaza ._rsi-cod-form-is-gempage si activeaza modul GemPages
-// In modul GemPages, Releasit insusi injecteaza butonul COD in
-// elementele cu clasa rsi-cod-form-gempages-button-overwrite
-// Noi trebuie doar sa punem div-ul trigger si placeholder-ele cu clasa corecta
-function buildReleasitScript() {
-  return `<div class='_rsi-cod-form-is-gempage' style='display:none'></div>`
+// Releasit: folosim MutationObserver care asteapta butonul real
+// si il muta in toate placeholder-ele .unitone-releasit-btn
+function buildReleasitMover(variantId) {
+  const vid = variantId || ''
+  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
+    '<script>\n' +
+    '(function(){\n' +
+    '  var VARIANT_ID = "' + vid + '";\n' +
+    '  var moved = false;\n' +
+    '  var attempts = 0;\n' +
+    '\n' +
+    '  function findRsiBtn(){\n' +
+    '    return document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
+    '           document.querySelector("[class*=_rsi-buy-now-button]") ||\n' +
+    '           document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
+    '           document.querySelector("[data-rsi-button]");\n' +
+    '  }\n' +
+    '\n' +
+    '  function moveBtn(){\n' +
+    '    if(moved) return;\n' +
+    '    var btn = findRsiBtn();\n' +
+    '    var placeholders = document.querySelectorAll(".unitone-releasit-btn");\n' +
+    '    if(!btn || placeholders.length === 0) return;\n' +
+    '    moved = true;\n' +
+    '    placeholders.forEach(function(ph, i){\n' +
+    '      ph.style.cssText = "display:block;min-height:0;border:none;padding:0;";\n' +
+    '      if(i === 0){\n' +
+    '        ph.appendChild(btn);\n' +
+    '        btn.style.cssText = "width:100%!important;display:block!important;";\n' +
+    '      } else {\n' +
+    '        var clone = btn.cloneNode(true);\n' +
+    '        clone.style.cssText = "width:100%!important;display:block!important;";\n' +
+    '        ph.appendChild(clone);\n' +
+    '      }\n' +
+    '    });\n' +
+    '    console.log("[UnitOne] Releasit moved to",placeholders.length,"placeholders");\n' +
+    '  }\n' +
+    '\n' +
+    '  // Observer pe tot documentul\n' +
+    '  var obs = new MutationObserver(function(){\n' +
+    '    if(!moved && findRsiBtn()) moveBtn();\n' +
+    '  });\n' +
+    '  obs.observe(document.documentElement,{childList:true,subtree:true});\n' +
+    '\n' +
+    '  // Retry la interval\n' +
+    '  var iv = setInterval(function(){\n' +
+    '    attempts++;\n' +
+    '    moveBtn();\n' +
+    '    if(moved || attempts > 30) clearInterval(iv);\n' +
+    '  }, 300);\n' +
+    '\n' +
+    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
+    '})();\n' +
+    '<\/script>'
 }
 
 module.exports = async function handler(req, res) {
@@ -104,9 +149,8 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      if (codFormApp === 'releasit') finalHtml = buildReleasitScript() + finalHtml
+      if (codFormApp === 'releasit') finalHtml = buildReleasitMover(variantId) + finalHtml
       if (hideHeaderFooter !== false) finalHtml = buildHideScript() + finalHtml
-      if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
       const result = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
       })
@@ -122,8 +166,8 @@ module.exports = async function handler(req, res) {
     let finalHtml = html
 
     if (codFormApp === 'releasit') {
-      finalHtml = buildReleasitScript() + finalHtml
-      if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
+      finalHtml = buildReleasitMover(variantId) + finalHtml
+      console.log('Releasit mover added, variantId:', variantId)
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
@@ -144,6 +188,7 @@ module.exports = async function handler(req, res) {
     })
 
     if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
+    console.log('LP published:', result.product.id, result.product.handle)
 
     res.status(200).json({
       success: true,
