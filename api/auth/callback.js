@@ -37,7 +37,8 @@ async function installTemplates(shop, token) {
     const id = active.id
     console.log('Installing templates on theme:', id, active.name)
 
-    // Layout cu content_for_header - CRITIC pentru Releasit
+    // Layout pagecod - ascunde TOT ce e nativ din Shopify
+    // Titlul produsului, pretul, butonul Add to Cart, header, footer
     await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
       asset: {
         key: 'layout/pagecod.liquid',
@@ -48,27 +49,104 @@ async function installTemplates(shop, token) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ product.title }}</title>
   {{ content_for_header }}
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif}</style>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif}
+
+    /* Ascunde toate elementele native Shopify pe paginile pagecod */
+    header,footer,nav,
+    .header,.footer,.site-header,.site-footer,
+    #shopify-section-header,#shopify-section-footer,
+    .announcement-bar,.sticky-header,
+    .product__title,.product__media-wrapper,
+    .product-form__quantity,
+    .price--listing,.price__container,.price-item,.price__regular,.price__sale,
+    [class*="price--"],[class*="Price"],
+    .product__info-container .h1,
+    .product__info-container h1,
+    .product__info-container h2,
+    .product-single__title,.product_title,
+    [class*="product-title"],[class*="ProductTitle"],
+    ._rsi-buy-now-button,
+    [class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),
+    .shopify-payment-button,
+    [class*="recommendations"],.you-may-also-like,
+    [class*="related-products"],.complementary-products,
+    .product__view-details,.product-form__error-message-wrapper,
+    .product__pickup-availabilities
+    { display:none !important; }
+
+    main,#MainContent,.main-content{
+      padding:0 !important;
+      margin:0 !important;
+      max-width:100% !important;
+    }
+    .page-width{max-width:100% !important;padding:0 !important;}
+  </style>
 </head>
 <body>
   {{ content_for_layout }}
-  <script>setTimeout(function(){document.dispatchEvent(new Event('DOMContentLoaded'));window.dispatchEvent(new Event('load'));},800);</script>
+  <script>
+  (function(){
+    var HIDE=[
+      'header','footer','nav','.header','.footer',
+      '.site-header','.site-footer',
+      '#shopify-section-header','#shopify-section-footer',
+      '.announcement-bar','.sticky-header',
+      '.product__title','.product__media-wrapper',
+      '.product-form__quantity',
+      '.price--listing','.price__container','.price-item',
+      '.price__regular','.price__sale',
+      '._rsi-buy-now-button',
+      '.shopify-payment-button',
+      '.you-may-also-like','.complementary-products',
+      '.product__pickup-availabilities',
+      '.product__view-details'
+    ];
+    function hideAll(){
+      HIDE.forEach(function(s){
+        try{document.querySelectorAll(s).forEach(function(el){
+          el.style.setProperty('display','none','important');
+        });}catch(e){}
+      });
+      // Ascunde h1 nativ al produsului din tema (nu h1-urile din LP-ul nostru)
+      document.querySelectorAll('.product__info-container h1, .product__info-container h2, .product-single__title, .product_title, [class*="product-title"]').forEach(function(el){
+        el.style.setProperty('display','none','important');
+      });
+      // Ascunde elementele de pret
+      document.querySelectorAll('[class*="price"]').forEach(function(el){
+        if(!el.closest('.unitone-lp') && !el.closest('[data-unitone]')){
+          el.style.setProperty('display','none','important');
+        }
+      });
+      document.body.style.paddingTop='0';
+      var m=document.querySelector('main,#MainContent,.main-content');
+      if(m){m.style.paddingTop='0';m.style.marginTop='0';}
+    }
+    hideAll();
+    document.addEventListener('DOMContentLoaded',hideAll);
+    setTimeout(hideAll,100);
+    setTimeout(hideAll,300);
+    setTimeout(hideAll,800);
+    setTimeout(hideAll,2000);
+  })();
+  <\/script>
 </body>
 </html>`
       }
     })
-    console.log('Layout installed')
+    console.log('Layout pagecod installed')
 
-    // Sectiune produs
+    // Sectiune produs - afiseaza doar description (LP-ul nostru)
     await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
       asset: {
         key: 'sections/pagecod-product.liquid',
-        value: `<div class="pagecod-lp">{{ product.description }}</div>`
+        value: `<div class="pagecod-lp" data-unitone="true">{{ product.description }}</div>`
       }
     })
     console.log('Section installed')
 
-    // Template produs
+    // Template produs pagecod
     await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
       asset: {
         key: 'templates/product.pagecod.json',
@@ -80,11 +158,11 @@ async function installTemplates(shop, token) {
     })
     console.log('Product template installed')
 
-    // Template pagina (pentru backward compat)
+    // Template pagina (backward compat)
     await shopifyRequest(shop, token, `/themes/${id}/assets.json`, 'PUT', {
       asset: {
         key: 'sections/pagecod-main.liquid',
-        value: `{{ page.content }}`
+        value: `<div data-unitone="true">{{ page.content }}</div>`
       }
     })
 
@@ -140,8 +218,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const { access_token } = await exchangeToken(shop, code)
-    
-    // Instaleaza templatele in background
+
+    // Reinstaleaza templatele de fiecare data la auth (ca sa fie mereu up-to-date)
     installTemplates(shop, access_token).catch(e => console.log('Template install failed:', e.message))
 
     const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
