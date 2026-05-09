@@ -1,3 +1,4 @@
+// api/pages.js - fixed: no duplicate const, proper template_suffix filter
 const https = require('https')
 
 function shopifyRequest(shop, token, path, method, body) {
@@ -5,7 +6,7 @@ function shopifyRequest(shop, token, path, method, body) {
     const data = body ? JSON.stringify(body) : null
     const req = https.request({
       hostname: shop,
-      path: `/admin/api/2024-01${path}`,
+      path: '/admin/api/2024-01' + path,
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -39,20 +40,11 @@ module.exports = async function handler(req, res) {
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      // Listeaza produsele cu tag pagecod
-      const data = await shopifyRequest(shop, token, '/products.json?limit=50&fields=id,title,handle,status,created_at,updated_at,template_suffix&template_suffix=pagecod', 'GET', null)
-      // Converteste la format compatibil cu dashboard
-      const pages = (data.products || []).map(p => ({
-        id: p.id,
-        title: p.title,
-        handle: p.handle,
-        published: p.status === 'active',
-        created_at: p.created_at,
-        updated_at: p.updated_at,
-        isProduct: true
-      }))
-      // Listeaza doar produsele cu template_suffix pagecod (LP-urile noastre)
-      const data = await shopifyRequest(shop, token, '/products.json?limit=250&fields=id,title,handle,status,created_at,updated_at,template_suffix', 'GET', null)
+      // Fix: fetch all products then filter by template_suffix client-side
+      // (Shopify API nu returneaza template_suffix in fields= filter)
+      const data = await shopifyRequest(shop, token,
+        '/products.json?limit=250&fields=id,title,handle,status,created_at,updated_at,template_suffix',
+        'GET', null)
       const pages = (data.products || [])
         .filter(p => p.template_suffix === 'pagecod')
         .map(p => ({
@@ -68,27 +60,27 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'delete') {
-      await shopifyRequest(shop, token, `/products/${pageId}.json`, 'DELETE', null)
+      await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'DELETE', null)
       return res.status(200).json({ success: true })
     }
 
     if (action === 'toggle') {
-      const data = await shopifyRequest(shop, token, `/products/${pageId}.json`, 'PUT', {
+      const data = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, status: published ? 'active' : 'draft' }
       })
       return res.status(200).json({ success: true, page: data.product })
     }
 
     if (action === 'get') {
-      const data = await shopifyRequest(shop, token, `/products/${pageId}.json`, 'GET', null)
+      const data = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'GET', null)
       const p = data.product
-      return res.status(200).json({ 
-        success: true, 
-        page: { 
+      return res.status(200).json({
+        success: true,
+        page: {
           id: p.id, title: p.title, handle: p.handle,
           body_html: p.body_html, published: p.status === 'active',
           isProduct: true
-        } 
+        }
       })
     }
 
