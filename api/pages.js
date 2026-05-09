@@ -1,4 +1,4 @@
-// api/pages.js - fixed: no duplicate const, proper template_suffix filter
+// api/pages.js
 const https = require('https')
 
 function shopifyRequest(shop, token, path, method, body) {
@@ -36,14 +36,14 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   try {
-    const { action, shop, token, pageId, published, title } = req.body || {}
+    const { action, shop, token, pageId, published } = req.body || {}
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      // Fix: fetch all products then filter by template_suffix client-side
-      // (Shopify API nu returneaza template_suffix in fields= filter)
+      // Shopify nu returneaza template_suffix in fields= filter
+      // Fetch fara fields filter ca sa primim template_suffix
       const data = await shopifyRequest(shop, token,
-        '/products.json?limit=250&fields=id,title,handle,status,created_at,updated_at,template_suffix',
+        '/products.json?limit=250&template_suffix=pagecod',
         'GET', null)
       const pages = (data.products || [])
         .filter(p => p.template_suffix === 'pagecod')
