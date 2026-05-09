@@ -105,14 +105,11 @@ module.exports = async function handler(req, res) {
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
       asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') }
     })
+    // Sterge JSON template (Shopify OS2.0 prefera .json peste .liquid, deci trebuie sters)
+    shopifyRequest(shop, token, '/themes/' + id + '/assets.json?asset[key]=templates/product.pagecod.json', 'DELETE', null).catch(() => {})
+    // Liquid template - singurul mecanism garantat pentru {% layout 'pagecod' %}
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: { key: 'sections/pagecod-product.liquid', value: '<div data-unitone="true">{{ product.description }}</div>' }
-    })
-    await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: {
-        key: 'templates/product.pagecod.json',
-        value: JSON.stringify({ layout: 'pagecod', sections: { main: { type: 'pagecod-product', settings: {} } }, order: ['main'] })
-      }
+      asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" }
     })
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
       asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' }
