@@ -102,24 +102,24 @@ module.exports = async function handler(req, res) {
       '</html>'
     ]
 
-    await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') }
-    })
-    // Sterge JSON template (Shopify OS2.0 prefera .json peste .liquid, deci trebuie sters)
-    shopifyRequest(shop, token, '/themes/' + id + '/assets.json?asset[key]=templates/product.pagecod.json', 'DELETE', null).catch(() => {})
-    // Liquid template - singurul mecanism garantat pentru {% layout 'pagecod' %}
-    await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" }
-    })
-    await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' }
-    })
-    await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: {
-        key: 'templates/page.pagecod.json',
-        value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] })
-      }
-    })
+    shopifyRequest(shop, token, '/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE', null).catch(() => {})
+    await Promise.all([
+      shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
+        asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') }
+      }),
+      shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
+        asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" }
+      }),
+      shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
+        asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' }
+      }),
+      shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
+        asset: {
+          key: 'templates/page.pagecod.json',
+          value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] })
+        }
+      })
+    ])
 
     console.log('Templates reinstalled on', shop, 'theme:', active.name)
     res.status(200).json({ success: true, theme: active.name, themeId: id })

@@ -17,6 +17,7 @@
   ],
   "functions": {
     "api/generate.js": { "maxDuration": 60 },
-    "api/auth/callback.js": { "maxDuration": 30 }
+    "api/auth/callback.js": { "maxDuration": 30 },
+    "api/reinstall-templates.js": { "maxDuration": 30 }
   }
 }
