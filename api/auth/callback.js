@@ -35,74 +35,76 @@ async function installTemplates(shop, token) {
     const active = (themes.themes || []).find(t => t.role === 'main')
     if (!active) { console.log('No active theme'); return }
     const id = active.id
-    console.log('Installing templates on theme:', id, active.name)
+    console.log('Installing on theme:', id, active.name)
 
-    const layout = [
+    // Layout pagecod - tot CSS hide e aici, fara ghilimele simple in string JS
+    const layoutLines = [
       '<!DOCTYPE html>',
       '<html lang="ro">',
       '<head>',
-      '  <meta charset="utf-8">',
-      '  <meta name="viewport" content="width=device-width,initial-scale=1">',
-      '  <title>{{ product.title }}</title>',
-      '  {{ content_for_header }}',
-      '  <style>',
-      '    *{box-sizing:border-box;margin:0;padding:0}',
-      '    body{font-family:system-ui,sans-serif}',
-      '    header,footer,nav,.header,.footer,.site-header,.site-footer,',
-      '    #shopify-section-header,#shopify-section-footer,',
-      '    .announcement-bar,.sticky-header,',
-      '    .product__title,.product__media-wrapper,',
-      '    .product-form__quantity,.price--listing,.price__container,',
-      '    .price-item,.price__regular,.price__sale,',
-      '    .product__info-container h1,.product__info-container h2,',
-      '    .product-single__title,.product_title,',
-      '    ._rsi-buy-now-button,',
-      '    .shopify-payment-button,',
-      '    .you-may-also-like,.complementary-products,',
-      '    .product__view-details,.product__pickup-availabilities',
-      '    {display:none!important}',
-      '    main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}',
-      '    .page-width{max-width:100%!important;padding:0!important}',
-      '  </style>',
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1">',
+      '<title>{{ product.title }}</title>',
+      '{{ content_for_header }}',
+      '<style>',
+      'header,footer,nav,.header,.footer,.site-header,.site-footer,',
+      '#shopify-section-header,#shopify-section-footer,',
+      '.announcement-bar,.sticky-header,',
+      '.product__title,.product__media-wrapper,',
+      '.product-form__quantity,.price--listing,.price__container,',
+      '.price-item,.price__regular,.price__sale,',
+      '.product__info-container h1,.product__info-container h2,',
+      '.product-single__title,.product_title,',
+      '._rsi-buy-now-button,',
+      '[class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),',
+      '.shopify-payment-button,',
+      '.you-may-also-like,.complementary-products,',
+      '.product__view-details,.product__pickup-availabilities',
+      '{display:none!important}',
+      'body{padding-top:0!important}',
+      'main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}',
+      '.page-width{max-width:100%!important;padding:0!important}',
+      '</style>',
       '</head>',
       '<body>',
-      '  {{ content_for_layout }}',
-      '  <script>',
-      '  (function(){',
-      '    var H=[',
-      '      "header","footer","nav",".header",".footer",".site-header",".site-footer",',
-      '      "#shopify-section-header","#shopify-section-footer",".announcement-bar",".sticky-header",',
-      '      ".product__title",".product__media-wrapper",".product-form__quantity",',
-      '      ".price--listing",".price__container",".price-item",".price__regular",".price__sale",',
-      '      "._rsi-buy-now-button",".shopify-payment-button",',
-      '      ".you-may-also-like",".complementary-products",',
-      '      ".product__pickup-availabilities",".product__view-details"',
-      '    ];',
-      '    function hide(){',
-      '      H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.setProperty("display","none","important");});}catch(e){}});',
-      '      document.querySelectorAll(".product__info-container h1,.product__info-container h2,.product-single__title,.product_title").forEach(function(el){el.style.setProperty("display","none","important");});',
-      '      document.body.style.paddingTop="0";',
-      '      var m=document.querySelector("main,#MainContent,.main-content");',
-      '      if(m){m.style.paddingTop="0";m.style.marginTop="0";}',
-      '    }',
-      '    hide();document.addEventListener("DOMContentLoaded",hide);',
-      '    setTimeout(hide,100);setTimeout(hide,300);setTimeout(hide,800);setTimeout(hide,2000);',
-      '  })();',
-      '  <\/script>',
+      '{{ content_for_layout }}',
+      '<script>',
+      '(function(){',
+      'var H=["header","footer","nav",".header",".footer",".site-header",".site-footer",',
+      '"#shopify-section-header","#shopify-section-footer",".announcement-bar",".sticky-header",',
+      '".product__title",".product__media-wrapper",".product-form__quantity",',
+      '".price--listing",".price__container",".price-item",".price__regular",".price__sale",',
+      '"._rsi-buy-now-button",".shopify-payment-button",',
+      '".you-may-also-like",".complementary-products",',
+      '".product__pickup-availabilities",".product__view-details"];',
+      'function hide(){',
+      'H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){',
+      'el.style.setProperty("display","none","important");});}catch(e){}});',
+      'document.querySelectorAll(".product__info-container h1,.product-single__title,.product_title").forEach(function(el){',
+      'el.style.setProperty("display","none","important");});',
+      'document.body.style.paddingTop="0";',
+      'var m=document.querySelector("main,#MainContent,.main-content");',
+      'if(m){m.style.paddingTop="0";m.style.marginTop="0";}',
+      '}',
+      'hide();',
+      'document.addEventListener("DOMContentLoaded",hide);',
+      'setTimeout(hide,100);setTimeout(hide,300);setTimeout(hide,800);setTimeout(hide,2000);',
+      '})();',
+      '<\/script>',
       '</body>',
       '</html>'
-    ].join('\n')
+    ]
+    const layout = layoutLines.join('\n')
 
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
       asset: { key: 'layout/pagecod.liquid', value: layout }
     })
     console.log('Layout installed')
 
+    // Section - FARA ghilimele simple in value string
+    const sectionHtml = '<div data-unitone="true">{{ product.description }}</div>'
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: {
-        key: 'sections/pagecod-product.liquid',
-        value: '<div data-unitone="true">{{ product.description }}</div>'
-      }
+      asset: { key: 'sections/pagecod-product.liquid', value: sectionHtml }
     })
 
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
@@ -115,11 +117,9 @@ async function installTemplates(shop, token) {
       }
     })
 
+    const pageSection = '<div data-unitone="true">{{ page.content }}</div>'
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
-      asset: {
-        key: 'sections/pagecod-main.liquid',
-        value: '<div data-unitone="true">{{ page.content }}</div>'
-      }
+      asset: { key: 'sections/pagecod-main.liquid', value: pageSection }
     })
 
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
