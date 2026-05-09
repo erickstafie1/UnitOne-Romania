@@ -111,6 +111,7 @@ async function installTemplates(shop, token) {
       asset: {
         key: 'templates/product.pagecod.json',
         value: JSON.stringify({
+          layout: 'pagecod',
           sections: { main: { type: 'pagecod-product', settings: {} } },
           order: ['main']
         })

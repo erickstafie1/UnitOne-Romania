@@ -111,7 +111,7 @@ module.exports = async function handler(req, res) {
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {
       asset: {
         key: 'templates/product.pagecod.json',
-        value: JSON.stringify({ sections: { main: { type: 'pagecod-product', settings: {} } }, order: ['main'] })
+        value: JSON.stringify({ layout: 'pagecod', sections: { main: { type: 'pagecod-product', settings: {} } }, order: ['main'] })
       }
     })
     await shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', {

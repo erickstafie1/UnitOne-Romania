@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
     if (action === 'list') {
       // Nu folosim &fields= ca sa primim template_suffix in raspuns
       const data = await shopifyRequest(shop, token,
-        '/products.json?limit=250&template_suffix=pagecod',
+        '/products.json?limit=250&status=any',
         'GET', null)
       const pages = (data.products || [])
         .filter(p => p.template_suffix === 'pagecod')
