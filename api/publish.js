@@ -31,140 +31,55 @@ function shopifyRequest(shop, token, path, method, body) {
 
 function buildHideScript() {
   return `<style>
-header, footer, nav,
-.header, .footer, .site-header, .site-footer,
-#shopify-section-header, #shopify-section-footer,
-.announcement-bar, .sticky-header,
-.product__title, .product__media-wrapper,
-.product-form__quantity, .price--listing,
-.price__container, .price-item, .price,
-[class*="price"], [class*="Price"],
+header,footer,nav,.header,.footer,.site-header,.site-footer,
+#shopify-section-header,#shopify-section-footer,
+.announcement-bar,.sticky-header,
+.product__title,.product__media-wrapper,
+.product-form__quantity,.price--listing,.price__container,
+.price-item,.price__regular,.price__sale,
+[class*='price--'],[class*='Price'],
+.product__info-container h1,.product__info-container h2,
+.product-single__title,.product_title,
+[class*='product-title'],[class*='ProductTitle'],
 ._rsi-buy-now-button,
-[class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),
-[class*="recommendations"], .you-may-also-like,
-[class*="related-products"], .complementary-products,
+[class*='product-form__button']:not(.rsi-cod-form-gempages-button-overwrite),
 .shopify-payment-button,
-.product__info-container h1,
-.product__info-container h2,
-[class*="product-title"],
-[class*="ProductTitle"],
-.product-single__title,
-.product_title,
-h1.title, h1.product-name
-{ display: none !important; }
-body { padding-top: 0 !important; }
-main, #MainContent, .main-content {
-  padding: 0 !important;
-  margin: 0 !important;
-  max-width: 100% !important;
-}
-.page-width { max-width: 100% !important; padding: 0 !important; }
+[class*='recommendations'],.you-may-also-like,
+[class*='related-products'],.complementary-products,
+.product__view-details,.product__pickup-availabilities
+{display:none!important}
+body{padding-top:0!important}
+main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}
+.page-width{max-width:100%!important;padding:0!important}
 </style>
-<script>
-(function() {
-  var HIDE = [
-    'header','footer','nav',
-    '.header','.footer','.site-header','.site-footer',
-    '#shopify-section-header','#shopify-section-footer',
-    '.announcement-bar','.sticky-header',
-    '.product__title','.product__media-wrapper',
-    '.product-form__quantity','.price--listing',
-    '.price__container','.price-item',
-    '._rsi-buy-now-button',
-    '[class*="price"]','[class*="Price"]',
-    '[class*="product-title"]','[class*="ProductTitle"]',
-    '.product-single__title','.product_title',
-    '.shopify-payment-button',
-    '.you-may-also-like','.complementary-products'
-  ];
-  function hideAll() {
-    HIDE.forEach(function(sel) {
-      try {
-        document.querySelectorAll(sel).forEach(function(el) {
-          el.style.setProperty('display', 'none', 'important');
-        });
-      } catch(e) {}
-    });
-    // Ascunde si h1 care contine titlul produsului (dar nu h1-urile din LP)
-    document.querySelectorAll('h1').forEach(function(h) {
-      var inLP = h.closest('[class*="pagecod"], .unitone-lp, #unitone-content');
-      if (!inLP) h.style.setProperty('display', 'none', 'important');
-    });
-    document.body.style.paddingTop = '0';
-    var m = document.querySelector('main, #MainContent, .main-content');
-    if (m) { m.style.paddingTop = '0'; m.style.marginTop = '0'; }
+<script>(function(){
+  var H=['header','footer','nav','.header','.footer','.site-header','.site-footer',
+    '#shopify-section-header','#shopify-section-footer','.announcement-bar','.sticky-header',
+    '.product__title','.product__media-wrapper','.product-form__quantity',
+    '.price--listing','.price__container','.price-item','.price__regular','.price__sale',
+    '._rsi-buy-now-button','.shopify-payment-button',
+    '.you-may-also-like','.complementary-products',
+    '.product__pickup-availabilities','.product__view-details'];
+  function hide(){
+    H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.setProperty('display','none','important');});}catch(e){}}); 
+    document.querySelectorAll('.product__info-container h1,.product__info-container h2,.product-single__title,.product_title').forEach(function(el){el.style.setProperty('display','none','important');});
+    document.querySelectorAll('[class*='price']').forEach(function(el){if(!el.closest('[data-unitone]'))el.style.setProperty('display','none','important');});
+    document.body.style.paddingTop='0';
+    var m=document.querySelector('main,#MainContent,.main-content');
+    if(m){m.style.paddingTop='0';m.style.marginTop='0';}
   }
-  hideAll();
-  document.addEventListener('DOMContentLoaded', hideAll);
-  setTimeout(hideAll, 100);
-  setTimeout(hideAll, 500);
-  setTimeout(hideAll, 1000);
-  setTimeout(hideAll, 2000);
-})();
-</script>`
+  hide();document.addEventListener('DOMContentLoaded',hide);
+  setTimeout(hide,100);setTimeout(hide,500);setTimeout(hide,1500);
+})();<\/script>`
 }
 
-function buildReleasitMover() {
-  return `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>
-<script>
-(function() {
-  var moved = false;
-
-  function moveBtn() {
-    if (moved) return;
-    // Cauta butonul Releasit - incearca mai multi selectori
-    var rsiBtn = 
-      document.querySelector('._rsi-buy-now-button-app-block-hook') ||
-      document.querySelector('[class*="_rsi-buy-now-button"]') ||
-      document.querySelector('.rsi-cod-form-button') ||
-      document.querySelector('[data-testid="rsi-button"]');
-
-    var placeholders = document.querySelectorAll('.unitone-releasit-btn');
-
-    console.log('[UnitOne] moveBtn called. rsiBtn:', !!rsiBtn, 'placeholders:', placeholders.length);
-
-    if (rsiBtn && placeholders.length > 0) {
-      moved = true;
-      // Cloneaza pentru placeholder-ele extra, muta originalul in primul
-      placeholders.forEach(function(ph, i) {
-        ph.style.border = 'none';
-        ph.style.padding = '0';
-        ph.innerHTML = '';
-        if (i === 0) {
-          ph.appendChild(rsiBtn);
-          rsiBtn.style.cssText = 'width:100% !important;display:block !important;';
-        } else {
-          var clone = rsiBtn.cloneNode(true);
-          clone.style.cssText = 'width:100% !important;display:block !important;';
-          ph.appendChild(clone);
-        }
-      });
-      console.log('[UnitOne] Releasit moved to', placeholders.length, 'placeholders');
-    }
-  }
-
-  // Observer pe tot documentul
-  var observer = new MutationObserver(function() {
-    var rsiBtn = 
-      document.querySelector('._rsi-buy-now-button-app-block-hook') ||
-      document.querySelector('[class*="_rsi-buy-now-button"]') ||
-      document.querySelector('.rsi-cod-form-button');
-    if (rsiBtn && !moved) {
-      moveBtn();
-    }
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  // Retry-uri cu interval
-  var attempts = 0;
-  var interval = setInterval(function() {
-    attempts++;
-    moveBtn();
-    if (moved || attempts > 20) clearInterval(interval);
-  }, 500);
-
-})();
-</script>`
+// Releasit GemPages integration
+// Releasit detecteaza ._rsi-cod-form-is-gempage si activeaza modul GemPages
+// In modul GemPages, Releasit insusi injecteaza butonul COD in
+// elementele cu clasa rsi-cod-form-gempages-button-overwrite
+// Noi trebuie doar sa punem div-ul trigger si placeholder-ele cu clasa corecta
+function buildReleasitScript() {
+  return `<div class='_rsi-cod-form-is-gempage' style='display:none'></div>`
 }
 
 module.exports = async function handler(req, res) {
@@ -178,7 +93,6 @@ module.exports = async function handler(req, res) {
     const body = req.body || {}
     const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = body
 
-    console.log('PUBLISH action:', action, 'codFormApp:', codFormApp, 'productId:', productId)
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'get_products') {
@@ -190,17 +104,14 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      if (codFormApp === 'releasit') finalHtml = buildReleasitMover() + finalHtml
+      if (codFormApp === 'releasit') finalHtml = buildReleasitScript() + finalHtml
       if (hideHeaderFooter !== false) finalHtml = buildHideScript() + finalHtml
       if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
       const result = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml }
       })
       if (result.product) {
-        return res.status(200).json({
-          success: true,
-          pageUrl: 'https://' + shop + '/products/' + result.product.handle
-        })
+        return res.status(200).json({ success: true, pageUrl: 'https://' + shop + '/products/' + result.product.handle })
       }
       throw new Error(JSON.stringify(result.errors || 'Update failed'))
     }
@@ -211,9 +122,8 @@ module.exports = async function handler(req, res) {
     let finalHtml = html
 
     if (codFormApp === 'releasit') {
-      finalHtml = buildReleasitMover() + finalHtml
+      finalHtml = buildReleasitScript() + finalHtml
       if (variantId) finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
-      console.log('Releasit mover added, variantId:', variantId)
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
@@ -234,7 +144,6 @@ module.exports = async function handler(req, res) {
     })
 
     if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
-    console.log('LP published:', result.product.id, result.product.handle)
 
     res.status(200).json({
       success: true,
