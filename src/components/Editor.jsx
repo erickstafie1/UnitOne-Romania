@@ -192,7 +192,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       if (finalCodFormApp === 'releasit') {
         // Inlocuieste toate butoanele de comanda cu clasa Releasit
         finalHtml = finalHtml
-          .replace(/href="#formular"([^>]*)>COMANDÄ ACUM/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage"$1>COMANDÄ ACUM')
+          .replace(/href="#formular"([^>]*)>COMANDÃÂ ACUM/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage"$1>COMANDÃÂ ACUM')
           .replace(/class="cod-button([^"]*)"/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage$1"')
           .replace(/class="releasit-button([^"]*)"/g, 'class="rsi-cod-form-gempages-button-overwrite rsi-cod-form-is-gempage$1"')
         // Adauga div-ul magic GemPages care declanseaza Releasit
@@ -200,7 +200,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         console.log('[Publish] Releasit GemPages integration added')
       } else if (finalCodFormApp === 'easysell') {
         finalHtml = finalHtml
-          .replace(/href="#formular"([^>]*)>COMANDÄ ACUM/g, 'class="es-cod-button"$1>COMANDÄ ACUM')
+          .replace(/href="#formular"([^>]*)>COMANDÃÂ ACUM/g, 'class="es-cod-button"$1>COMANDÃÂ ACUM')
         console.log('[Publish] EasySell integration added')
       }
       
@@ -225,7 +225,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     if (old) old.remove();
     var d = document.createElement('div');
     d.id = 'unitone-drawer';
-    d.innerHTML = '<style>@keyframes uSlide{from{transform:translateX(100%)}to{transform:translateX(0)}}</style><div onclick="document.getElementById(\'unitone-drawer\').remove()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2147483646"></div><div style="position:fixed;top:0;right:0;width:100%;max-width:480px;height:100%;background:#fff;z-index:2147483647;display:flex;flex-direction:column;animation:uSlide 0.3s ease;box-shadow:-4px 0 30px rgba(0,0,0,0.2)"><div style="padding:14px 16px;background:#fff;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700">FinalizeazÄ comanda</span><button onclick="document.getElementById(\'unitone-drawer\').remove()" style="background:rgba(0,0,0,0.06);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">â</button></div><iframe src="/products/'+H+'?variant='+varId+'" style="flex:1;border:none;width:100%" id="unitone-iframe"></iframe></div>';
+    d.innerHTML = '<style>@keyframes uSlide{from{transform:translateX(100%)}to{transform:translateX(0)}}</style><div onclick="document.getElementById(\'unitone-drawer\').remove()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2147483646"></div><div style="position:fixed;top:0;right:0;width:100%;max-width:480px;height:100%;background:#fff;z-index:2147483647;display:flex;flex-direction:column;animation:uSlide 0.3s ease;box-shadow:-4px 0 30px rgba(0,0,0,0.2)"><div style="padding:14px 16px;background:#fff;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700">FinalizeazÃÂ comanda</span><button onclick="document.getElementById(\'unitone-drawer\').remove()" style="background:rgba(0,0,0,0.06);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">Ã¢ÂÂ</button></div><iframe src="/products/'+H+'?variant='+varId+'" style="flex:1;border:none;width:100%" id="unitone-iframe"></iframe></div>';
     document.body.appendChild(d);
     // Dupa load, click pe butonul Releasit din iframe
     document.getElementById('unitone-iframe').onload = function() {
@@ -282,17 +282,17 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   if (published) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a0f', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
       <div style={{ textAlign:'center', maxWidth:440 }}>
-        <div style={{ fontSize:64, marginBottom:16 }}>ð</div>
-        <h2 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Pagina e live Ã®n Shopify!</h2>
-        <p style={{ color:'rgba(255,255,255,0.5)', marginBottom:24 }}>Pagina COD a fost publicatÄ Ã®n magazinul tÄu.</p>
+        <div style={{ fontSize:64, marginBottom:16 }}>Ã°ÂÂÂ</div>
+        <h2 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Pagina e live ÃÂ®n Shopify!</h2>
+        <p style={{ color:'rgba(255,255,255,0.5)', marginBottom:24 }}>Pagina COD a fost publicatÃÂ ÃÂ®n magazinul tÃÂu.</p>
         <a href={publishedUrl} target="_blank" rel="noreferrer"
           style={{ display:'inline-block', padding:'12px 24px', borderRadius:10, background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', textDecoration:'none', fontSize:15, fontWeight:700, marginBottom:12 }}>
-          ð Vezi pagina live
+          Ã°ÂÂÂ Vezi pagina live
         </a>
         <br />
         <button onClick={onBack}
           style={{ padding:'10px 24px', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'#fff', fontSize:14, cursor:'pointer', marginTop:8 }}>
-          + GenereazÄ altÄ paginÄ
+          + GenereazÃÂ altÃÂ paginÃÂ
         </button>
       </div>
     </div>
@@ -303,7 +303,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       {/* TOOLBAR */}
       <div style={{ height:64, background:'#0a0a0f', borderBottom:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', padding:'0 16px', gap:10, flexShrink:0, zIndex:100 }}>
         <button onClick={onBack} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:13, padding:'6px 10px', borderRadius:8 }}>
-          â Ãnapoi
+          Ã¢ÂÂ ÃÂnapoi
         </button>
 
         <input
@@ -315,7 +315,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
         {/* Device selector */}
         <div style={{ display:'flex', background:'rgba(255,255,255,0.06)', borderRadius:10, padding:3, gap:2 }}>
-          {[['desktop','ð¥ï¸'],['mobile','ð±']].map(([d, ic]) => (
+          {[['desktop','Ã°ÂÂÂ¥Ã¯Â¸Â'],['mobile','Ã°ÂÂÂ±']].map(([d, ic]) => (
             <button key={d} onClick={() => switchDevice(d)}
               style={{ padding:'5px 12px', borderRadius:8, border:'none', background: device===d ? 'rgba(229,62,62,0.8)' : 'transparent', color:'#fff', fontSize:14, cursor:'pointer' }}>
               {ic}
@@ -327,18 +327,18 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         <button onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
           title={hideHeaderFooter ? 'Header/Footer ascuns' : 'Header/Footer vizibil'}
           style={{ padding:'5px 12px', borderRadius:8, border:'none', background: hideHeaderFooter ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)', color: hideHeaderFooter ? '#4ade80' : 'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', fontWeight:600, whiteSpace:'nowrap' }}>
-          {hideHeaderFooter ? 'â FÄrÄ H/F' : 'Cu H/F'}
+          {hideHeaderFooter ? 'Ã¢ÂÂ FÃÂrÃÂ H/F' : 'Cu H/F'}
         </button>
 
         {/* Undo/Redo */}
         <div style={{ display:'flex', gap:4 }}>
           <button onClick={() => gjsRef.current?.UndoManager.undo()}
-            style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>â©ï¸</button>
+            style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>Ã¢ÂÂ©Ã¯Â¸Â</button>
           <button onClick={() => gjsRef.current?.UndoManager.redo()}
-            style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>âªï¸</button>
+            style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>Ã¢ÂÂªÃ¯Â¸Â</button>
         </div>
 
-        {error && <span style={{ fontSize:12, color:'#fc8181' }}>â ï¸ {error}</span>}
+        {error && <span style={{ fontSize:12, color:'#fc8181' }}>Ã¢ÂÂ Ã¯Â¸Â {error}</span>}
 
         <button onClick={() => { 
           if(isEditing) { 
@@ -350,7 +350,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
           } 
         }} disabled={publishing}
           style={{ padding:'8px 20px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', opacity: publishing ? 0.6 : 1, boxShadow:'0 2px 8px rgba(229,62,62,0.3)', whiteSpace:'nowrap' }}>
-          {publishing ? 'â³ ...' : isEditing ? 'ð¾ SalveazÄ modificÄrile' : 'ð PublicÄ â 40 RON'}
+          {publishing ? 'Ã¢ÂÂ³ ...' : isEditing ? 'Ã°ÂÂÂ¾ SalveazÃÂ modificÃÂrile' : 'Ã°ÂÂÂ PublicÃÂ Ã¢ÂÂ 40 RON'}
         </button>
       </div>
 
@@ -371,7 +371,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         <div style={{ width:260, background:'#0f0f1a', borderLeft:'1px solid rgba(255,255,255,0.06)', overflow:'auto', flexShrink:0 }}>
           <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:1 }}>Stiluri</div>
           <div id="styles-panel" />
-          <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:1, marginTop:8 }}>ProprietÄÈi</div>
+          <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:1, marginTop:8 }}>ProprietÃÂÃÂi</div>
           <div id="traits-panel" />
         </div>
       </div>
@@ -380,15 +380,15 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
           <div style={{ background:'#1a1a2e', borderRadius:20, padding:28, width:460, maxWidth:'90vw', maxHeight:'80vh', display:'flex', flexDirection:'column', border:'1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-              <h3 style={{ color:'#fff', fontSize:17, fontWeight:800, margin:0 }}>AsociazÄ produsul din magazin</h3>
-              <button onClick={() => setShowProductModal(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:20 }}>â</button>
+              <h3 style={{ color:'#fff', fontSize:17, fontWeight:800, margin:0 }}>AsociazÃÂ produsul din magazin</h3>
+              <button onClick={() => setShowProductModal(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:20 }}>Ã¢ÂÂ</button>
             </div>
             <p style={{ color:'rgba(255,255,255,0.45)', fontSize:13, marginBottom:16, lineHeight:1.6 }}>
-              SelecteazÄ produsul cÄruia Ã®i asociezi acest landing page. CÃ¢nd clienÈii vor accesa produsul, vor fi redirectaÈi la LP.
+              SelecteazÃÂ produsul cÃÂruia ÃÂ®i asociezi acest landing page. CÃÂ¢nd clienÃÂii vor accesa produsul, vor fi redirectaÃÂi la LP.
             </p>
             <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
               {loadingProducts ? (
-                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se Ã®ncarcÄ produsele...</div>
+                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se ÃÂ®ncarcÃÂ produsele...</div>
               ) : products.map(p => (
                 <div key={p.id} onClick={() => { console.log('[Modal] Selected product:', p.title, 'variantId:', p.variants?.[0]?.id); setSelectedProduct(p); }}
                   style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, border: selectedProduct?.id===p.id ? '1.5px solid #e53e3e' : '1px solid rgba(255,255,255,0.08)', background: selectedProduct?.id===p.id ? 'rgba(229,62,62,0.08)' : 'rgba(255,255,255,0.02)', cursor:'pointer' }}>
@@ -397,24 +397,24 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
                     <div style={{ fontSize:13, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.title}</div>
                     <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{p.variants?.[0]?.price} RON</div>
                   </div>
-                  {selectedProduct?.id===p.id && <span style={{ color:'#e53e3e', fontSize:18 }}>â</span>}
+                  {selectedProduct?.id===p.id && <span style={{ color:'#e53e3e', fontSize:18 }}>Ã¢ÂÂ</span>}
                 </div>
               ))}
             </div>
             {codFormApp && codFormApp !== 'none' && !selectedProduct && (
               <div style={{ padding:'10px 14px', background:'rgba(251,191,36,0.08)', border:'1px solid rgba(251,191,36,0.2)', borderRadius:10, fontSize:13, color:'#fbbf24', marginBottom:12, display:'flex', gap:8 }}>
-                <span>â ï¸</span>
-                <span>SelecteazÄ produsul pentru a conecta {codFormApp === 'releasit' ? 'Releasit' : 'EasySell'} la butonul de comandÄ.</span>
+                <span>Ã¢ÂÂ Ã¯Â¸Â</span>
+                <span>SelecteazÃÂ produsul pentru a conecta {codFormApp === 'releasit' ? 'Releasit' : 'EasySell'} la butonul de comandÃÂ.</span>
               </div>
             )}
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setShowProductModal(false)}
                 style={{ flex:1, padding:12, borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'#fff', fontSize:14, cursor:'pointer' }}>
-                AnuleazÄ
+                AnuleazÃÂ
               </button>
               <button onClick={() => { setShowProductModal(false); publish() }} disabled={!selectedProduct}
                 style={{ flex:2, padding:12, borderRadius:10, border:'none', background: selectedProduct ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'rgba(255,255,255,0.1)', color:'#fff', fontSize:14, fontWeight:700, cursor: selectedProduct ? 'pointer' : 'not-allowed' }}>
-                {selectedProduct ? `PublicÄ pentru "${selectedProduct.title.substring(0,25)}..."` : 'SelecteazÄ un produs'}
+                {selectedProduct ? `PublicÃÂ pentru "${selectedProduct.title.substring(0,25)}..."` : 'SelecteazÃÂ un produs'}
               </button>
             </div>
           </div>
@@ -535,8 +535,7 @@ function addBlocks(editor, data) {
     {id:'icon-list', label:'Lista Beneficii', cat:'Elemente', content:'<div style="padding:20px"><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:' + p + ';color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#x2713;</span><span style="font-size:14px;color:#222">Livrare rapida in toata Romania</span></div><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:' + p + ';color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#x2713;</span><span style="font-size:14px;color:#222">Plata la livrare, fara risc</span></div><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:' + p + ';color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#x2713;</span><span style="font-size:14px;color:#222">Garantie 30 zile retur</span></div></div></div>'},
     {id:'accordion', label:'FAQ Accordion', cat:'Elemente', content:'<div style="padding:20px"><details style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">Cum functioneaza plata la livrare?</summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">Platesti curierului in momentul in care primesti coletul acasa.</div></details><details style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">Cat dureaza livrarea?</summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">2-5 zile lucratoare.</div></details></div>'},
     {id:'marquee', label:'Marquee Banner', cat:'Elemente', content:'<div style="overflow:hidden;background:#111;padding:12px 0"><div style="display:flex;animation:unitone-marquee 15s linear infinite;white-space:nowrap"><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#x1F69A; Livrare GRATUITA</span><span style="color:' + p + ';padding:0 12px">&#x2605;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#x2705; Plata la livrare</span><span style="color:' + p + ';padding:0 12px">&#x2605;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#x21A9;&#xFE0F; Retur 30 zile</span><span style="color:' + p + ';padding:0 12px">&#x2605;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#x1F69A; Livrare GRATUITA</span></div></div><style>@keyframes unitone-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}</style>'},
-    {id:'tabs', label:'Tabs', cat:'Elemente', content:'<div style="padding:20px"><div style="display:flex;border-bottom:2px solid #e5e7eb;margin-bottom:16px"><button onclick="this.closest('div').querySelectorAll('[data-tab]').forEach(t=>t.style.display='none');this.closest('div').querySelector('[data-tab=\'1\']').style.display='block'" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:700;color:' + p + ';border-bottom:2px solid ' + p + ';margin-bottom:-2px;cursor:pointer;font-family:inherit">Tab 1</button><button onclick="this.closest('div').querySelectorAll('[data-tab]').forEach(t=>t.style.display='none');this.closest('div').querySelector('[data-tab=\'2\']').style.display='block'" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:600;color:#666;cursor:pointer;font-family:inherit">Tab 2</button></div><div data-tab="1" style="font-size:14px;color:#444;line-height:1.7">Continutul primului tab.</div><div data-tab="2" style="display:none;font-size:14px;color:#444;line-height:1.7">Continutul celui de-al doilea tab.</div></div>'},
-
+    {id:'tabs', label:'Tabs', cat:'Elemente', content:'<div style="padding:20px"><div style="display:flex;border-bottom:2px solid #e5e7eb;margin-bottom:16px"><button onclick="var tabs=this.closest('div').querySelectorAll('[data-tab]');tabs.forEach(function(t){t.style.display='none'});this.closest('div').querySelector('[data-tab=&quot;1&quot;]').style.display='block'" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:700;color:' + p + ';border-bottom:2px solid ' + p + ';margin-bottom:-2px;cursor:pointer;font-family:inherit">Tab 1</button><button onclick="var tabs=this.closest('div').querySelectorAll('[data-tab]');tabs.forEach(function(t){t.style.display='none'});this.closest('div').querySelector('[data-tab=&quot;2&quot;]').style.display='block'" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:600;color:#666;cursor:pointer;font-family:inherit">Tab 2</button></div><div data-tab="1" style="font-size:14px;color:#444;line-height:1.7">Continutul primului tab.</div><div data-tab="2" style="display:none;font-size:14px;color:#444;line-height:1.7">Continutul celui de-al doilea tab.</div></div>'},
     // ── TRUST ──
     {id:'trust-badges', label:'Trust Badges', cat:'Trust', content:'<div style="padding:20px;background:#fff;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;text-align:center"><div style="font-size:13px;color:#444"><div style="font-size:28px">&#x1F4B3;</div>Plata ramburs</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#x2705;</div>Satisfactie garantata</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#x21A9;&#xFE0F;</div>Banii inapoi 30 zile</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#x1F69A;</div>Livrare rapida</div></div>'},
     {id:'testimonial', label:'Testimonial Card', cat:'Trust', content:'<div style="padding:20px 20px 0"><div style="padding:20px;background:#f9fafb;border-radius:12px;border-left:4px solid ' + p + ';margin-bottom:12px"><div style="color:#f39c12;margin-bottom:8px;font-size:16px">&#x2605;&#x2605;&#x2605;&#x2605;&#x2605;</div><p style="color:#333;margin-bottom:12px;font-style:italic;font-size:15px;line-height:1.6">"Produs excelent! L-am primit in 5 zile."</p><strong style="color:#111;font-size:14px">— Maria D., Bucuresti</strong></div></div>'},
