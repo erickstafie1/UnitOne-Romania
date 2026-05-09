@@ -40,8 +40,7 @@ module.exports = async function handler(req, res) {
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      // Shopify nu returneaza template_suffix in fields= filter
-      // Fetch fara fields filter ca sa primim template_suffix
+      // Nu folosim &fields= ca sa primim template_suffix in raspuns
       const data = await shopifyRequest(shop, token,
         '/products.json?limit=250&template_suffix=pagecod',
         'GET', null)
