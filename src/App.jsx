@@ -20,6 +20,7 @@ export default function App() {
     const t = params.get('token')
     if (s && t) {
       setShop(s); setToken(t); setLoading(false)
+      fetch('/api/reinstall-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shop: s, token: t }) }).catch(() => {})
       const saved = localStorage.getItem('codform_' + s)
       console.log('codFormApp from localStorage:', saved, 'shop:', s)
       if (saved) {

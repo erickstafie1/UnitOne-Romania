@@ -74,57 +74,7 @@ function buildHideScript() {
 // Releasit: folosim MutationObserver care asteapta butonul real
 // si il muta in toate placeholder-ele .unitone-releasit-btn
 function buildReleasitMover(variantId) {
-  const vid = variantId || ''
-  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
-    '<script>\n' +
-    '(function(){\n' +
-    '  var VARIANT_ID = "' + vid + '";\n' +
-    '  var moved = false;\n' +
-    '  var attempts = 0;\n' +
-    '\n' +
-    '  function findRsiBtn(){\n' +
-    '    return document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
-    '           document.querySelector("[class*=_rsi-buy-now-button]") ||\n' +
-    '           document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
-    '           document.querySelector("[data-rsi-button]");\n' +
-    '  }\n' +
-    '\n' +
-    '  function moveBtn(){\n' +
-    '    if(moved) return;\n' +
-    '    var btn = findRsiBtn();\n' +
-    '    var placeholders = document.querySelectorAll(".unitone-releasit-btn");\n' +
-    '    if(!btn || placeholders.length === 0) return;\n' +
-    '    moved = true;\n' +
-    '    placeholders.forEach(function(ph, i){\n' +
-    '      ph.style.cssText = "display:block;min-height:0;border:none;padding:0;";\n' +
-    '      if(i === 0){\n' +
-    '        ph.appendChild(btn);\n' +
-    '        btn.style.cssText = "width:100%!important;display:block!important;";\n' +
-    '      } else {\n' +
-    '        var clone = btn.cloneNode(true);\n' +
-    '        clone.style.cssText = "width:100%!important;display:block!important;";\n' +
-    '        ph.appendChild(clone);\n' +
-    '      }\n' +
-    '    });\n' +
-    '    console.log("[UnitOne] Releasit moved to",placeholders.length,"placeholders");\n' +
-    '  }\n' +
-    '\n' +
-    '  // Observer pe tot documentul\n' +
-    '  var obs = new MutationObserver(function(){\n' +
-    '    if(!moved && findRsiBtn()) moveBtn();\n' +
-    '  });\n' +
-    '  obs.observe(document.documentElement,{childList:true,subtree:true});\n' +
-    '\n' +
-    '  // Retry la interval\n' +
-    '  var iv = setInterval(function(){\n' +
-    '    attempts++;\n' +
-    '    moveBtn();\n' +
-    '    if(moved || attempts > 30) clearInterval(iv);\n' +
-    '  }, 300);\n' +
-    '\n' +
-    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
-    '})();\n' +
-    '<\/script>'
+  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>'
 }
 
 module.exports = async function handler(req, res) {
