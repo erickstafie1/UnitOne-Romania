@@ -44,21 +44,46 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit GemPages mode: trigger div + ascunde placeholder-ul vizual la load
+// Releasit: trigger GemPages mode + mover care cloneaza butonul in placeholder-ele noastre
 function buildReleasitGemPages() {
   return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
     '<script>\n' +
     '(function(){\n' +
-    '  function cleanPlaceholders(){\n' +
-    '    document.querySelectorAll(".unitone-releasit-btn").forEach(function(ph){\n' +
-    '      var s = ph.querySelector("span.unitone-placeholder-text");\n' +
-    '      if(s) s.style.display = "none";\n' +
-    '      ph.style.border = "none";\n' +
-    '      ph.style.padding = "0";\n' +
+    '  var done = false;\n' +
+    '\n' +
+    '  function findBtn(){\n' +
+    '    return document.querySelector(".rsi-cod-form-gempages-button-overwrite") ||\n' +
+    '           document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
+    '           document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
+    '           document.querySelector("[class*=_rsi-buy-now][class*=button]");\n' +
+    '  }\n' +
+    '\n' +
+    '  function hidePlaceholderText(){\n' +
+    '    document.querySelectorAll(".unitone-releasit-btn .unitone-placeholder-text").forEach(function(s){ s.style.display="none"; });\n' +
+    '    document.querySelectorAll(".unitone-releasit-btn").forEach(function(ph){ ph.style.border="none"; ph.style.padding="0"; });\n' +
+    '  }\n' +
+    '\n' +
+    '  function moveBtn(){\n' +
+    '    if(done) return;\n' +
+    '    var btn = findBtn();\n' +
+    '    var phs = document.querySelectorAll(".unitone-releasit-btn");\n' +
+    '    if(!btn || !phs.length) return;\n' +
+    '    // Daca butonul e deja in overlay, nu mai misca\n' +
+    '    var overlay = document.getElementById("unitone-lp");\n' +
+    '    if(overlay && overlay.contains(btn)){ done=true; hidePlaceholderText(); return; }\n' +
+    '    done = true;\n' +
+    '    hidePlaceholderText();\n' +
+    '    phs.forEach(function(ph, i){\n' +
+    '      var el = i === 0 ? btn : btn.cloneNode(true);\n' +
+    '      el.style.cssText = "width:100%!important;display:block!important;box-sizing:border-box!important;";\n' +
+    '      ph.appendChild(el);\n' +
     '    });\n' +
     '  }\n' +
-    '  cleanPlaceholders();\n' +
-    '  document.addEventListener("DOMContentLoaded", cleanPlaceholders);\n' +
+    '\n' +
+    '  // Incearca imediat, la DOMContentLoaded si cu interval\n' +
+    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
+    '  var iv = setInterval(function(){ moveBtn(); if(done) clearInterval(iv); }, 300);\n' +
+    '  setTimeout(function(){ clearInterval(iv); }, 10000);\n' +
     '})();\n' +
     '<\/script>'
 }
