@@ -52,10 +52,13 @@ function buildReleasitGemPages() {
     '  var done = false;\n' +
     '\n' +
     '  function findBtn(){\n' +
-    '    return document.querySelector(".rsi-cod-form-gempages-button-overwrite") ||\n' +
-    '           document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
-    '           document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
-    '           document.querySelector("[class*=_rsi-buy-now][class*=button]");\n' +
+    '    var btn = document.querySelector(".rsi-cod-form-gempages-button-overwrite") ||\n' +
+    '              document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
+    '              document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
+    '              document.querySelector("[class*=_rsi-buy-now][class*=button]");\n' +
+    '    // Asteapta pana skeleton-ul dispare (Releasit termina initializarea)\n' +
+    '    if(btn && btn.querySelector(".rsi-btn-skel")) return null;\n' +
+    '    return btn;\n' +
     '  }\n' +
     '\n' +
     '  function hidePlaceholderText(){\n' +
