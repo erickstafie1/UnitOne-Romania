@@ -13,6 +13,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
+  const [productsError, setProductsError] = useState('')
   const [hideHeaderFooter, setHideHeaderFooter] = useState(true)
   const [pageTitle, setPageTitle] = useState(data.title || data.productName || 'Pagina COD')
   const isEditing = !!data.fromDashboard
@@ -98,6 +99,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
   async function loadProducts() {
     setLoadingProducts(true)
+    setProductsError('')
     try {
       const res = await fetch('/api/get-products', {
         method: 'POST',
@@ -105,8 +107,10 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         body: JSON.stringify({ shop, token })
       })
       const d = await res.json()
-      setProducts(d.products || [])
-    } catch(e) { console.log('Load products error:', e.message) }
+      if (!res.ok || d.error) throw new Error(d.error || 'Eroare server')
+      if ((d.products || []).length === 0) setProductsError('Niciun produs găsit în magazin.')
+      else setProducts(d.products)
+    } catch(e) { setProductsError('Eroare: ' + e.message) }
     setLoadingProducts(false)
   }
 
@@ -289,7 +293,12 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
             </p>
             <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
               {loadingProducts ? (
-                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se incarca produsele...</div>
+                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se încarcă produsele...</div>
+              ) : productsError ? (
+                <div style={{ textAlign:'center', padding:20 }}>
+                  <div style={{ color:'#fc8181', fontSize:13, marginBottom:12 }}>⚠️ {productsError}</div>
+                  <button onClick={loadProducts} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>Încearcă din nou</button>
+                </div>
               ) : products.map(p => (
                 <div key={p.id} onClick={() => setSelectedProduct(p)}
                   style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, border: selectedProduct?.id===p.id ? '1.5px solid #e53e3e' : '1px solid rgba(255,255,255,0.08)', background: selectedProduct?.id===p.id ? 'rgba(229,62,62,0.08)' : 'rgba(255,255,255,0.02)', cursor:'pointer' }}>
