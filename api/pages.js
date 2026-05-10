@@ -40,12 +40,11 @@ module.exports = async function handler(req, res) {
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      // Nu folosim &fields= ca sa primim template_suffix in raspuns
       const data = await shopifyRequest(shop, token,
         '/products.json?limit=250&status=any',
         'GET', null)
       const pages = (data.products || [])
-        .filter(p => p.template_suffix === 'pagecod')
+        .filter(p => p.template_suffix === 'pagecod' || (p.tags || '').includes('unitone-cod-page'))
         .map(p => ({
           id: p.id,
           title: p.title,
