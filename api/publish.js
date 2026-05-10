@@ -29,46 +29,19 @@ function shopifyRequest(shop, token, path, method, body) {
   })
 }
 
-// Ascunde elementele native ale temei Shopify
+// Overlay care acopera complet tema - nu mai depindem de hide selectori
+function buildOverlay(html) {
+  return '<div id="unitone-lp" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box">' +
+    html +
+    '</div><!--/unitone-lp-->'
+}
+
+// CSS minimal: ascunde scrollul temei din spate si elemente fixed cu z-index mare
 function buildHideScript() {
   return '<style>\n' +
-    'header,footer,nav,.header,.footer,.site-header,.site-footer,\n' +
-    '#shopify-section-header,#shopify-section-footer,\n' +
-    '.announcement-bar,.sticky-header,\n' +
-    '.product__title,.product__media-wrapper,\n' +
-    '.product-form__quantity,.price--listing,.price__container,\n' +
-    '.price-item,.price__regular,.price__sale,\n' +
-    '.product__info-container h1,.product__info-container h2,\n' +
-    '.product-single__title,.product_title,\n' +
-    '._rsi-buy-now-button,\n' +
-    '[class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),\n' +
-    '.shopify-payment-button,\n' +
-    '[class*="recommendations"],.you-may-also-like,\n' +
-    '[class*="related-products"],.complementary-products,\n' +
-    '.product__view-details,.product__pickup-availabilities\n' +
-    '{display:none!important}\n' +
-    'body{padding-top:0!important}\n' +
-    'main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}\n' +
-    '.page-width{max-width:100%!important;padding:0!important}\n' +
-    '</style>\n' +
-    '<script>(function(){\n' +
-    'var H=["header","footer","nav",".header",".footer",".site-header",".site-footer",\n' +
-    '"#shopify-section-header","#shopify-section-footer",".announcement-bar",".sticky-header",\n' +
-    '".product__title",".product__media-wrapper",".product-form__quantity",\n' +
-    '".price--listing",".price__container",".price-item",".price__regular",".price__sale",\n' +
-    '"._rsi-buy-now-button",".shopify-payment-button",\n' +
-    '".you-may-also-like",".complementary-products",\n' +
-    '".product__pickup-availabilities",".product__view-details"];\n' +
-    'function hide(){\n' +
-    'H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.setProperty("display","none","important");});}catch(e){}});\n' +
-    'document.querySelectorAll(".product__info-container h1,.product__info-container h2,.product-single__title,.product_title").forEach(function(el){el.style.setProperty("display","none","important");});\n' +
-    'document.body.style.paddingTop="0";\n' +
-    'var m=document.querySelector("main,#MainContent,.main-content");\n' +
-    'if(m){m.style.paddingTop="0";m.style.marginTop="0";}\n' +
-    '}\n' +
-    'hide();document.addEventListener("DOMContentLoaded",hide);\n' +
-    'setTimeout(hide,100);setTimeout(hide,500);setTimeout(hide,1500);\n' +
-    '})();<\/script>'
+    'html,body{overflow:hidden!important;margin:0!important;padding:0!important}\n' +
+    'body>*:not(#unitone-lp){display:none!important}\n' +
+    '</style>'
 }
 
 // Releasit: folosim MutationObserver care asteapta butonul real
@@ -101,8 +74,10 @@ function buildReleasitMover(variantId) {
     '  function moveBtn(){\n' +
     '    if(moved) return;\n' +
     '    var btn = findRsiBtn();\n' +
+    '    var overlay = document.getElementById("unitone-lp");\n' +
     '    var placeholders = document.querySelectorAll(".unitone-releasit-btn");\n' +
     '    if(!btn || placeholders.length === 0) return;\n' +
+    '    if(overlay && overlay.contains(btn)){moved=true;return;}\n' +
     '    moved = true;\n' +
     '    placeholders.forEach(function(ph, i){\n' +
     '      ph.style.cssText = "display:block;min-height:0;border:none;padding:0;";\n' +
@@ -163,7 +138,8 @@ module.exports = async function handler(req, res) {
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
       if (codFormApp === 'releasit') finalHtml = buildReleasitMover(variantId) + finalHtml
-      if (hideHeaderFooter !== false) finalHtml = buildHideScript() + finalHtml
+      finalHtml = buildOverlay(finalHtml)
+      finalHtml = buildHideScript() + finalHtml
       const result = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml, template_suffix: 'pagecod' }
       })
@@ -185,9 +161,8 @@ module.exports = async function handler(req, res) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
 
-    if (hideHeaderFooter !== false) {
-      finalHtml = buildHideScript() + finalHtml
-    }
+    finalHtml = buildOverlay(finalHtml)
+    finalHtml = buildHideScript() + finalHtml
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB')
 

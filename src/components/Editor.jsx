@@ -58,10 +58,18 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       gjsRef.current = editor
 
       if (data.fromDashboard && data.body_html) {
-        const styleMatch = data.body_html.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
+        let raw = data.body_html
+        // Extrage continutul LP din overlay-ul nostru (adaugat la publish)
+        const overlayMatch = raw.match(/<div[^>]+id="unitone-lp"[^>]*>([\s\S]*?)<!--\/unitone-lp-->/)
+        if (overlayMatch) raw = overlayMatch[1]
+        // Sterge scripturile si div-ul GemPages adaugate de publish
+        raw = raw.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+        raw = raw.replace(/<div[^>]+class="[^"]*_rsi-cod-form-is-gempage[^"]*"[^>]*><\/div>/gi, '')
+        // Extrage CSS din primul style tag (LP-ul generat de GrapesJS)
+        const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
         const css = styleMatch ? styleMatch[1] : ''
-        const htmlOnly = data.body_html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        editor.setComponents(htmlOnly)
+        const htmlOnly = raw.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        editor.setComponents(htmlOnly.trim())
         if (css) editor.setStyle(css)
       } else {
         const html = buildHTML(data, codFormApp)
