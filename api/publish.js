@@ -43,70 +43,49 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: form ascuns pentru context produs + mover in placeholder-ele noastre
+// Releasit: muta _rsi-buy-now-button-app-block-hook in placeholder-ul nostru
 function buildReleasitGemPages(variantId) {
   const vid = variantId || ''
-  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
-    (vid ? '<form id="_unitone_rsi_form" action="/cart/add" method="post" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;" novalidate><input type="hidden" name="id" value="' + vid + '"><button type="submit">add</button></form>\n' : '') +
-    '<script>\n' +
+  return '<script>\n' +
     '(function(){\n' +
     '  var done = false;\n' +
-    '  var VARIANT_ID = "' + vid + '";\n' +
     '\n' +
-    '  function findBtn(){\n' +
-    '    // Cauta butonul Releasit in form-ul nostru (nu butonul submit original)\n' +
-    '    var form = document.getElementById("_unitone_rsi_form");\n' +
-    '    if(form){\n' +
-    '      var btns = form.querySelectorAll("button");\n' +
-    '      for(var i=0;i<btns.length;i++){\n' +
-    '        if(btns[i].getAttribute("type")!=="submit" && btns[i].className && btns[i].className.length>3) return btns[i];\n' +
-    '      }\n' +
-    '    }\n' +
-    '    return document.querySelector("button.rsi_animation_none") ||\n' +
-    '           document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
-    '  }\n' +
-    '\n' +
-    '  function cleanPh(){\n' +
-    '    document.querySelectorAll(".unitone-releasit-btn").forEach(function(ph){\n' +
-    '      ph.style.border="none"; ph.style.padding="0";\n' +
-    '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
-    '    });\n' +
+    '  function findTarget(){\n' +
+    '    // Prioritate: containerul standard Releasit (modul non-GemPages)\n' +
+    '    var hook = document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
+    '    if(hook && hook.querySelector("button")) return hook;\n' +
+    '    // Fallback GemPages\n' +
+    '    var gem = document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
+    '    if(gem) return gem;\n' +
+    '    // Fallback generic\n' +
+    '    return document.querySelector("button.rsi_animation_none");\n' +
     '  }\n' +
     '\n' +
     '  function moveBtn(){\n' +
     '    if(done) return;\n' +
-    '    var btn = findBtn();\n' +
+    '    var target = findTarget();\n' +
     '    var phs = document.querySelectorAll(".unitone-releasit-btn");\n' +
-    '    if(!btn || !phs.length) return;\n' +
+    '    if(!target || !phs.length) return;\n' +
     '    var overlay = document.getElementById("unitone-lp");\n' +
-    '    if(overlay && overlay.contains(btn)){ done=true; cleanPh(); return; }\n' +
-    '    done=true; cleanPh();\n' +
-    '    phs.forEach(function(ph,i){\n' +
+    '    if(overlay && overlay.contains(target)){ done=true; return; }\n' +
+    '    done = true;\n' +
+    '    var realBtn = target.querySelector ? target.querySelector("button") || target : target;\n' +
+    '    phs.forEach(function(ph, i){\n' +
+    '      ph.style.border="none"; ph.style.padding="0"; ph.style.minHeight="";\n' +
+    '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
     '      if(i===0){\n' +
-    '        btn.style.cssText="width:100%!important;display:block!important;";\n' +
-    '        ph.appendChild(btn);\n' +
+    '        target.style.cssText="width:100%!important;display:block!important;";\n' +
+    '        ph.appendChild(target);\n' +
     '      } else {\n' +
-    '        // Proxy button - declanseaza originalul la click\n' +
     '        var proxy = document.createElement("button");\n' +
-    '        proxy.className = btn.className;\n' +
-    '        proxy.innerHTML = btn.innerHTML;\n' +
-    '        proxy.style.cssText = "width:100%!important;display:block!important;cursor:pointer;";\n' +
-    '        proxy.addEventListener("click", function(e){ e.preventDefault(); btn.click(); });\n' +
+    '        proxy.className = realBtn.className;\n' +
+    '        proxy.innerHTML = realBtn.innerHTML;\n' +
+    '        proxy.style.cssText="width:100%!important;display:block!important;cursor:pointer;";\n' +
+    '        proxy.addEventListener("click", function(e){ e.preventDefault(); realBtn.click(); });\n' +
     '        ph.appendChild(proxy);\n' +
     '      }\n' +
     '    });\n' +
     '  }\n' +
-    '\n' +
-    '  // Debug vizual dupa 5s\n' +
-    '  setTimeout(function(){\n' +
-    '    var all=document.querySelectorAll(\'[class*="rsi"],[id*="rsi"]\');\n' +
-    '    var info=[]; all.forEach(function(el){info.push(el.tagName+"."+el.className.toString().split(" ")[0]+" skel:"+!!el.querySelector(".rsi-btn-skel"));});\n' +
-    '    var wRsi=Object.keys(window).filter(function(k){return k.toLowerCase().includes("rsi");});\n' +
-    '    var dbg=document.createElement("div");\n' +
-    '    dbg.style.cssText="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font-size:10px;padding:6px;z-index:9999999999;font-family:monospace;word-break:break-all;";\n' +
-    '    dbg.textContent="RSI DOM: "+info.join(", ")+" | window: "+wRsi.join(",");\n' +
-    '    document.getElementById("unitone-lp").appendChild(dbg);\n' +
-    '  }, 5000);\n' +
     '\n' +
     '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
     '  var iv=setInterval(function(){ moveBtn(); if(done) clearInterval(iv); },300);\n' +
