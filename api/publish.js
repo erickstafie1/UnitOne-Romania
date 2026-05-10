@@ -55,9 +55,15 @@ function buildReleasitGemPages(variantId) {
     '  var VARIANT_ID = "' + vid + '";\n' +
     '\n' +
     '  function findBtn(){\n' +
-    '    // Cauta butonul real Releasit (dupa ce s-a initializat)\n' +
+    '    // Cauta butonul Releasit in form-ul nostru (nu butonul submit original)\n' +
+    '    var form = document.getElementById("_unitone_rsi_form");\n' +
+    '    if(form){\n' +
+    '      var btns = form.querySelectorAll("button");\n' +
+    '      for(var i=0;i<btns.length;i++){\n' +
+    '        if(btns[i].getAttribute("type")!=="submit" && btns[i].className && btns[i].className.length>3) return btns[i];\n' +
+    '      }\n' +
+    '    }\n' +
     '    return document.querySelector("button.rsi_animation_none") ||\n' +
-    '           document.querySelector("[class*=rsi_animation]") ||\n' +
     '           document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
     '  }\n' +
     '\n' +
