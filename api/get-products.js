@@ -31,9 +31,11 @@ module.exports = async function handler(req, res) {
   try {
     const { shop, token } = req.body || {}
     if (!shop || !token) return res.status(400).json({ error: 'Missing params' })
+    console.log('get-products shop:', shop, 'token prefix:', token?.substring(0,10))
     const data = await shopifyRequest(shop, token, '/products.json?limit=250&status=any&fields=id,title,handle,status,images,variants')
+    console.log('get-products response keys:', Object.keys(data), 'count:', data.products?.length)
     if (data.errors) return res.status(401).json({ success: false, error: 'Acces refuzat: ' + JSON.stringify(data.errors) })
-    res.status(200).json({ success: true, products: data.products || [] })
+    res.status(200).json({ success: true, products: data.products || [], debug: { keys: Object.keys(data) } })
   } catch(e) {
     res.status(500).json({ success: false, error: e.message })
   }

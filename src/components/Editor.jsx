@@ -107,8 +107,9 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         body: JSON.stringify({ shop, token })
       })
       const d = await res.json()
+      console.log('get-products response:', d)
       if (!res.ok || d.error) throw new Error(d.error || 'Eroare server')
-      if ((d.products || []).length === 0) setProductsError('Niciun produs găsit în magazin.')
+      if ((d.products || []).length === 0) setProductsError('Niciun produs găsit. Debug: ' + JSON.stringify(d.debug))
       else setProducts(d.products)
     } catch(e) { setProductsError('Eroare: ' + e.message) }
     setLoadingProducts(false)
