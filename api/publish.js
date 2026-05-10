@@ -44,26 +44,31 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: trigger GemPages mode + mover care cloneaza butonul in placeholder-ele noastre
-function buildReleasitGemPages() {
+// Releasit: form ascuns pentru context produs + mover in placeholder-ele noastre
+function buildReleasitGemPages(variantId) {
+  const vid = variantId || ''
   return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
+    (vid ? '<form id="_unitone_rsi_form" action="/cart/add" method="post" style="display:none"><input type="hidden" name="id" value="' + vid + '"><button type="submit">add</button></form>\n' : '') +
     '<script>\n' +
     '(function(){\n' +
     '  var done = false;\n' +
+    '  var VARIANT_ID = "' + vid + '";\n' +
     '\n' +
     '  function findBtn(){\n' +
-    '    var btn = document.querySelector(".rsi-cod-form-gempages-button-overwrite") ||\n' +
-    '              document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
-    '              document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
-    '              document.querySelector("[class*=_rsi-buy-now][class*=button]");\n' +
-    '    // Asteapta pana skeleton-ul dispare (Releasit termina initializarea)\n' +
-    '    if(btn && btn.querySelector(".rsi-btn-skel")) return null;\n' +
-    '    return btn;\n' +
+    '    var sel = ["._rsi-buy-now-button-app-block-hook",".rsi-cod-form-gempages-button-overwrite",\n' +
+    '               ".rsi-cod-form-button-wrapper","[class*=rsi-cod-form-button]"];\n' +
+    '    for(var i=0;i<sel.length;i++){\n' +
+    '      var el = document.querySelector(sel[i]);\n' +
+    '      if(el && !el.querySelector(".rsi-btn-skel")) return el;\n' +
+    '    }\n' +
+    '    return null;\n' +
     '  }\n' +
     '\n' +
-    '  function hidePlaceholderText(){\n' +
-    '    document.querySelectorAll(".unitone-releasit-btn .unitone-placeholder-text").forEach(function(s){ s.style.display="none"; });\n' +
-    '    document.querySelectorAll(".unitone-releasit-btn").forEach(function(ph){ ph.style.border="none"; ph.style.padding="0"; });\n' +
+    '  function cleanPh(){\n' +
+    '    document.querySelectorAll(".unitone-releasit-btn").forEach(function(ph){\n' +
+    '      ph.style.border="none"; ph.style.padding="0";\n' +
+    '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
+    '    });\n' +
     '  }\n' +
     '\n' +
     '  function moveBtn(){\n' +
@@ -71,33 +76,30 @@ function buildReleasitGemPages() {
     '    var btn = findBtn();\n' +
     '    var phs = document.querySelectorAll(".unitone-releasit-btn");\n' +
     '    if(!btn || !phs.length) return;\n' +
-    '    // Daca butonul e deja in overlay, nu mai misca\n' +
     '    var overlay = document.getElementById("unitone-lp");\n' +
-    '    if(overlay && overlay.contains(btn)){ done=true; hidePlaceholderText(); return; }\n' +
-    '    done = true;\n' +
-    '    hidePlaceholderText();\n' +
-    '    phs.forEach(function(ph, i){\n' +
-    '      var el = i === 0 ? btn : btn.cloneNode(true);\n' +
-    '      el.style.cssText = "width:100%!important;display:block!important;box-sizing:border-box!important;";\n' +
+    '    if(overlay && overlay.contains(btn)){ done=true; cleanPh(); return; }\n' +
+    '    done=true; cleanPh();\n' +
+    '    phs.forEach(function(ph,i){\n' +
+    '      var el = i===0 ? btn : btn.cloneNode(true);\n' +
+    '      el.style.cssText="width:100%!important;display:block!important;";\n' +
     '      ph.appendChild(el);\n' +
     '    });\n' +
     '  }\n' +
     '\n' +
-    '  // Debug vizual - arata ce elemente RSI exista in DOM dupa 3s\n' +
+    '  // Debug vizual dupa 5s\n' +
     '  setTimeout(function(){\n' +
-    '    var all = document.querySelectorAll(\'[class*="rsi"],[id*="rsi"]\');\n' +
-    '    var info = [];\n' +
-    '    all.forEach(function(el){ info.push(el.tagName+"."+el.className.toString().split(" ")[0]); });\n' +
-    '    var dbg = document.createElement("div");\n' +
-    '    dbg.style.cssText = "position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font-size:11px;padding:6px 10px;z-index:9999999999;font-family:monospace;word-break:break-all;";\n' +
-    '    dbg.textContent = "RSI: " + (info.length ? info.join(", ") : "NICIUN element RSI in DOM");\n' +
+    '    var all=document.querySelectorAll(\'[class*="rsi"],[id*="rsi"]\');\n' +
+    '    var info=[]; all.forEach(function(el){info.push(el.tagName+"."+el.className.toString().split(" ")[0]+" skel:"+!!el.querySelector(".rsi-btn-skel"));});\n' +
+    '    var wRsi=Object.keys(window).filter(function(k){return k.toLowerCase().includes("rsi");});\n' +
+    '    var dbg=document.createElement("div");\n' +
+    '    dbg.style.cssText="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font-size:10px;padding:6px;z-index:9999999999;font-family:monospace;word-break:break-all;";\n' +
+    '    dbg.textContent="RSI DOM: "+info.join(", ")+" | window: "+wRsi.join(",");\n' +
     '    document.getElementById("unitone-lp").appendChild(dbg);\n' +
-    '  }, 3000);\n' +
+    '  }, 5000);\n' +
     '\n' +
-    '  // Incearca imediat, la DOMContentLoaded si cu interval\n' +
     '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
-    '  var iv = setInterval(function(){ moveBtn(); if(done) clearInterval(iv); }, 300);\n' +
-    '  setTimeout(function(){ clearInterval(iv); }, 10000);\n' +
+    '  var iv=setInterval(function(){ moveBtn(); if(done) clearInterval(iv); },300);\n' +
+    '  setTimeout(function(){ clearInterval(iv); },15000);\n' +
     '})();\n' +
     '<\/script>'
 }
