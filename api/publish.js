@@ -44,73 +44,21 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: folosim MutationObserver care asteapta butonul real
-// si il muta in toate placeholder-ele .unitone-releasit-btn
-function buildReleasitMover(variantId) {
-  const vid = variantId || ''
+// Releasit GemPages mode: trigger div + ascunde placeholder-ul vizual la load
+function buildReleasitGemPages() {
   return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
     '<script>\n' +
     '(function(){\n' +
-    '  var VARIANT_ID = "' + vid + '";\n' +
-    '  var moved = false;\n' +
-    '  var attempts = 0;\n' +
-    '\n' +
-    '  function findRsiBtn(){\n' +
-    '    return document.querySelector("._rsi-buy-now-button-app-block-hook") ||\n' +
-    '           document.querySelector("[class*=_rsi-buy-now-button]") ||\n' +
-    '           document.querySelector(".rsi-cod-form-button-wrapper") ||\n' +
-    '           document.querySelector(".rsi-cod-form-gempages-button-overwrite") ||\n' +
-    '           document.querySelector("[data-rsi-button]");\n' +
-    '  }\n' +
-    '\n' +
     '  function cleanPlaceholders(){\n' +
     '    document.querySelectorAll(".unitone-releasit-btn").forEach(function(ph){\n' +
-    '      ph.style.cssText = "display:block;min-height:0;border:none;padding:0;margin:8px 0;";\n' +
-    '      var s = ph.querySelector("span");\n' +
+    '      var s = ph.querySelector("span.unitone-placeholder-text");\n' +
     '      if(s) s.style.display = "none";\n' +
+    '      ph.style.border = "none";\n' +
+    '      ph.style.padding = "0";\n' +
     '    });\n' +
     '  }\n' +
-    '\n' +
-    '  function moveBtn(){\n' +
-    '    if(moved) return;\n' +
-    '    var btn = findRsiBtn();\n' +
-    '    var overlay = document.getElementById("unitone-lp");\n' +
-    '    var placeholders = document.querySelectorAll(".unitone-releasit-btn");\n' +
-    '    if(!btn || placeholders.length === 0) return;\n' +
-    '    if(overlay && overlay.contains(btn)){moved=true;return;}\n' +
-    '    moved = true;\n' +
-    '    placeholders.forEach(function(ph, i){\n' +
-    '      ph.style.cssText = "display:block;min-height:0;border:none;padding:0;";\n' +
-    '      if(i === 0){\n' +
-    '        ph.appendChild(btn);\n' +
-    '        btn.style.cssText = "width:100%!important;display:block!important;";\n' +
-    '      } else {\n' +
-    '        var clone = btn.cloneNode(true);\n' +
-    '        clone.style.cssText = "width:100%!important;display:block!important;";\n' +
-    '        ph.appendChild(clone);\n' +
-    '      }\n' +
-    '    });\n' +
-    '    console.log("[UnitOne] Releasit moved to",placeholders.length,"placeholders");\n' +
-    '  }\n' +
-    '\n' +
-    '  // Curata placeholder-ele vizuale (border dashed, text span) cat mai repede\n' +
     '  cleanPlaceholders();\n' +
     '  document.addEventListener("DOMContentLoaded", cleanPlaceholders);\n' +
-    '\n' +
-    '  // Observer pe tot documentul\n' +
-    '  var obs = new MutationObserver(function(){\n' +
-    '    if(!moved && findRsiBtn()) moveBtn();\n' +
-    '  });\n' +
-    '  obs.observe(document.documentElement,{childList:true,subtree:true});\n' +
-    '\n' +
-    '  // Retry la interval\n' +
-    '  var iv = setInterval(function(){\n' +
-    '    attempts++;\n' +
-    '    moveBtn();\n' +
-    '    if(moved || attempts > 30) clearInterval(iv);\n' +
-    '  }, 300);\n' +
-    '\n' +
-    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
     '})();\n' +
     '<\/script>'
 }
@@ -137,7 +85,7 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      if (codFormApp === 'releasit') finalHtml = buildReleasitMover(variantId) + finalHtml
+      if (codFormApp === 'releasit') finalHtml = buildReleasitGemPages(variantId) + finalHtml
       finalHtml = buildOverlay(finalHtml)
       finalHtml = buildHideScript() + finalHtml
       const result = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
@@ -155,7 +103,7 @@ module.exports = async function handler(req, res) {
     let finalHtml = html
 
     if (codFormApp === 'releasit') {
-      finalHtml = buildReleasitMover(variantId) + finalHtml
+      finalHtml = buildReleasitGemPages(variantId) + finalHtml
       console.log('Releasit mover added, variantId:', variantId)
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)

@@ -345,7 +345,7 @@ function buildHTML(data, codFormApp) {
   const benefits = (data.benefits || []).slice(0, 5)
 
   // Placeholder vizibil pentru butonul Releasit (rsi-cod-form-gempages-button = clasa recunoscuta de Releasit in GemPages mode)
-  const relBtn = `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${primary};border-radius:6px;padding:6px;text-align:center;margin:8px 0"><span style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
+  const relBtn = `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${primary};border-radius:6px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
 
   const tCards = (data.testimonials || []).map((t, i) => [
     `<div style="margin-bottom:32px">`,
@@ -475,7 +475,7 @@ function addBlocks(editor, data) {
 
   // Helper - placeholder vizibil cu border rosu dashed (rsi-cod-form-gempages-button = clasa recunoscuta de Releasit)
   function relBtn(extra) {
-    return `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD - trage-ma unde vrei</span></div>`
+    return `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD - trage-ma unde vrei</span></div>`
   }
 
   const blocks = [
