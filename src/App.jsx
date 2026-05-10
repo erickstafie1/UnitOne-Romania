@@ -127,6 +127,9 @@ export default function App() {
         initApp(s, savedToken)
         return
       }
+      // Token negasit → re-trigger OAuth automat
+      window.location.href = '/api/auth?shop=' + s
+      return
     }
 
     // Credentials salvate din sesiune anterioara
