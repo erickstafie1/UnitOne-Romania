@@ -48,20 +48,17 @@ function buildHideScript() {
 function buildReleasitGemPages(variantId) {
   const vid = variantId || ''
   return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
-    (vid ? '<form id="_unitone_rsi_form" action="/cart/add" method="post" style="display:none"><input type="hidden" name="id" value="' + vid + '"><button type="submit">add</button></form>\n' : '') +
+    (vid ? '<form id="_unitone_rsi_form" action="/cart/add" method="post" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;" novalidate><input type="hidden" name="id" value="' + vid + '"><button type="submit">add</button></form>\n' : '') +
     '<script>\n' +
     '(function(){\n' +
     '  var done = false;\n' +
     '  var VARIANT_ID = "' + vid + '";\n' +
     '\n' +
     '  function findBtn(){\n' +
-    '    var sel = ["._rsi-buy-now-button-app-block-hook",".rsi-cod-form-gempages-button-overwrite",\n' +
-    '               ".rsi-cod-form-button-wrapper","[class*=rsi-cod-form-button]"];\n' +
-    '    for(var i=0;i<sel.length;i++){\n' +
-    '      var el = document.querySelector(sel[i]);\n' +
-    '      if(el && !el.querySelector(".rsi-btn-skel")) return el;\n' +
-    '    }\n' +
-    '    return null;\n' +
+    '    // Cauta butonul real Releasit (dupa ce s-a initializat)\n' +
+    '    return document.querySelector("button.rsi_animation_none") ||\n' +
+    '           document.querySelector("[class*=rsi_animation]") ||\n' +
+    '           document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
     '  }\n' +
     '\n' +
     '  function cleanPh(){\n' +
@@ -80,9 +77,18 @@ function buildReleasitGemPages(variantId) {
     '    if(overlay && overlay.contains(btn)){ done=true; cleanPh(); return; }\n' +
     '    done=true; cleanPh();\n' +
     '    phs.forEach(function(ph,i){\n' +
-    '      var el = i===0 ? btn : btn.cloneNode(true);\n' +
-    '      el.style.cssText="width:100%!important;display:block!important;";\n' +
-    '      ph.appendChild(el);\n' +
+    '      if(i===0){\n' +
+    '        btn.style.cssText="width:100%!important;display:block!important;";\n' +
+    '        ph.appendChild(btn);\n' +
+    '      } else {\n' +
+    '        // Proxy button - declanseaza originalul la click\n' +
+    '        var proxy = document.createElement("button");\n' +
+    '        proxy.className = btn.className;\n' +
+    '        proxy.innerHTML = btn.innerHTML;\n' +
+    '        proxy.style.cssText = "width:100%!important;display:block!important;cursor:pointer;";\n' +
+    '        proxy.addEventListener("click", function(e){ e.preventDefault(); btn.click(); });\n' +
+    '        ph.appendChild(proxy);\n' +
+    '      }\n' +
     '    });\n' +
     '  }\n' +
     '\n' +
