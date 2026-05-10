@@ -108,6 +108,17 @@ export default function App() {
   const [token, setToken] = useState('')
 
   useEffect(() => {
+    // 1. URL params (OAuth callback sau link direct cu token)
+    const params = new URLSearchParams(window.location.search)
+    const s = params.get('shop')
+    const t = params.get('token')
+    if (s && t) {
+      localStorage.setItem('unitone_shop', s)
+      localStorage.setItem('unitone_token_' + s, t)
+      initApp(s, t)
+      return
+    }
+    // 2. Credentials salvate in localStorage
     const savedShop = localStorage.getItem('unitone_shop')
     if (savedShop) {
       const savedToken = localStorage.getItem('unitone_token_' + savedShop)
@@ -116,6 +127,7 @@ export default function App() {
         return
       }
     }
+    // 3. Login manual
     setScreen('login')
   }, [])
 
