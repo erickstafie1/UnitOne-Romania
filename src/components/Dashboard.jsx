@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function Dashboard({ shop, token, onNew, onEdit, onReconfigure }) {
+export default function Dashboard({ shop, token, onNew, onEdit, onReconfigure, onLogout }) {
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
@@ -122,6 +122,15 @@ export default function Dashboard({ shop, token, onNew, onEdit, onReconfigure })
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
               Pagină nouă
             </PremiumBtn>
+            {onLogout && (
+              <button onClick={onLogout}
+                title="Deconectare"
+                style={{ display:'flex', alignItems:'center', padding:'6px 10px', borderRadius:8, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.03)', color:'rgba(255,255,255,0.4)', fontSize:12, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.1)'; e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.03)'; e.currentTarget.style.color='rgba(255,255,255,0.4)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
