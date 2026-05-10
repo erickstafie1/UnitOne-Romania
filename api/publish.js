@@ -80,6 +80,17 @@ function buildReleasitGemPages() {
     '    });\n' +
     '  }\n' +
     '\n' +
+    '  // Debug vizual - arata ce elemente RSI exista in DOM dupa 3s\n' +
+    '  setTimeout(function(){\n' +
+    '    var all = document.querySelectorAll(\'[class*="rsi"],[id*="rsi"]\');\n' +
+    '    var info = [];\n' +
+    '    all.forEach(function(el){ info.push(el.tagName+"."+el.className.toString().split(" ")[0]); });\n' +
+    '    var dbg = document.createElement("div");\n' +
+    '    dbg.style.cssText = "position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font-size:11px;padding:6px 10px;z-index:9999999999;font-family:monospace;word-break:break-all;";\n' +
+    '    dbg.textContent = "RSI: " + (info.length ? info.join(", ") : "NICIUN element RSI in DOM");\n' +
+    '    document.getElementById("unitone-lp").appendChild(dbg);\n' +
+    '  }, 3000);\n' +
+    '\n' +
     '  // Incearca imediat, la DOMContentLoaded si cu interval\n' +
     '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
     '  var iv = setInterval(function(){ moveBtn(); if(done) clearInterval(iv); }, 300);\n' +
