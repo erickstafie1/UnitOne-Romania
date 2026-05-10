@@ -53,6 +53,7 @@ module.exports = async function handler(req, res) {
       '<meta name="viewport" content="width=device-width,initial-scale=1">',
       '<title>{{ product.title }}</title>',
       '{{ content_for_header }}',
+      '{%- if product -%}<script type="application/json" id="unitone-product-json">{{ product | json }}</script>{%- endif -%}',
       '<style>',
       'header,footer,nav,.header,.footer,.site-header,.site-footer,',
       '#shopify-section-header,#shopify-section-footer,',

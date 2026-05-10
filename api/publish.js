@@ -36,11 +36,10 @@ function buildOverlay(html) {
     '</div><!--/unitone-lp-->'
 }
 
-// CSS minimal: ascunde scrollul temei din spate si elemente fixed cu z-index mare
+// CSS minimal: overlay acopera vizual tot, doar prevenim scrollul din spate
 function buildHideScript() {
   return '<style>\n' +
     'html,body{overflow:hidden!important;margin:0!important;padding:0!important}\n' +
-    'body>*:not(#unitone-lp){display:none!important}\n' +
     '</style>'
 }
 
