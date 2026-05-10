@@ -43,21 +43,20 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: muta _rsi-buy-now-button-app-block-hook in placeholder-ul nostru
+// Releasit: muta hook-ul in overlay + watch pentru modalul Releasit injectat in body
 function buildReleasitGemPages(variantId) {
   const vid = variantId || ''
   return '<script>\n' +
     '(function(){\n' +
     '  var done = false;\n' +
     '\n' +
+    '  function getOverlay(){ return document.getElementById("unitone-lp"); }\n' +
+    '\n' +
     '  function findTarget(){\n' +
-    '    // Prioritate: containerul standard Releasit (modul non-GemPages)\n' +
     '    var hook = document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
     '    if(hook && hook.querySelector("button")) return hook;\n' +
-    '    // Fallback GemPages\n' +
     '    var gem = document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
     '    if(gem) return gem;\n' +
-    '    // Fallback generic\n' +
     '    return document.querySelector("button.rsi_animation_none");\n' +
     '  }\n' +
     '\n' +
@@ -66,10 +65,10 @@ function buildReleasitGemPages(variantId) {
     '    var target = findTarget();\n' +
     '    var phs = document.querySelectorAll(".unitone-releasit-btn");\n' +
     '    if(!target || !phs.length) return;\n' +
-    '    var overlay = document.getElementById("unitone-lp");\n' +
+    '    var overlay = getOverlay();\n' +
     '    if(overlay && overlay.contains(target)){ done=true; return; }\n' +
     '    done = true;\n' +
-    '    var realBtn = target.querySelector ? target.querySelector("button") || target : target;\n' +
+    '    var realBtn = (target.querySelector && target.querySelector("button")) || target;\n' +
     '    phs.forEach(function(ph, i){\n' +
     '      ph.style.border="none"; ph.style.padding="0"; ph.style.minHeight="";\n' +
     '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
@@ -87,7 +86,25 @@ function buildReleasitGemPages(variantId) {
     '    });\n' +
     '  }\n' +
     '\n' +
-    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
+    '  // Orice injecteaza Releasit in body (modal, form popup) - muta in overlay\n' +
+    '  function watchRsiModals(){\n' +
+    '    var observer = new MutationObserver(function(muts){\n' +
+    '      muts.forEach(function(m){\n' +
+    '        m.addedNodes.forEach(function(node){\n' +
+    '          if(node.nodeType!==1) return;\n' +
+    '          var cls=(node.className||"").toString().toLowerCase();\n' +
+    '          var id=(node.id||"").toString().toLowerCase();\n' +
+    '          if(!cls.includes("rsi")&&!id.includes("rsi")) return;\n' +
+    '          var overlay=getOverlay();\n' +
+    '          if(!overlay||overlay.contains(node)) return;\n' +
+    '          overlay.appendChild(node);\n' +
+    '        });\n' +
+    '      });\n' +
+    '    });\n' +
+    '    observer.observe(document.body,{childList:true});\n' +
+    '  }\n' +
+    '\n' +
+    '  document.addEventListener("DOMContentLoaded", function(){ moveBtn(); watchRsiModals(); });\n' +
     '  var iv=setInterval(function(){ moveBtn(); if(done) clearInterval(iv); },300);\n' +
     '  setTimeout(function(){ clearInterval(iv); },15000);\n' +
     '})();\n' +
