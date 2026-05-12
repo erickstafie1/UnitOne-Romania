@@ -1,9 +1,8 @@
 import { useState } from 'react'
 
 export default function Setup({ shop, onComplete, isReconfigure }) {
-  const [step, setStep] = useState(1) // 1=alegere, 2=instructiuni, 3=confirmare
-  const [selected, setSelected] = useState(null) // 'releasit' | 'easysell' | 'none'
-  const [hover, setHover] = useState(null)
+  const [step, setStep] = useState(1)
+  const [selected, setSelected] = useState(null)
 
   function confirm() {
     localStorage.setItem(`codform_${shop}`, selected)
@@ -15,24 +14,21 @@ export default function Setup({ shop, onComplete, isReconfigure }) {
       id: 'releasit',
       name: 'Releasit COD Form',
       desc: 'Cel mai popular formular COD pentru Shopify',
-      color: '#6366f1',
-      icon: '🟣',
+      accent: 'var(--brand)',
       link: 'https://apps.shopify.com/releasit-cod-order-form'
     },
     {
       id: 'easysell',
       name: 'EasySell COD Form',
       desc: 'Simplu și rapid de configurat',
-      color: '#f59e0b',
-      icon: '🟡',
+      accent: 'var(--warning)',
       link: 'https://apps.shopify.com/easy-order-form'
     },
     {
       id: 'none',
       name: 'Formular propriu',
       desc: 'Folosesc formularul COD inclus în LP',
-      color: '#6b7280',
-      icon: '⚪'
+      accent: 'var(--text-muted)'
     }
   ]
 
@@ -41,110 +37,95 @@ export default function Setup({ shop, onComplete, isReconfigure }) {
       steps: [
         { n: 1, title: 'Instalează Releasit', desc: 'Dacă nu ai instalat deja, mergi la link-ul de mai jos și instalează aplicația în magazinul tău Shopify.', link: 'https://apps.shopify.com/releasit-cod-order-form', linkText: 'Instalează Releasit →' },
         { n: 2, title: 'Activează pe toate paginile', desc: 'În Releasit → Settings → General → asigură-te că aplicația este activată pentru magazinul tău.' },
-        { n: 3, title: 'Gata!', desc: 'Butonul din LP-ul tău va deschide automat formularul Releasit când clientul apasă "Comandă Acum". Nu trebuie să faci nimic altceva.' }
+        { n: 3, title: 'Gata!', desc: 'Butonul din LP-ul tău va deschide automat formularul Releasit când clientul apasă "Comandă acum". Nu trebuie să faci nimic altceva.' }
       ]
     },
     easysell: {
       steps: [
         { n: 1, title: 'Instalează EasySell', desc: 'Dacă nu ai instalat deja, mergi la link-ul de mai jos și instalează aplicația în magazinul tău Shopify.', link: 'https://apps.shopify.com/easy-order-form', linkText: 'Instalează EasySell →' },
         { n: 2, title: 'Activează pe toate paginile', desc: 'În EasySell → Settings → asigură-te că aplicația este activată și funcționează pe paginile magazinului tău.' },
-        { n: 3, title: 'Gata!', desc: 'Butonul din LP-ul tău va deschide automat formularul EasySell când clientul apasă "Comandă Acum".' }
+        { n: 3, title: 'Gata!', desc: 'Butonul din LP-ul tău va deschide automat formularul EasySell când clientul apasă "Comandă acum".' }
       ]
     }
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0b0f', color:'#fff', fontFamily:"'Inter','SF Pro Display',-apple-system,system-ui,sans-serif", display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ position:'fixed', inset:0, background:'radial-gradient(ellipse at top, rgba(59,130,246,0.08) 0%, transparent 70%)', pointerEvents:'none' }} />
+    <div className="us-shell">
+      <Styles />
+      <div className="us-hero-gradient" />
+      <div className="us-mesh" />
 
-      <div style={{ position:'relative', width:'100%', maxWidth:560 }}>
-
-        {/* Step 1: Alegere app */}
+      <main className="us-container">
         {step === 1 && (
-          <div style={{ animation:'slideUp 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
-            <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
-            <div style={{ textAlign:'center', marginBottom:40 }}>
-              <div style={{ width:56, height:56, borderRadius:14, background:'linear-gradient(135deg,#3b82f6,#2563eb)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', boxShadow:'0 8px 24px rgba(59,130,246,0.35)', fontSize:24 }}>🛒</div>
-              <h1 style={{ fontSize:28, fontWeight:800, letterSpacing:-0.8, marginBottom:10 }}>
-                {isReconfigure ? 'Schimbă formularul COD' : 'Configurare rapidă'}
+          <div className="us-step fade-up">
+            <div className="us-page-header">
+              <div className="us-eyebrow">{isReconfigure ? 'Reconfigurare' : 'Configurare rapidă'}</div>
+              <h1 className="us-h1">
+                {isReconfigure ? 'Schimbă formularul COD' : (
+                  <>Ce <span className="us-h1-italic">formular COD</span> folosești?</>
+                )}
               </h1>
-              <p style={{ color:'rgba(255,255,255,0.5)', fontSize:15, lineHeight:1.6 }}>
-                {isReconfigure ? 'Alege o altă aplicație de formular COD pentru butoanele din LP-urile tale.' : 'Ce aplicație de formular COD folosești în magazinul tău?'}
+              <p className="us-lede">
+                {isReconfigure
+                  ? 'Alege o altă aplicație de formular COD pentru butoanele din LP-urile tale.'
+                  : 'Conectează aplicația ta de formular COD ca să apară automat în paginile generate.'}
               </p>
             </div>
 
-            <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
+            <div className="us-apps">
               {apps.map(app => (
-                <div key={app.id}
-                  onClick={() => setSelected(app.id)}
-                  onMouseEnter={() => setHover(app.id)}
-                  onMouseLeave={() => setHover(null)}
-                  style={{
-                    padding:'18px 20px', borderRadius:14,
-                    border: selected===app.id ? `1.5px solid ${app.color}` : hover===app.id ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.07)',
-                    background: selected===app.id ? `${app.color}12` : hover===app.id ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.025)',
-                    cursor:'pointer', display:'flex', alignItems:'center', gap:16,
-                    transition:'all 0.18s cubic-bezier(0.4,0,0.2,1)',
-                    transform: hover===app.id ? 'translateY(-1px)' : 'translateY(0)',
-                    boxShadow: selected===app.id ? `0 4px 20px ${app.color}20` : 'none'
-                  }}>
-                  <div style={{ width:44, height:44, borderRadius:12, background:`${app.color}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>{app.icon}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:15, fontWeight:700, marginBottom:3, letterSpacing:-0.2 }}>{app.name}</div>
-                    <div style={{ fontSize:13, color:'rgba(255,255,255,0.45)' }}>{app.desc}</div>
+                <button key={app.id} onClick={() => setSelected(app.id)}
+                  className={`us-app ${selected === app.id ? 'active' : ''}`}>
+                  <div className="us-app-icon" style={{ color: app.accent, borderColor: selected === app.id ? app.accent : 'var(--border)' }}>
+                    <span className="us-app-dot" style={{ background: app.accent }} />
                   </div>
-                  <div style={{ width:20, height:20, borderRadius:'50%', border: selected===app.id ? `2px solid ${app.color}` : '2px solid rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
-                    {selected===app.id && <div style={{ width:10, height:10, borderRadius:'50%', background:app.color }} />}
+                  <div className="us-app-meta">
+                    <div className="us-app-name">{app.name}</div>
+                    <div className="us-app-desc">{app.desc}</div>
                   </div>
-                </div>
+                  <div className="us-app-radio">
+                    {selected === app.id && <div className="us-app-radio-inner" style={{ background: app.accent }} />}
+                  </div>
+                </button>
               ))}
             </div>
 
             <button
               onClick={() => selected === 'none' ? confirm() : setStep(2)}
               disabled={!selected}
-              style={{
-                width:'100%', padding:'14px', borderRadius:12,
-                background: selected ? 'linear-gradient(135deg,#3b82f6,#2563eb)' : 'rgba(255,255,255,0.06)',
-                color:'#fff', border:'none', fontSize:15, fontWeight:700,
-                cursor: selected ? 'pointer' : 'not-allowed', opacity: selected ? 1 : 0.5,
-                fontFamily:'inherit', letterSpacing:-0.2,
-                transition:'all 0.18s',
-                boxShadow: selected ? '0 4px 14px rgba(59,130,246,0.3)' : 'none'
-              }}>
-              {selected === 'none' ? 'Continuă cu formularul propriu' : 'Continuă'}
-              {selected && selected !== 'none' && ' →'}
+              className="us-cta">
+              {selected === 'none' ? 'Continuă cu formular propriu' : 'Continuă'}
+              {selected && selected !== 'none' && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              )}
             </button>
           </div>
         )}
 
-        {/* Step 2: Instructiuni */}
         {step === 2 && selected && selected !== 'none' && (
-          <div style={{ animation:'slideUp 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
-            <button onClick={() => setStep(1)} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'rgba(255,255,255,0.6)', cursor:'pointer', padding:'7px 14px', fontSize:13, fontWeight:600, fontFamily:'inherit', marginBottom:28, display:'flex', alignItems:'center', gap:6 }}>
-              ← Înapoi
+          <div className="us-step fade-up">
+            <button onClick={() => setStep(1)} className="us-back">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <span>Înapoi</span>
             </button>
 
-            <div style={{ textAlign:'center', marginBottom:36 }}>
-              <div style={{ fontSize:40, marginBottom:14 }}>{apps.find(a=>a.id===selected)?.icon}</div>
-              <h2 style={{ fontSize:24, fontWeight:800, letterSpacing:-0.6, marginBottom:8 }}>
-                Cum conectezi {apps.find(a=>a.id===selected)?.name}
-              </h2>
-              <p style={{ color:'rgba(255,255,255,0.45)', fontSize:14 }}>
-                Urmează pașii de mai jos — durează 2 minute
-              </p>
+            <div className="us-page-header">
+              <div className="us-eyebrow">Pas 2 din 2</div>
+              <h1 className="us-h1">
+                Cum conectezi <span className="us-h1-italic">{apps.find(a => a.id === selected)?.name}</span>
+              </h1>
+              <p className="us-lede">Urmează pașii de mai jos — durează 2 minute.</p>
             </div>
 
-            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:28 }}>
+            <div className="us-steps">
               {instructions[selected].steps.map(s => (
-                <div key={s.n} style={{ display:'flex', gap:16, padding:'18px 20px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12 }}>
-                  <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:15, flexShrink:0, boxShadow:'0 4px 10px rgba(59,130,246,0.25)' }}>{s.n}</div>
-                  <div>
-                    <div style={{ fontSize:15, fontWeight:700, marginBottom:5, letterSpacing:-0.2 }}>{s.title}</div>
-                    <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', lineHeight:1.6 }}>{s.desc}</div>
+                <div key={s.n} className="us-step-card">
+                  <div className="us-step-num">{s.n}</div>
+                  <div className="us-step-body">
+                    <div className="us-step-title">{s.title}</div>
+                    <div className="us-step-desc">{s.desc}</div>
                     {s.link && (
-                      <a href={s.link} target="_blank" rel="noreferrer"
-                        style={{ display:'inline-block', marginTop:10, padding:'7px 14px', borderRadius:8, background:'rgba(59,130,246,0.15)', border:'1px solid rgba(59,130,246,0.3)', color:'#60a5fa', fontSize:13, fontWeight:600, textDecoration:'none' }}>
+                      <a href={s.link} target="_blank" rel="noreferrer" className="us-step-link">
                         {s.linkText}
                       </a>
                     )}
@@ -153,22 +134,230 @@ export default function Setup({ shop, onComplete, isReconfigure }) {
               ))}
             </div>
 
-            <div style={{ background:'rgba(34,197,94,0.06)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:12, padding:'14px 18px', marginBottom:24, display:'flex', gap:12, alignItems:'flex-start' }}>
-              <span style={{ fontSize:18, flexShrink:0 }}>💡</span>
-              <div style={{ fontSize:13, color:'rgba(255,255,255,0.6)', lineHeight:1.6 }}>
-                <strong style={{ color:'rgba(255,255,255,0.8)' }}>Cum funcționează: </strong>
-                Butonul "Comandă Acum" din LP-ul generat va deschide automat formularul {apps.find(a=>a.id===selected)?.name} cu produsul și prețul pre-completat.
+            <div className="us-note">
+              <span className="us-note-icon">✦</span>
+              <div>
+                <strong>Cum funcționează: </strong>
+                Butonul "Comandă acum" din LP-ul generat deschide automat formularul {apps.find(a => a.id === selected)?.name} cu produsul și prețul pre-completat.
               </div>
             </div>
 
-            <button onClick={confirm}
-              style={{ width:'100%', padding:'14px', borderRadius:12, background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'#fff', border:'none', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', letterSpacing:-0.2, boxShadow:'0 4px 14px rgba(59,130,246,0.3)' }}>
-              Am configurat — Continuă ✓
+            <button onClick={confirm} className="us-cta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Am configurat — continuă</span>
             </button>
           </div>
         )}
-
-      </div>
+      </main>
     </div>
+  )
+}
+
+function Styles() {
+  return (
+    <style>{`
+      .us-shell {
+        min-height: 100vh; position: relative;
+        background: var(--bg); color: var(--text);
+        font-family: var(--font-sans);
+      }
+      .us-hero-gradient {
+        position: absolute; top: 0; left: 0; right: 0; height: 540px;
+        background: var(--hero-gradient);
+        pointer-events: none; z-index: 0;
+      }
+      .us-mesh {
+        position: absolute; inset: 0;
+        background: var(--mesh); opacity: 0.55;
+        pointer-events: none; z-index: 0;
+      }
+      .us-container {
+        position: relative; z-index: 1;
+        max-width: 580px; margin: 0 auto;
+        padding: clamp(48px, 8vw, 96px) 32px clamp(40px, 6vw, 64px);
+      }
+      .us-step { display: flex; flex-direction: column; }
+      .us-page-header { margin-bottom: 32px; }
+      .us-eyebrow {
+        font-size: 11.5px; font-weight: 700;
+        color: var(--brand);
+        text-transform: uppercase; letter-spacing: 0.16em;
+        margin-bottom: 14px;
+      }
+      .us-h1 {
+        font-family: var(--font-display);
+        font-size: clamp(30px, 4.5vw, 40px);
+        font-weight: 400; letter-spacing: -0.035em;
+        line-height: 1.1;
+        color: var(--text);
+      }
+      .us-h1-italic { font-style: italic; color: var(--text-muted); }
+      .us-lede {
+        margin-top: 14px;
+        font-size: 15px; line-height: 1.55;
+        color: var(--text-muted);
+      }
+      .us-back {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 12px; border-radius: 9px;
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 13px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        margin-bottom: 26px;
+        align-self: flex-start;
+        transition: all 0.15s ease;
+      }
+      .us-back:hover {
+        background: var(--bg-3);
+        color: var(--text);
+        border-color: var(--border-strong);
+      }
+
+      /* App selector */
+      .us-apps {
+        display: flex; flex-direction: column; gap: 10px;
+        margin-bottom: 28px;
+      }
+      .us-app {
+        display: flex; align-items: center; gap: 16px;
+        padding: 18px 20px; border-radius: 14px;
+        background: var(--bg-elev);
+        border: 1.5px solid var(--border);
+        cursor: pointer; font-family: inherit; text-align: left;
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .us-app:hover {
+        background: var(--bg-3);
+        border-color: var(--border-strong);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+      }
+      .us-app.active {
+        background: var(--brand-soft);
+        border-color: var(--brand-border);
+        box-shadow: 0 0 0 3px var(--brand-soft), var(--shadow-sm);
+      }
+      .us-app-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: var(--bg-2);
+        border: 1.5px solid var(--border);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        transition: border-color 0.18s ease;
+      }
+      .us-app-dot {
+        width: 16px; height: 16px; border-radius: 50%;
+        box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+      }
+      .us-app-meta { flex: 1; min-width: 0; }
+      .us-app-name {
+        font-size: 15px; font-weight: 700;
+        color: var(--text); letter-spacing: -0.015em;
+        margin-bottom: 3px;
+      }
+      .us-app-desc {
+        font-size: 13px; color: var(--text-muted);
+        line-height: 1.45;
+      }
+      .us-app-radio {
+        width: 20px; height: 20px; border-radius: 50%;
+        border: 2px solid var(--border-strong);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        transition: border-color 0.15s ease;
+      }
+      .us-app.active .us-app-radio {
+        border-color: var(--brand);
+      }
+      .us-app-radio-inner {
+        width: 10px; height: 10px; border-radius: 50%;
+      }
+
+      .us-cta {
+        display: flex; align-items: center; justify-content: center; gap: 9px;
+        padding: 14px 22px; border-radius: 12px;
+        background: var(--accent); color: var(--accent-fg);
+        border: 1px solid var(--accent);
+        font-size: 15px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .us-cta:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+      }
+      .us-cta:disabled {
+        opacity: 0.45; cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      /* Step instructions */
+      .us-steps {
+        display: flex; flex-direction: column; gap: 12px;
+        margin-bottom: 22px;
+      }
+      .us-step-card {
+        display: flex; gap: 16px;
+        padding: 20px 22px; border-radius: 14px;
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+      }
+      .us-step-num {
+        width: 32px; height: 32px; border-radius: 9px;
+        background: var(--accent); color: var(--accent-fg);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px;
+        font-family: var(--font-display); font-style: italic;
+        flex-shrink: 0;
+      }
+      .us-step-body { flex: 1; }
+      .us-step-title {
+        font-size: 15px; font-weight: 700;
+        color: var(--text); letter-spacing: -0.01em;
+        margin-bottom: 5px;
+      }
+      .us-step-desc {
+        font-size: 13.5px; color: var(--text-muted);
+        line-height: 1.6;
+      }
+      .us-step-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-top: 12px;
+        padding: 7px 14px; border-radius: 9px;
+        background: var(--brand-soft);
+        border: 1px solid var(--brand-border);
+        color: var(--brand);
+        font-size: 13px; font-weight: 600;
+        text-decoration: none;
+        transition: all 0.15s ease;
+      }
+      .us-step-link:hover {
+        background: var(--brand); color: #fff;
+      }
+
+      .us-note {
+        display: flex; gap: 12px; align-items: flex-start;
+        padding: 16px 18px;
+        background: var(--brand-soft);
+        border: 1px solid var(--brand-border);
+        border-radius: 12px;
+        margin-bottom: 22px;
+        color: var(--text);
+        font-size: 13.5px; line-height: 1.6;
+      }
+      .us-note strong { color: var(--text); font-weight: 700; }
+      .us-note-icon {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #fff; font-size: 11px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 0 14px color-mix(in srgb, var(--brand) 35%, transparent);
+      }
+    `}</style>
   )
 }

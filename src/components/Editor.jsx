@@ -283,82 +283,94 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   }
 
   if (published) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a0f', fontFamily:'Inter,system-ui,sans-serif', color:'#fff' }}>
-      <div style={{ textAlign:'center', maxWidth:440 }}>
-        <div style={{ fontSize:64, marginBottom:16 }}>🎉</div>
-        <h2 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Pagina e live!</h2>
-        <p style={{ color:'rgba(255,255,255,0.5)', marginBottom:24 }}>Pagina COD a fost publicata in magazinul tau.</p>
-        <a href={publishedUrl} target="_blank" rel="noreferrer"
-          style={{ display:'inline-block', padding:'12px 24px', borderRadius:10, background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', textDecoration:'none', fontSize:15, fontWeight:700, marginBottom:12 }}>
-          🔗 Vezi pagina live
-        </a>
-        <br/>
-        <button onClick={() => { setPublished(false); if(onPublished) onPublished(); else if(onBack) onBack() }}
-          style={{ padding:'10px 24px', borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'#fff', fontSize:14, cursor:'pointer', marginTop:8, fontFamily:'inherit' }}>
-          ← Inapoi la dashboard
-        </button>
+    <div className="ue-published-shell">
+      <EditorStyles />
+      <div className="ue-hero-gradient" />
+      <div className="ue-mesh" />
+      <div className="ue-published-card fade-up">
+        <div className="ue-published-orb">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <div className="ue-orb-glow" />
+        </div>
+        <div className="ue-eyebrow">Publicat cu succes</div>
+        <h2 className="ue-h1">Pagina ta e <span className="ue-h1-italic">live</span></h2>
+        <p className="ue-published-text">Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.</p>
+        <div className="ue-published-actions">
+          <a href={publishedUrl} target="_blank" rel="noreferrer" className="ue-cta-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span>Vezi pagina live</span>
+          </a>
+          <button onClick={() => { setPublished(false); if(onPublished) onPublished(); else if(onBack) onBack() }} className="ue-cta-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            <span>Înapoi la dashboard</span>
+          </button>
+        </div>
       </div>
     </div>
   )
 
   return (
-    <div style={{ height:'100vh', display:'flex', flexDirection:'column', fontFamily:'Inter,system-ui,sans-serif', background:'#1a1a2e' }}>
+    <div className="ue-shell">
+      <EditorStyles />
       {/* TOOLBAR */}
-      <div style={{ height:64, background:'#0a0a0f', borderBottom:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', padding:'0 16px', gap:10, flexShrink:0, zIndex:100 }}>
-        <button onClick={onBack} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:13, padding:'6px 10px', borderRadius:8, fontFamily:'inherit' }}>
-          ← Inapoi
+      <div className="ue-toolbar">
+        <button onClick={onBack} className="ue-tb-back" title="Înapoi la dashboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span>Înapoi</span>
         </button>
+
+        <div className="ue-tb-divider" />
 
         <input
           value={pageTitle}
           onChange={e => setPageTitle(e.target.value)}
-          style={{ flex:1, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'4px 10px', color:'#fff', fontSize:14, fontWeight:600, outline:'none', minWidth:0, fontFamily:'inherit' }}
+          className="ue-tb-title"
           placeholder="Numele paginii..."
         />
 
-        <div style={{ display:'flex', background:'rgba(255,255,255,0.06)', borderRadius:10, padding:3, gap:2 }}>
+        <div className="ue-tb-device">
           {[
-            ['desktop','Desktop', <svg key="d" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>],
-            ['tablet','Tablet', <svg key="t" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>],
-            ['mobile','Mobil', <svg key="m" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>]
+            ['desktop','Desktop', <svg key="d" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>],
+            ['tablet','Tablet', <svg key="t" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>],
+            ['mobile','Mobil', <svg key="m" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>]
           ].map(([d,lbl,ic]) => (
             <button key={d} onClick={() => switchDevice(d)} title={lbl}
-              style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 10px', borderRadius:8, border:'none', background: device===d ? 'rgba(229,62,62,0.8)' : 'transparent', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              className={`ue-tb-device-btn ${device===d ? 'active' : ''}`}>
               {ic}
-              <span style={{ display: window.innerWidth > 900 ? 'inline' : 'none' }}>{lbl}</span>
             </button>
           ))}
         </div>
 
         <button onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
-          title={hideHeaderFooter ? 'Header/footer Shopify ascuns - apasa pentru a-l afisa' : 'Header/footer Shopify afisat - apasa pentru a-l ascunde'}
-          style={{ padding:'6px 12px', borderRadius:8, border:'none', background: hideHeaderFooter ? 'rgba(34,197,94,0.18)' : 'rgba(251,191,36,0.18)', color: hideHeaderFooter ? '#4ade80' : '#fbbf24', fontSize:12, cursor:'pointer', fontWeight:700, whiteSpace:'nowrap', fontFamily:'inherit', display:'flex', alignItems:'center', gap:5 }}>
-          {hideHeaderFooter ? '⊖ H/F ascuns' : '⊕ H/F vizibil'}
+          title={hideHeaderFooter ? 'Header/footer Shopify ascuns' : 'Header/footer Shopify afișat'}
+          className={`ue-tb-toggle ${hideHeaderFooter ? 'on' : 'off'}`}>
+          <span className="ue-tb-toggle-dot" />
+          <span>{hideHeaderFooter ? 'H/F ascuns' : 'H/F vizibil'}</span>
         </button>
 
-        {/* Indicator autosave */}
         {(saving || lastSaved) && (
-          <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 10px', borderRadius:8, background:'rgba(255,255,255,0.04)', fontSize:11, color:'rgba(255,255,255,0.55)', whiteSpace:'nowrap', fontFamily:'inherit' }}>
-            {saving ? (
-              <><span style={{ width:6, height:6, borderRadius:'50%', background:'#fbbf24', animation:'pulse 1.2s ease-in-out infinite' }} />Se salveaza...</>
-            ) : (
-              <><span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e' }} />Salvat {lastSaved.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' })}</>
-            )}
+          <div className="ue-tb-save">
+            <span className={`ue-tb-save-dot ${saving ? 'saving' : 'saved'}`} />
+            <span>{saving ? 'Se salvează...' : `Salvat ${lastSaved.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' })}`}</span>
           </div>
         )}
 
-        <div style={{ display:'flex', gap:4 }}>
-          <button onClick={() => gjsRef.current?.UndoManager.undo()}
-            style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>↩️</button>
-          <button onClick={() => gjsRef.current?.UndoManager.redo()}
-            style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>↪️</button>
+        <div className="ue-tb-undo">
+          <button onClick={() => gjsRef.current?.UndoManager.undo()} className="ue-tb-icon-btn" title="Undo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          </button>
+          <button onClick={() => gjsRef.current?.UndoManager.redo()} className="ue-tb-icon-btn" title="Redo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          </button>
         </div>
 
         {error && (
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ fontSize:12, color:'#fc8181' }}>⚠️ {error}</span>
+          <div className="ue-tb-error">
+            <span>{error}</span>
             {error.includes('limita') && onUpgrade && (
-              <button onClick={onUpgrade} style={{ fontSize:11, fontWeight:700, color:'#60a5fa', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.3)', borderRadius:6, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>Upgrade →</button>
+              <button onClick={onUpgrade} className="ue-tb-upgrade">Upgrade →</button>
             )}
           </div>
         )}
@@ -371,73 +383,101 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
             setShowProductModal(true)
             if (products.length === 0) loadProducts()
           }
-        }} disabled={publishing}
-          style={{ padding:'8px 20px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#e53e3e,#c53030)', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', opacity: publishing ? 0.6 : 1, boxShadow:'0 2px 8px rgba(229,62,62,0.3)', whiteSpace:'nowrap', fontFamily:'inherit' }}>
-          {publishing ? '⏳ ...' : isEditing ? '💾 Salveaza' : '🚀 Publica'}
+        }} disabled={publishing} className="ue-tb-publish">
+          {publishing ? (
+            <><span className="ue-spinner-sm" /> Se procesează...</>
+          ) : isEditing ? (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span>Salvează</span>
+            </>
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              <span>Publică</span>
+            </>
+          )}
         </button>
       </div>
 
       {/* EDITOR LAYOUT */}
-      <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
-        {/* LEFT: Blocks */}
-        <div style={{ width:220, background:'#0f0f1a', borderRight:'1px solid rgba(255,255,255,0.06)', overflow:'auto', flexShrink:0 }}>
-          <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:1 }}>Blocuri</div>
+      <div className="ue-layout">
+        <div className="ue-panel ue-panel-left">
+          <div className="ue-panel-title">Blocuri</div>
           <div id="blocks-panel" />
         </div>
 
-        {/* CENTER: Canvas */}
-        <div style={{ flex:1, overflow:'hidden', position:'relative' }}>
+        <div className="ue-canvas">
           <div ref={editorRef} style={{ width:'100%', height:'100%' }} />
         </div>
 
-        {/* RIGHT: Styles + Traits */}
-        <div style={{ width:260, background:'#0f0f1a', borderLeft:'1px solid rgba(255,255,255,0.06)', overflow:'auto', flexShrink:0 }}>
-          <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:1 }}>Stiluri</div>
+        <div className="ue-panel ue-panel-right">
+          <div className="ue-panel-title">Stiluri</div>
           <div id="styles-panel" />
-          <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:1, marginTop:8 }}>Proprietati</div>
+          <div className="ue-panel-title" style={{ marginTop: 8 }}>Proprietăți</div>
           <div id="traits-panel" />
         </div>
       </div>
 
       {/* Modal selectare produs */}
       {showProductModal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ background:'#1a1a2e', borderRadius:20, padding:28, width:460, maxWidth:'90vw', maxHeight:'80vh', display:'flex', flexDirection:'column', border:'1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-              <h3 style={{ color:'#fff', fontSize:17, fontWeight:800, margin:0 }}>Asociaza produsul din magazin</h3>
-              <button onClick={() => setShowProductModal(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:20 }}>✕</button>
+        <div className="ue-modal-backdrop" onClick={() => setShowProductModal(false)}>
+          <div className="ue-modal" onClick={e => e.stopPropagation()}>
+            <div className="ue-modal-header">
+              <div>
+                <div className="ue-eyebrow">Pas final</div>
+                <h3 className="ue-modal-title">Asociază produsul</h3>
+              </div>
+              <button onClick={() => setShowProductModal(false)} className="ue-modal-close" title="Închide">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
             </div>
-            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:13, marginBottom:16, lineHeight:1.6 }}>
-              Selecteaza produsul caruia ii asociezi acest landing page.
-            </p>
-            <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
+            <p className="ue-modal-lede">Selectează produsul din magazin căruia îi atașezi acest landing page.</p>
+
+            <div className="ue-modal-list">
               {loadingProducts ? (
-                <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,0.4)' }}>Se încarcă produsele...</div>
+                <div className="ue-modal-empty">
+                  <div className="ue-spinner" />
+                  <span>Se încarcă produsele...</span>
+                </div>
               ) : productsError ? (
-                <div style={{ textAlign:'center', padding:20 }}>
-                  <div style={{ color:'#fc8181', fontSize:13, marginBottom:12 }}>⚠️ {productsError}</div>
-                  <button onClick={loadProducts} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>Încearcă din nou</button>
+                <div className="ue-modal-empty">
+                  <div className="ue-modal-error">{productsError}</div>
+                  <button onClick={loadProducts} className="ue-cta-secondary">Încearcă din nou</button>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="ue-modal-empty">
+                  <span>Niciun produs găsit în magazin.</span>
                 </div>
               ) : products.map(p => (
-                <div key={p.id} onClick={() => setSelectedProduct(p)}
-                  style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, border: selectedProduct?.id===p.id ? '1.5px solid #e53e3e' : '1px solid rgba(255,255,255,0.08)', background: selectedProduct?.id===p.id ? 'rgba(229,62,62,0.08)' : 'rgba(255,255,255,0.02)', cursor:'pointer' }}>
-                  {p.images?.[0] && <img src={p.images[0].src} alt={p.title} style={{ width:44, height:44, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.title}</div>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>{p.variants?.[0]?.price} RON</div>
+                <button key={p.id} onClick={() => setSelectedProduct(p)}
+                  className={`ue-product ${selectedProduct?.id === p.id ? 'active' : ''}`}>
+                  {p.images?.[0] ? (
+                    <img src={p.images[0].src} alt={p.title} className="ue-product-img" />
+                  ) : (
+                    <div className="ue-product-img-fallback">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    </div>
+                  )}
+                  <div className="ue-product-meta">
+                    <div className="ue-product-title">{p.title}</div>
+                    <div className="ue-product-handle">/{p.handle}</div>
                   </div>
-                  {selectedProduct?.id===p.id && <span style={{ color:'#e53e3e', fontSize:18 }}>✓</span>}
-                </div>
+                  <div className="ue-product-check">
+                    {selectedProduct?.id === p.id && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    )}
+                  </div>
+                </button>
               ))}
             </div>
-            <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => setShowProductModal(false)}
-                style={{ flex:1, padding:12, borderRadius:10, border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'#fff', fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
-                Anuleaza
-              </button>
+
+            <div className="ue-modal-actions">
+              <button onClick={() => setShowProductModal(false)} className="ue-cta-secondary">Anulează</button>
               <button onClick={() => { setShowProductModal(false); publish() }} disabled={!selectedProduct}
-                style={{ flex:2, padding:12, borderRadius:10, border:'none', background: selectedProduct ? 'linear-gradient(135deg,#e53e3e,#c53030)' : 'rgba(255,255,255,0.1)', color:'#fff', fontSize:14, fontWeight:700, cursor: selectedProduct ? 'pointer' : 'not-allowed', fontFamily:'inherit' }}>
-                {selectedProduct ? `Publica pe "${selectedProduct.title.substring(0,20)}..."` : 'Selecteaza un produs'}
+                className="ue-cta-primary ue-cta-block">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                <span>{selectedProduct ? `Publică pe "${selectedProduct.title.substring(0,18)}${selectedProduct.title.length > 18 ? '...' : ''}"` : 'Selectează un produs'}</span>
               </button>
             </div>
           </div>
@@ -719,4 +759,457 @@ function addBlocks(editor, data) {
       attributes: { class: 'gjs-block-section' }
     })
   })
+}
+
+/* ─── Editor outer UI styles (theme-adaptive) ─────────────────────────────── */
+function EditorStyles() {
+  return (
+    <style>{`
+      .ue-shell {
+        height: 100vh; display: flex; flex-direction: column;
+        background: var(--bg); color: var(--text);
+        font-family: var(--font-sans);
+      }
+
+      /* ── Toolbar ── */
+      .ue-toolbar {
+        height: 60px; flex-shrink: 0; z-index: 100;
+        padding: 0 16px; gap: 10px;
+        display: flex; align-items: center;
+        background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
+        backdrop-filter: blur(16px) saturate(120%);
+        -webkit-backdrop-filter: blur(16px) saturate(120%);
+        border-bottom: 1px solid var(--divider);
+      }
+      .ue-tb-back {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 11px; border-radius: 9px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 13px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        transition: all 0.15s ease;
+      }
+      .ue-tb-back:hover {
+        background: var(--bg-3); color: var(--text);
+        border-color: var(--border-strong);
+      }
+      .ue-tb-divider {
+        width: 1px; height: 22px;
+        background: var(--divider);
+      }
+      .ue-tb-title {
+        flex: 1; min-width: 0;
+        padding: 7px 11px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        color: var(--text);
+        font-size: 14px; font-weight: 600;
+        font-family: inherit; outline: none;
+        letter-spacing: -0.01em;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .ue-tb-title:focus {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px var(--brand-soft);
+      }
+      .ue-tb-device {
+        display: flex; gap: 2px; padding: 3px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+      .ue-tb-device-btn {
+        padding: 6px 10px; border-radius: 7px;
+        background: transparent; border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s ease;
+      }
+      .ue-tb-device-btn:hover { color: var(--text); }
+      .ue-tb-device-btn.active {
+        background: var(--bg-elev);
+        color: var(--text);
+        box-shadow: var(--shadow-sm);
+      }
+      .ue-tb-toggle {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 11px; border-radius: 9px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 12px; font-weight: 600; font-family: inherit;
+        cursor: pointer; white-space: nowrap;
+        letter-spacing: -0.01em;
+        transition: all 0.15s ease;
+      }
+      .ue-tb-toggle.on {
+        background: var(--success-soft);
+        border-color: color-mix(in srgb, var(--success) 25%, transparent);
+        color: var(--success);
+      }
+      .ue-tb-toggle.off {
+        background: var(--warning-soft);
+        border-color: color-mix(in srgb, var(--warning) 25%, transparent);
+        color: var(--warning);
+      }
+      .ue-tb-toggle-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+      }
+      .ue-tb-save {
+        display: flex; align-items: center; gap: 7px;
+        padding: 6px 11px; border-radius: 9px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        font-size: 11.5px; color: var(--text-muted);
+        white-space: nowrap; letter-spacing: -0.005em;
+      }
+      .ue-tb-save-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+      }
+      .ue-tb-save-dot.saving {
+        background: var(--warning);
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      .ue-tb-save-dot.saved {
+        background: var(--success);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
+      }
+      .ue-tb-undo { display: flex; gap: 3px; }
+      .ue-tb-icon-btn {
+        padding: 7px 9px; border-radius: 8px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: all 0.15s ease;
+      }
+      .ue-tb-icon-btn:hover {
+        background: var(--bg-3); color: var(--text);
+        border-color: var(--border-strong);
+      }
+      .ue-tb-error {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 11px; border-radius: 8px;
+        background: var(--danger-soft);
+        border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+        color: var(--danger);
+        font-size: 12px;
+        max-width: 280px;
+      }
+      .ue-tb-upgrade {
+        font-size: 11px; font-weight: 700;
+        color: var(--brand);
+        background: var(--brand-soft);
+        border: 1px solid var(--brand-border);
+        border-radius: 6px;
+        padding: 3px 8px;
+        cursor: pointer; font-family: inherit;
+        white-space: nowrap;
+      }
+      .ue-tb-publish {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 18px; border-radius: 10px;
+        background: var(--accent); color: var(--accent-fg);
+        border: 1px solid var(--accent);
+        font-size: 13.5px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        white-space: nowrap;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ue-tb-publish:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+      }
+      .ue-tb-publish:disabled {
+        opacity: 0.6; cursor: not-allowed;
+        box-shadow: none;
+      }
+      .ue-spinner-sm {
+        width: 12px; height: 12px;
+        border: 2px solid color-mix(in srgb, var(--accent-fg) 25%, transparent);
+        border-top-color: var(--accent-fg);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+
+      @media (max-width: 1100px) {
+        .ue-tb-save { display: none; }
+      }
+      @media (max-width: 900px) {
+        .ue-tb-toggle { display: none; }
+        .ue-tb-back span, .ue-tb-publish span { display: inline; }
+      }
+      @media (max-width: 720px) {
+        .ue-tb-undo { display: none; }
+      }
+
+      /* ── Layout ── */
+      .ue-layout {
+        flex: 1; display: flex; overflow: hidden;
+      }
+      .ue-panel {
+        width: 240px; flex-shrink: 0;
+        background: var(--bg-2);
+        overflow: auto;
+      }
+      .ue-panel-left { border-right: 1px solid var(--divider); }
+      .ue-panel-right { border-left: 1px solid var(--divider); width: 270px; }
+      .ue-panel-title {
+        padding: 14px 16px 8px;
+        font-size: 10.5px; font-weight: 700;
+        color: var(--text-subtle);
+        text-transform: uppercase; letter-spacing: 0.12em;
+      }
+      .ue-canvas {
+        flex: 1; overflow: hidden; position: relative;
+        background: var(--bg-3);
+      }
+
+      /* ── Published screen ── */
+      .ue-published-shell {
+        min-height: 100vh; position: relative;
+        background: var(--bg); color: var(--text);
+        font-family: var(--font-sans);
+        display: flex; align-items: center; justify-content: center;
+        padding: 32px;
+      }
+      .ue-hero-gradient {
+        position: absolute; top: 0; left: 0; right: 0; height: 520px;
+        background: var(--hero-gradient);
+        pointer-events: none; z-index: 0;
+      }
+      .ue-mesh {
+        position: absolute; inset: 0;
+        background: var(--mesh); opacity: 0.6;
+        pointer-events: none; z-index: 0;
+      }
+      .ue-published-card {
+        position: relative; z-index: 1;
+        max-width: 480px; width: 100%;
+        text-align: center;
+      }
+      .ue-published-orb {
+        width: 78px; height: 78px; border-radius: 22px;
+        background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 70%, var(--brand)) 100%);
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 28px;
+        position: relative;
+        box-shadow: 0 12px 32px color-mix(in srgb, var(--success) 40%, transparent);
+      }
+      .ue-orb-glow {
+        position: absolute; inset: -3px; border-radius: 22px;
+        background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 60%, var(--brand)));
+        opacity: 0.4; filter: blur(14px);
+        animation: orbPulse 2.5s ease-in-out infinite;
+        z-index: -1;
+      }
+      @keyframes orbPulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
+      }
+      .ue-eyebrow {
+        font-size: 11.5px; font-weight: 700;
+        color: var(--brand);
+        text-transform: uppercase; letter-spacing: 0.16em;
+        margin-bottom: 12px;
+      }
+      .ue-h1 {
+        font-family: var(--font-display);
+        font-size: clamp(32px, 5vw, 44px);
+        font-weight: 400; letter-spacing: -0.035em;
+        line-height: 1.1; color: var(--text);
+      }
+      .ue-h1-italic { font-style: italic; color: var(--text-muted); }
+      .ue-published-text {
+        margin-top: 14px;
+        font-size: 15px; line-height: 1.55;
+        color: var(--text-muted);
+      }
+      .ue-published-actions {
+        margin-top: 28px;
+        display: flex; gap: 10px; justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .ue-cta-primary {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 12px 20px; border-radius: 11px;
+        background: var(--accent); color: var(--accent-fg);
+        border: 1px solid var(--accent);
+        font-size: 14px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ue-cta-primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+      }
+      .ue-cta-primary:disabled {
+        opacity: 0.5; cursor: not-allowed;
+        box-shadow: none;
+      }
+      .ue-cta-block { flex: 1; justify-content: center; }
+      .ue-cta-secondary {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 12px 20px; border-radius: 11px;
+        background: var(--bg-elev); color: var(--text);
+        border: 1px solid var(--border-strong);
+        font-size: 14px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        text-decoration: none;
+        transition: all 0.15s ease;
+      }
+      .ue-cta-secondary:hover { background: var(--bg-3); }
+
+      /* ── Modal ── */
+      .ue-modal-backdrop {
+        position: fixed; inset: 0;
+        z-index: 1000;
+        background: color-mix(in srgb, var(--text) 35%, transparent);
+        backdrop-filter: blur(8px) saturate(80%);
+        -webkit-backdrop-filter: blur(8px) saturate(80%);
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px;
+        animation: fadeIn 0.2s ease;
+      }
+      .ue-modal {
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 26px;
+        width: 480px; max-width: 100%; max-height: 82vh;
+        display: flex; flex-direction: column;
+        box-shadow: var(--shadow-lg);
+        animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .ue-modal-header {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 6px;
+      }
+      .ue-modal-title {
+        font-family: var(--font-display);
+        font-size: 24px; font-weight: 400;
+        letter-spacing: -0.025em;
+        color: var(--text);
+        margin: 4px 0 0;
+      }
+      .ue-modal-close {
+        width: 30px; height: 30px; border-radius: 8px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+      }
+      .ue-modal-close:hover {
+        background: var(--bg-3); color: var(--text);
+      }
+      .ue-modal-lede {
+        font-size: 13.5px; color: var(--text-muted);
+        line-height: 1.55; margin: 14px 0 18px;
+      }
+      .ue-modal-list {
+        flex: 1; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 6px;
+        margin-bottom: 18px;
+        min-height: 100px;
+        max-height: 380px;
+      }
+      .ue-modal-empty {
+        text-align: center; padding: 40px 16px;
+        color: var(--text-muted);
+        font-size: 13px;
+        display: flex; flex-direction: column; align-items: center; gap: 14px;
+      }
+      .ue-modal-error {
+        color: var(--danger);
+        font-size: 13px;
+        padding: 10px 14px;
+        background: var(--danger-soft);
+        border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+        border-radius: 9px;
+      }
+      .ue-spinner {
+        width: 28px; height: 28px;
+        border: 2.5px solid var(--bg-3);
+        border-top-color: var(--brand);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      .ue-product {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 12px; border-radius: 11px;
+        background: var(--bg-2);
+        border: 1.5px solid var(--border);
+        cursor: pointer; font-family: inherit; text-align: left;
+        transition: all 0.15s ease;
+        width: 100%;
+      }
+      .ue-product:hover {
+        background: var(--bg-3);
+        border-color: var(--border-strong);
+      }
+      .ue-product.active {
+        background: var(--brand-soft);
+        border-color: var(--brand);
+      }
+      .ue-product-img {
+        width: 44px; height: 44px; border-radius: 9px;
+        object-fit: cover; flex-shrink: 0;
+        border: 1px solid var(--border);
+      }
+      .ue-product-img-fallback {
+        width: 44px; height: 44px; border-radius: 9px;
+        background: var(--bg-3);
+        border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-subtle);
+        flex-shrink: 0;
+      }
+      .ue-product-meta { flex: 1; min-width: 0; }
+      .ue-product-title {
+        font-size: 13.5px; font-weight: 600;
+        color: var(--text); letter-spacing: -0.01em;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .ue-product-handle {
+        font-size: 11.5px;
+        color: var(--text-subtle);
+        font-family: var(--font-mono);
+        margin-top: 2px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .ue-product-check {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: transparent;
+        border: 1.5px solid var(--border-strong);
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        color: transparent;
+      }
+      .ue-product.active .ue-product-check {
+        background: var(--brand);
+        border-color: var(--brand);
+        color: #fff;
+      }
+      .ue-modal-actions {
+        display: flex; gap: 10px;
+      }
+    `}</style>
+  )
 }

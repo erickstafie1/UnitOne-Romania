@@ -18,9 +18,6 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
   const [error, setError] = useState('')
-  const [hover, setHover] = useState(false)
-  const [focusUrl, setFocusUrl] = useState(false)
-  const [focusStyle, setFocusStyle] = useState(false)
 
   async function generate() {
     if (!aliUrl.trim()) return
@@ -50,108 +47,363 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
   }
 
   if (loading) return (
-    <div style={{ minHeight:'100vh', background:'#0a0b0f', color:'#fff', fontFamily:"'Inter','SF Pro Display',-apple-system,system-ui,sans-serif", display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ position:'fixed', inset:0, background:'radial-gradient(ellipse at center, rgba(59,130,246,0.1) 0%, transparent 60%)', pointerEvents:'none' }} />
-      <div style={{ position:'relative', textAlign:'center', maxWidth:420 }}>
-        <div style={{ width:78, height:78, borderRadius:18, background:'linear-gradient(135deg,#3b82f6,#2563eb)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 32px', boxShadow:'0 10px 40px rgba(59,130,246,0.4)', position:'relative' }}>
-          <div style={{ position:'absolute', inset:-2, borderRadius:18, background:'linear-gradient(135deg,#3b82f6,#2563eb)', opacity:0.5, filter:'blur(10px)', animation:'pulse 2s ease-in-out infinite' }} />
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ position:'relative' }}><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <div className="ug-shell">
+      <Styles />
+      <div className="ug-hero-gradient" />
+      <div className="ug-loading">
+        <div className="ug-loading-orb">
+          <div className="ug-orb-glow" />
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
         </div>
-        <style>{`@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.8}}`}</style>
-        <h2 style={{ fontSize:24, fontWeight:800, marginBottom:10, letterSpacing:-0.6 }}>Generăm pagina ta</h2>
-        <p style={{ color:'rgba(255,255,255,0.5)', fontSize:14, marginBottom:6, fontWeight:500 }}>{loadMsg}</p>
-        <p style={{ color:'rgba(255,255,255,0.3)', fontSize:12, marginBottom:32 }}>Imaginile AI durează ~1 minut · Calitate maximă</p>
-        <div style={{ height:6, borderRadius:100, background:'rgba(255,255,255,0.06)', overflow:'hidden', marginBottom:10 }}>
-          <div style={{ height:'100%', borderRadius:100, background:'linear-gradient(90deg,#3b82f6,#60a5fa)', width:`${loadPct}%`, transition:'width 1.2s cubic-bezier(0.4,0,0.2,1)', boxShadow:'0 0 10px rgba(59,130,246,0.5)' }} />
+        <div className="ug-eyebrow">Generare în curs</div>
+        <h2 className="ug-h1-loading">Pregătim pagina ta</h2>
+        <p className="ug-loading-step">{loadMsg}</p>
+        <p className="ug-loading-hint">Imaginile AI durează ~1 minut · Calitate maximă</p>
+        <div className="ug-progress">
+          <div className="ug-progress-fill" style={{ width: `${loadPct}%` }} />
         </div>
-        <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:600, letterSpacing:1 }}>{loadPct}%</p>
+        <div className="ug-progress-meta">
+          <span>{loadPct}%</span>
+        </div>
       </div>
     </div>
   )
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0b0f', color:'#fff', fontFamily:"'Inter','SF Pro Display',-apple-system,system-ui,sans-serif" }}>
-      <div style={{ position:'fixed', inset:0, background:'radial-gradient(ellipse at top, rgba(59,130,246,0.06) 0%, transparent 70%)', pointerEvents:'none' }} />
+    <div className="ug-shell">
+      <Styles />
+      <div className="ug-hero-gradient" />
+      <div className="ug-mesh" />
 
-      {/* Header */}
-      <div style={{ position:'relative', borderBottom:'1px solid rgba(255,255,255,0.06)', backdropFilter:'blur(20px)', background:'rgba(10,11,15,0.7)', position:'sticky', top:0, zIndex:10 }}>
-        <div style={{ maxWidth:680, margin:'0 auto', padding:'18px 32px', display:'flex', alignItems:'center', gap:14 }}>
-          <button onClick={onBack} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:8, color:'rgba(255,255,255,0.6)', cursor:'pointer', padding:'7px 12px', fontSize:13, fontWeight:600, fontFamily:'inherit', display:'flex', alignItems:'center', gap:6, transition:'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.08)'; e.currentTarget.style.color='#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.style.color='rgba(255,255,255,0.6)' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Înapoi
+      <header className="ug-topbar">
+        <div className="ug-topbar-inner">
+          <button onClick={onBack} className="ug-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>Înapoi</span>
           </button>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:30, height:30, borderRadius:8, background:'linear-gradient(135deg,#3b82f6,#2563eb)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:800 }}>U</div>
-            <div style={{ fontSize:14, fontWeight:700, letterSpacing:-0.2 }}>Pagină nouă</div>
+          <div className="ug-breadcrumb">
+            <span className="ug-bc-dot" />
+            <span>Pagină nouă</span>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div style={{ position:'relative', maxWidth:540, margin:'0 auto', padding:'72px 32px' }}>
-        <div style={{ textAlign:'center', marginBottom:48 }}>
-          <h1 style={{ fontSize:38, fontWeight:800, letterSpacing:-1.5, marginBottom:14, lineHeight:1.1, background:'linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.65) 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-            Generează landing page COD
+      <main className="ug-container">
+        <div className="ug-page-header">
+          <div className="ug-eyebrow">Generator AI</div>
+          <h1 className="ug-h1">
+            Generează landing page <span className="ug-h1-italic">COD</span>
           </h1>
-          <p style={{ color:'rgba(255,255,255,0.5)', fontSize:15, lineHeight:1.6, fontWeight:400 }}>
-            Pune linkul AliExpress și descrie stilul dorit.<br/>AI-ul generează copywriting în română și 4 imagini profesionale.
+          <p className="ug-lede">
+            Pune linkul AliExpress și descrie stilul dorit. AI-ul generează copywriting în română și 4 imagini profesionale.
           </p>
         </div>
 
-        <div style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:28, display:'flex', flexDirection:'column', gap:20, boxShadow:'0 4px 30px rgba(0,0,0,0.3)' }}>
-          <div>
-            <label style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.55)', display:'block', marginBottom:8, letterSpacing:0.2, textTransform:'uppercase' }}>Link AliExpress</label>
-            <input value={aliUrl} onChange={e => setAliUrl(e.target.value)}
-              onFocus={() => setFocusUrl(true)} onBlur={() => setFocusUrl(false)}
+        <div className="ug-card">
+          <div className="ug-field">
+            <label className="ug-label" htmlFor="ali-url">Link AliExpress</label>
+            <input id="ali-url" value={aliUrl} onChange={e => setAliUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && aliUrl.trim() && generate()}
               placeholder="https://www.aliexpress.com/item/..."
-              style={{ width:'100%', padding:'13px 16px', borderRadius:10, background:'rgba(255,255,255,0.04)', border: focusUrl ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(255,255,255,0.08)', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit', boxSizing:'border-box', transition:'all 0.15s', boxShadow: focusUrl ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none' }}
-            />
+              className="ug-input" />
           </div>
 
-          <div>
-            <label style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.55)', display:'block', marginBottom:8, letterSpacing:0.2, textTransform:'uppercase' }}>
-              Descriere stil <span style={{ color:'rgba(255,255,255,0.3)', textTransform:'none', letterSpacing:0, fontWeight:400 }}>· opțional</span>
+          <div className="ug-field">
+            <label className="ug-label" htmlFor="style-desc">
+              Descriere stil <span className="ug-label-opt">opțional</span>
             </label>
-            <textarea value={styleDesc} onChange={e => setStyleDesc(e.target.value)}
-              onFocus={() => setFocusStyle(true)} onBlur={() => setFocusStyle(false)}
+            <textarea id="style-desc" value={styleDesc} onChange={e => setStyleDesc(e.target.value)}
               rows={3}
-              placeholder="Ex: Pagina pentru bărbați 25-45 ani, culori negru și roșu, ton direct și agresiv, accent pe durabilitate..."
-              style={{ width:'100%', padding:'13px 16px', borderRadius:10, background:'rgba(255,255,255,0.04)', border: focusStyle ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(255,255,255,0.08)', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit', resize:'vertical', lineHeight:1.6, boxSizing:'border-box', transition:'all 0.15s', boxShadow: focusStyle ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none' }}
-            />
+              placeholder="Ex: Pagină pentru bărbați 25-45 ani, culori negru și roșu, ton direct, accent pe durabilitate..."
+              className="ug-input" />
           </div>
 
           {error && (
-            <div style={{ padding:'11px 14px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:10, fontSize:13, color:'#f87171', display:'flex', alignItems:'center', gap:8 }}>
+            <div className="ug-error">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
-              {error}
+              <span>{error}</span>
             </div>
           )}
 
-          <button onClick={generate} disabled={!aliUrl.trim()}
-            onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-            style={{
-              padding:'14px', borderRadius:10,
-              background: aliUrl.trim() ? (hover ? 'linear-gradient(135deg,#2563eb,#1d4ed8)' : 'linear-gradient(135deg,#3b82f6,#2563eb)') : 'rgba(255,255,255,0.04)',
-              color:'#fff', border:'none', fontSize:15, fontWeight:700,
-              cursor: aliUrl.trim() ? 'pointer' : 'not-allowed',
-              opacity: aliUrl.trim() ? 1 : 0.5,
-              transition:'all 0.18s cubic-bezier(0.4,0,0.2,1)',
-              boxShadow: aliUrl.trim() && hover ? '0 8px 24px rgba(59,130,246,0.45)' : (aliUrl.trim() ? '0 4px 14px rgba(59,130,246,0.3)' : 'none'),
-              transform: aliUrl.trim() && hover ? 'translateY(-1px)' : 'translateY(0)',
-              fontFamily:'inherit', letterSpacing:-0.2,
-              display:'flex', alignItems:'center', justifyContent:'center', gap:8
-            }}>
-            Generează pagina
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <button onClick={generate} disabled={!aliUrl.trim()} className="ug-cta">
+            <span>Generează pagina</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
 
-          <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', textAlign:'center', fontWeight:500 }}>
-            ~ 1 minut · 40 RON la publicare
-          </p>
+          <p className="ug-fine">≈ 1 minut de procesare</p>
         </div>
-      </div>
+
+        <div className="ug-tips">
+          <div className="ug-tips-head">
+            <span className="ug-tips-icon">✦</span>
+            <span>Sfaturi pentru rezultate mai bune</span>
+          </div>
+          <ul className="ug-tips-list">
+            <li>Folosește link-uri AliExpress complete (cu toate paramerii URL)</li>
+            <li>În descrierea de stil specifică publicul țintă și tonul dorit</li>
+            <li>Menționează culorile preferate pentru personalizare AI</li>
+          </ul>
+        </div>
+      </main>
     </div>
+  )
+}
+
+function Styles() {
+  return (
+    <style>{`
+      .ug-shell {
+        min-height: 100vh; position: relative;
+        background: var(--bg); color: var(--text);
+        font-family: var(--font-sans);
+      }
+      .ug-hero-gradient {
+        position: absolute; top: 0; left: 0; right: 0; height: 520px;
+        background: var(--hero-gradient);
+        pointer-events: none; z-index: 0;
+      }
+      .ug-mesh {
+        position: absolute; inset: 0;
+        background: var(--mesh); opacity: 0.6;
+        pointer-events: none; z-index: 0;
+      }
+      .ug-topbar {
+        position: sticky; top: 0; z-index: 10;
+        background: color-mix(in srgb, var(--bg) 75%, transparent);
+        backdrop-filter: blur(16px) saturate(120%);
+        -webkit-backdrop-filter: blur(16px) saturate(120%);
+        border-bottom: 1px solid var(--divider);
+      }
+      .ug-topbar-inner {
+        max-width: 720px; margin: 0 auto;
+        padding: 16px 32px;
+        display: flex; align-items: center; gap: 14px;
+      }
+      .ug-back {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 12px; border-radius: 9px;
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 13px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        transition: all 0.15s ease;
+      }
+      .ug-back:hover {
+        background: var(--bg-3);
+        color: var(--text);
+        border-color: var(--border-strong);
+      }
+      .ug-breadcrumb {
+        display: flex; align-items: center; gap: 9px;
+        font-size: 13.5px; font-weight: 600;
+        color: var(--text); letter-spacing: -0.01em;
+      }
+      .ug-bc-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--brand);
+        box-shadow: 0 0 0 4px var(--brand-soft);
+      }
+
+      .ug-container {
+        position: relative; z-index: 1;
+        max-width: 560px; margin: 0 auto;
+        padding: clamp(48px, 8vw, 80px) 32px clamp(40px, 6vw, 64px);
+        animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .ug-page-header { text-align: center; margin-bottom: 36px; }
+      .ug-eyebrow {
+        font-size: 11.5px; font-weight: 700;
+        color: var(--brand);
+        text-transform: uppercase; letter-spacing: 0.16em;
+        margin-bottom: 14px;
+      }
+      .ug-h1 {
+        font-family: var(--font-display);
+        font-size: clamp(32px, 5vw, 44px);
+        font-weight: 400; letter-spacing: -0.035em;
+        line-height: 1.08;
+        color: var(--text);
+      }
+      .ug-h1-italic { font-style: italic; color: var(--text-muted); }
+      .ug-lede {
+        margin: 14px auto 0;
+        font-size: 15px; line-height: 1.55;
+        color: var(--text-muted);
+        max-width: 460px;
+      }
+
+      .ug-card {
+        background: var(--bg-elev);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 28px;
+        display: flex; flex-direction: column; gap: 18px;
+        box-shadow: var(--shadow-sm);
+      }
+      .ug-field { display: flex; flex-direction: column; gap: 8px; }
+      .ug-label {
+        font-size: 12px; font-weight: 700;
+        color: var(--text);
+        text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      .ug-label-opt {
+        font-weight: 500; color: var(--text-subtle);
+        text-transform: none; letter-spacing: 0;
+      }
+      .ug-input {
+        width: 100%; padding: 12px 14px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font-size: 14.5px; font-family: inherit;
+        outline: none; resize: vertical;
+        line-height: 1.55; letter-spacing: -0.01em;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .ug-input:focus {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px var(--brand-soft);
+      }
+
+      .ug-error {
+        display: flex; gap: 9px; align-items: center;
+        padding: 11px 14px; border-radius: 10px;
+        background: var(--danger-soft);
+        border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+        color: var(--danger);
+        font-size: 13px;
+      }
+
+      .ug-cta {
+        display: flex; align-items: center; justify-content: center; gap: 9px;
+        padding: 13px 20px; border-radius: 11px;
+        background: var(--accent); color: var(--accent-fg);
+        border: 1px solid var(--accent);
+        font-size: 15px; font-weight: 600; font-family: inherit;
+        cursor: pointer; letter-spacing: -0.01em;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ug-cta:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+      }
+      .ug-cta:disabled {
+        opacity: 0.45; cursor: not-allowed;
+        box-shadow: none;
+      }
+      .ug-fine {
+        font-size: 12px; color: var(--text-subtle);
+        text-align: center; font-weight: 500;
+      }
+
+      .ug-tips {
+        margin-top: 24px;
+        padding: 20px 22px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+      }
+      .ug-tips-head {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 13px; font-weight: 700;
+        color: var(--text);
+        margin-bottom: 12px;
+        letter-spacing: -0.01em;
+      }
+      .ug-tips-icon {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #fff; font-size: 11px;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 14px color-mix(in srgb, var(--brand) 35%, transparent);
+      }
+      .ug-tips-list {
+        list-style: none; padding: 0; margin: 0;
+        display: flex; flex-direction: column; gap: 8px;
+      }
+      .ug-tips-list li {
+        font-size: 13px; color: var(--text-muted);
+        line-height: 1.55;
+        padding-left: 18px; position: relative;
+      }
+      .ug-tips-list li::before {
+        content: '→';
+        position: absolute; left: 0; top: 0;
+        color: var(--brand);
+        font-weight: 700;
+      }
+
+      /* Loading screen */
+      .ug-loading {
+        position: relative; z-index: 1;
+        max-width: 440px; margin: 0 auto;
+        padding: clamp(80px, 14vh, 140px) 32px;
+        text-align: center;
+        animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .ug-loading-orb {
+        width: 74px; height: 74px; border-radius: 20px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 32px;
+        position: relative;
+        box-shadow: 0 12px 32px color-mix(in srgb, var(--brand) 40%, transparent);
+      }
+      .ug-orb-glow {
+        position: absolute; inset: -3px; border-radius: 20px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        opacity: 0.5; filter: blur(14px);
+        animation: orbPulse 2.5s ease-in-out infinite;
+        z-index: -1;
+      }
+      @keyframes orbPulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 0.75; transform: scale(1.05); }
+      }
+      .ug-h1-loading {
+        font-family: var(--font-display);
+        font-size: 28px; font-weight: 400;
+        letter-spacing: -0.03em;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+      .ug-loading-step {
+        font-size: 14px; font-weight: 500;
+        color: var(--text);
+        margin-bottom: 6px;
+        animation: fadeIn 0.3s ease;
+      }
+      .ug-loading-hint {
+        font-size: 12.5px; color: var(--text-subtle);
+        margin-bottom: 32px;
+      }
+      .ug-progress {
+        height: 5px; border-radius: 999px;
+        background: var(--bg-3);
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      .ug-progress-fill {
+        height: 100%; border-radius: 999px;
+        background: linear-gradient(90deg, var(--brand), var(--brand-2));
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--brand) 40%, transparent);
+      }
+      .ug-progress-meta {
+        font-size: 11px; font-weight: 700;
+        color: var(--text-subtle);
+        letter-spacing: 0.1em;
+      }
+    `}</style>
   )
 }
