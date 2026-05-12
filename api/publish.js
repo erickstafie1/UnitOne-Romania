@@ -29,46 +29,53 @@ function shopifyRequest(shop, token, path, method, body) {
   })
 }
 
-// Wrapper simplu - layout-ul temei ascunde deja header/footer via CSS
+// Overlay la z-index 9999 - Releasit popup e la 99999+ si apare deasupra
 function buildOverlay(html) {
-  return '<div id="unitone-lp" style="width:100%;min-height:100vh;background:#fff;box-sizing:border-box;overflow-x:hidden">' +
+  return '<div id="unitone-lp" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box">' +
     html +
     '</div><!--/unitone-lp-->'
 }
 
-// Reset minimal body
 function buildHideScript() {
   return '<style>\n' +
-    'body{background:#fff!important;margin:0!important;padding:0!important}\n' +
+    'html,body{overflow:hidden!important;margin:0!important;padding:0!important}\n' +
     '</style>'
 }
 
-// Releasit: cloneaza butonul in placeholderele noastre, originalul ramane intact
+// Releasit: GemPages trigger + clona vizuala in placeholder
 function buildReleasitGemPages(variantId) {
-  return '<script>\n' +
+  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
+    '<script>\n' +
     '(function(){\n' +
     '  var done=false;\n' +
     '  function findTarget(){\n' +
+    '    // GemPages mode: butonul randat de Releasit in placeholder\n' +
+    '    var gem=document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
+    '    if(gem) return gem.closest("._rsi-buy-now-button-app-block-hook")||gem;\n' +
     '    var h=document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
     '    if(h&&h.querySelector("button")) return h;\n' +
-    '    return document.querySelector(".rsi-cod-form-gempages-button-overwrite")||document.querySelector("button.rsi_animation_none");\n' +
+    '    return document.querySelector("button.rsi_animation_none");\n' +
     '  }\n' +
     '  function run(){\n' +
     '    if(done) return;\n' +
     '    var target=findTarget();\n' +
     '    var phs=document.querySelectorAll(".unitone-releasit-btn");\n' +
     '    if(!target||!phs.length) return;\n' +
+    '    // Daca butonul e deja in placeholder nostru, gata\n' +
+    '    if(phs[0].contains(target)){ done=true; return; }\n' +
     '    done=true;\n' +
     '    var realBtn=target.querySelector("button")||target;\n' +
     '    phs.forEach(function(ph){\n' +
-    '      ph.style.cssText="border:none;padding:0;min-height:auto;display:block";\n' +
+    '      ph.style.cssText="border:none!important;padding:0!important;min-height:0!important;display:block!important";\n' +
     '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
     '      var clone=target.cloneNode(true);\n' +
     '      clone.style.setProperty("width","100%","important");\n' +
     '      clone.style.setProperty("display","block","important");\n' +
+    '      clone.style.setProperty("pointer-events","auto","important");\n' +
     '      clone.querySelectorAll("*").forEach(function(c){c.style.setProperty("pointer-events","auto","important");});\n' +
     '      (clone.querySelector("button")||clone).addEventListener("click",function(e){\n' +
-    '        e.preventDefault();e.stopPropagation();realBtn.click();\n' +
+    '        e.preventDefault();e.stopPropagation();\n' +
+    '        realBtn.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}));\n' +
     '      });\n' +
     '      ph.appendChild(clone);\n' +
     '    });\n' +
