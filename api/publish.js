@@ -43,7 +43,7 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: muta hook-ul in overlay + watch pentru modalul Releasit injectat in body
+// Releasit: muta hook-ul in overlay + intercepteaza modalul injectat in body
 function buildReleasitGemPages(variantId) {
   const vid = variantId || ''
   return '<script>\n' +
@@ -58,6 +58,31 @@ function buildReleasitGemPages(variantId) {
     '    var gem = document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
     '    if(gem) return gem;\n' +
     '    return document.querySelector("button.rsi_animation_none");\n' +
+    '  }\n' +
+    '\n' +
+    '  function enableClicks(el){\n' +
+    '    el.style.setProperty("pointer-events","auto","important");\n' +
+    '    el.querySelectorAll("*").forEach(function(c){\n' +
+    '      c.style.setProperty("pointer-events","auto","important");\n' +
+    '    });\n' +
+    '  }\n' +
+    '\n' +
+    '  // capture=true: handler-ul nostru porneste observer INAINTE ca Releasit sa adauge modalul\n' +
+    '  function watchRsiModals(realBtn){\n' +
+    '    realBtn.addEventListener("click", function(){\n' +
+    '      var observer = new MutationObserver(function(muts){\n' +
+    '        muts.forEach(function(m){\n' +
+    '          m.addedNodes.forEach(function(node){\n' +
+    '            if(node.nodeType!==1) return;\n' +
+    '            var overlay=getOverlay();\n' +
+    '            if(!overlay||overlay.contains(node)) return;\n' +
+    '            overlay.appendChild(node);\n' +
+    '          });\n' +
+    '        });\n' +
+    '      });\n' +
+    '      observer.observe(document.body,{childList:true,subtree:false});\n' +
+    '      setTimeout(function(){ observer.disconnect(); },5000);\n' +
+    '    }, true);\n' +
     '  }\n' +
     '\n' +
     '  function moveBtn(){\n' +
@@ -77,39 +102,18 @@ function buildReleasitGemPages(variantId) {
     '        target.style.setProperty("display","block","important");\n' +
     '        ph.appendChild(target);\n' +
     '        enableClicks(target);\n' +
+    '        watchRsiModals(realBtn);\n' +
     '      } else {\n' +
-    '        var proxy = document.createElement("button");\n' +
-    '        proxy.className = realBtn.className;\n' +
-    '        proxy.innerHTML = realBtn.innerHTML;\n' +
-    '        proxy.style.cssText="width:100%!important;display:block!important;cursor:pointer;";\n' +
-    '        proxy.addEventListener("click", function(e){ e.preventDefault(); realBtn.click(); });\n' +
-    '        ph.appendChild(proxy);\n' +
+    '        // Clone vizual identic cu originalul\n' +
+    '        var clone = target.cloneNode(true);\n' +
+    '        clone.style.setProperty("width","100%","important");\n' +
+    '        clone.style.setProperty("display","block","important");\n' +
+    '        enableClicks(clone);\n' +
+    '        var cloneBtn = clone.querySelector("button") || clone;\n' +
+    '        cloneBtn.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); realBtn.click(); });\n' +
+    '        ph.appendChild(clone);\n' +
     '      }\n' +
     '    });\n' +
-    '    watchRsiModals(realBtn);\n' +
-    '  }\n' +
-    '\n' +
-    '  // Dupa click pe buton Releasit, muta orice modal/form injectat in body in overlay\n' +
-    '  function watchRsiModals(realBtn){\n' +
-    '    realBtn.addEventListener("click", function(){\n' +
-    '      var observer = new MutationObserver(function(muts){\n' +
-    '        muts.forEach(function(m){\n' +
-    '          m.addedNodes.forEach(function(node){\n' +
-    '            if(node.nodeType!==1) return;\n' +
-    '            var overlay=getOverlay();\n' +
-    '            if(!overlay||overlay.contains(node)) return;\n' +
-    '            overlay.appendChild(node);\n' +
-    '          });\n' +
-    '        });\n' +
-    '      });\n' +
-    '      observer.observe(document.body,{childList:true,subtree:false});\n' +
-    '      setTimeout(function(){ observer.disconnect(); },5000);\n' +
-    '    });\n' +
-    '  }\n' +
-    '\n' +
-    '  function enableClicks(el){\n' +
-    '    el.style.setProperty("pointer-events","auto","important");\n' +
-    '    el.querySelectorAll("*").forEach(function(c){ c.style.setProperty("pointer-events","auto","important"); });\n' +
     '  }\n' +
     '\n' +
     '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
