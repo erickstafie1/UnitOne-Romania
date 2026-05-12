@@ -29,90 +29,53 @@ function shopifyRequest(shop, token, path, method, body) {
   })
 }
 
-// Overlay care acopera complet tema - nu mai depindem de hide selectori
+// Wrapper simplu - layout-ul temei ascunde deja header/footer via CSS
 function buildOverlay(html) {
-  return '<div id="unitone-lp" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box">' +
+  return '<div id="unitone-lp" style="width:100%;min-height:100vh;background:#fff;box-sizing:border-box;overflow-x:hidden">' +
     html +
     '</div><!--/unitone-lp-->'
 }
 
-// CSS minimal: overlay acopera vizual tot, doar prevenim scrollul din spate
+// Reset minimal body
 function buildHideScript() {
   return '<style>\n' +
-    'html,body{overflow:hidden!important;margin:0!important;padding:0!important}\n' +
+    'body{background:#fff!important;margin:0!important;padding:0!important}\n' +
     '</style>'
 }
 
-// Releasit: muta hook-ul in overlay + intercepteaza modalul injectat in body
+// Releasit: cloneaza butonul in placeholderele noastre, originalul ramane intact
 function buildReleasitGemPages(variantId) {
-  const vid = variantId || ''
   return '<script>\n' +
     '(function(){\n' +
-    '  var done = false;\n' +
-    '\n' +
-    '  function getOverlay(){ return document.getElementById("unitone-lp"); }\n' +
-    '\n' +
+    '  var done=false;\n' +
     '  function findTarget(){\n' +
-    '    var hook = document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
-    '    if(hook && hook.querySelector("button")) return hook;\n' +
-    '    var gem = document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
-    '    if(gem) return gem;\n' +
-    '    return document.querySelector("button.rsi_animation_none");\n' +
+    '    var h=document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
+    '    if(h&&h.querySelector("button")) return h;\n' +
+    '    return document.querySelector(".rsi-cod-form-gempages-button-overwrite")||document.querySelector("button.rsi_animation_none");\n' +
     '  }\n' +
-    '\n' +
-    '  function enableClicks(el){\n' +
-    '    el.style.setProperty("pointer-events","auto","important");\n' +
-    '    el.querySelectorAll("*").forEach(function(c){\n' +
-    '      c.style.setProperty("pointer-events","auto","important");\n' +
-    '    });\n' +
-    '  }\n' +
-    '\n' +
-    '  // Porneste observer INAINTE de realBtn.click() - prinde orice injecteaza Releasit in body\n' +
-    '  function watchRsiModals(){\n' +
-    '    var observer = new MutationObserver(function(muts){\n' +
-    '      muts.forEach(function(m){\n' +
-    '        m.addedNodes.forEach(function(node){\n' +
-    '          if(node.nodeType!==1) return;\n' +
-    '          var overlay=getOverlay();\n' +
-    '          if(!overlay||overlay.contains(node)) return;\n' +
-    '          overlay.appendChild(node);\n' +
-    '        });\n' +
-    '      });\n' +
-    '    });\n' +
-    '    observer.observe(document.body,{childList:true,subtree:false});\n' +
-    '    setTimeout(function(){ observer.disconnect(); },5000);\n' +
-    '  }\n' +
-    '\n' +
-    '  function moveBtn(){\n' +
+    '  function run(){\n' +
     '    if(done) return;\n' +
-    '    var target = findTarget();\n' +
-    '    var phs = document.querySelectorAll(".unitone-releasit-btn");\n' +
-    '    if(!target || !phs.length) return;\n' +
-    '    var overlay = getOverlay();\n' +
-    '    done = true;\n' +
-    '    var realBtn = (target.querySelector && target.querySelector("button")) || target;\n' +
-    '    // Nu mutam originalul - il lasam in loc cu contextul Releasit intact\n' +
-    '    // Punem clone vizuale in placeholderele noastre\n' +
+    '    var target=findTarget();\n' +
+    '    var phs=document.querySelectorAll(".unitone-releasit-btn");\n' +
+    '    if(!target||!phs.length) return;\n' +
+    '    done=true;\n' +
+    '    var realBtn=target.querySelector("button")||target;\n' +
     '    phs.forEach(function(ph){\n' +
-    '      ph.style.border="none"; ph.style.padding="0"; ph.style.minHeight="";\n' +
+    '      ph.style.cssText="border:none;padding:0;min-height:auto;display:block";\n' +
     '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
-    '      var clone = target.cloneNode(true);\n' +
+    '      var clone=target.cloneNode(true);\n' +
     '      clone.style.setProperty("width","100%","important");\n' +
     '      clone.style.setProperty("display","block","important");\n' +
-    '      enableClicks(clone);\n' +
-    '      var cloneBtn = clone.querySelector("button") || clone;\n' +
-    '      cloneBtn.addEventListener("click", function(e){\n' +
-    '        e.preventDefault(); e.stopPropagation();\n' +
-    '        watchRsiModals();\n' +
-    '        realBtn.click();\n' +
+    '      clone.querySelectorAll("*").forEach(function(c){c.style.setProperty("pointer-events","auto","important");});\n' +
+    '      (clone.querySelector("button")||clone).addEventListener("click",function(e){\n' +
+    '        e.preventDefault();e.stopPropagation();realBtn.click();\n' +
     '      });\n' +
     '      ph.appendChild(clone);\n' +
     '    });\n' +
     '  }\n' +
-    '\n' +
-    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
-    '  var iv=setInterval(function(){ moveBtn(); if(done) clearInterval(iv); },300);\n' +
-    '  setTimeout(function(){ clearInterval(iv); },15000);\n' +
+    '  document.addEventListener("DOMContentLoaded",run);\n' +
+    '  var iv=setInterval(function(){run();if(done)clearInterval(iv);},300);\n' +
+    '  setTimeout(function(){clearInterval(iv);},15000);\n' +
     '})();\n' +
     '<\/script>'
 }
