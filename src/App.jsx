@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import createApp from '@shopify/app-bridge'
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
@@ -106,13 +107,21 @@ export default function App() {
   const [editingPage, setEditingPage] = useState(null)
   const [shop, setShop] = useState('')
   const [token, setToken] = useState('')
+  const appBridgeRef = useRef(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const s = params.get('shop')
     const t = params.get('token')
+    const host = params.get('host')
 
-    // OAuth callback - are shop si token in URL
+    // Init App Bridge cand e deschis din Shopify Admin
+    const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
+    if (host && apiKey) {
+      try { appBridgeRef.current = createApp({ apiKey, host }) } catch(e) {}
+    }
+
+    // OAuth callback legacy - token in URL (backwards compat)
     if (s && t) {
       localStorage.setItem('unitone_shop', s)
       localStorage.setItem('unitone_token_' + s, t)
@@ -120,15 +129,22 @@ export default function App() {
       return
     }
 
-    // Shopify Admin deschide app-ul cu doar shop in URL - cauta token salvat
+    // Shop in URL - incearca cookie (OAuth proaspat), apoi localStorage, apoi re-auth
     if (s) {
-      const savedToken = localStorage.getItem('unitone_token_' + s)
-      if (savedToken) {
-        initApp(s, savedToken)
-        return
-      }
-      // Token negasit → re-trigger OAuth automat
-      window.location.href = '/api/auth?shop=' + s
+      fetch('/api/get-token')
+        .then(r => r.json())
+        .then(data => {
+          if (data.token) {
+            localStorage.setItem('unitone_shop', s)
+            localStorage.setItem('unitone_token_' + s, data.token)
+            initApp(s, data.token)
+          } else {
+            const saved = localStorage.getItem('unitone_token_' + s)
+            if (saved) { initApp(s, saved); return }
+            window.location.href = '/api/auth?shop=' + s
+          }
+        })
+        .catch(() => { window.location.href = '/api/auth?shop=' + s })
       return
     }
 

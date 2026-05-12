@@ -170,7 +170,8 @@ module.exports = async function handler(req, res) {
     installTemplates(shop, access_token).catch(e => console.log('Template install failed:', e.message))
     const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
     const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')
-    res.redirect(appUrl + '?shop=' + shop + '&host=' + host + '&token=' + access_token)
+    res.setHeader('Set-Cookie', `unitone_token=${access_token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=120`)
+    res.redirect(appUrl + '?shop=' + shop + '&host=' + host)
   } catch(e) {
     res.status(500).send('OAuth error: ' + e.message)
   }
