@@ -1,33 +1,35 @@
 const crypto = require('crypto')
 
-async function verifyHmac(req) {
+async function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    req.on('data', c => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)))
+    req.on('end', () => resolve(Buffer.concat(chunks)))
+    req.on('error', reject)
+  })
+}
+
+const handler = async function(req, res) {
+  if (req.method === 'GET') return res.status(200).json({ ok: true })
+  if (req.method === 'OPTIONS') return res.status(200).end()
+
   const hmac = req.headers['x-shopify-hmac-sha256']
-  if (!hmac) return false
+  if (!hmac) return res.status(401).json({ error: 'Missing HMAC' })
+
   const secret = process.env.SHOPIFY_CLIENT_SECRET
-  if (!secret) return false
+  if (!secret) return res.status(500).json({ error: 'Missing secret config' })
 
-  let body
+  const rawBody = await getRawBody(req)
+  const hash = crypto.createHmac('sha256', secret).update(rawBody).digest('base64')
+
   try {
-    if (req._rawBody) {
-      body = req._rawBody
-    } else if (req.body) {
-      body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
-    } else {
-      body = await new Promise((resolve, reject) => {
-        const chunks = []
-        req.on('data', c => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)))
-        req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
-        req.on('error', reject)
-      })
+    if (!crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hmac))) {
+      return res.status(401).json({ error: 'Invalid HMAC' })
     }
-  } catch { return false }
+  } catch { return res.status(401).json({ error: 'Invalid HMAC' }) }
 
-  const hash = crypto.createHmac('sha256', secret).update(body, 'utf8').digest('base64')
-  try { return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hmac)) }
-  catch { return false }
+  return res.status(200).json({ ok: true })
 }
 
-module.exports = async function handler(req, res) {
-  if (!(await verifyHmac(req))) return res.status(401).json({ error: 'Unauthorized' })
-  res.status(200).json({ ok: true })
-}
+handler.config = { api: { bodyParser: false } }
+module.exports = handler
