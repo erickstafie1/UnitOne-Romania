@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
-import createApp from '@shopify/app-bridge'
+import { useState, useEffect } from 'react'
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
@@ -107,18 +106,20 @@ export default function App() {
   const [editingPage, setEditingPage] = useState(null)
   const [shop, setShop] = useState('')
   const [token, setToken] = useState('')
-  const appBridgeRef = useRef(null)
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const s = params.get('shop')
     const t = params.get('token')
     const host = params.get('host')
 
-    // Init App Bridge cand e deschis din Shopify Admin
+    // Injecteaza App Bridge CDN cand e deschis din Shopify Admin
     const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
-    if (host && apiKey) {
-      try { appBridgeRef.current = createApp({ apiKey, host }) } catch(e) {}
+    if (host && apiKey && !document.getElementById('shopify-app-bridge')) {
+      const script = document.createElement('script')
+      script.id = 'shopify-app-bridge'
+      script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
+      script.setAttribute('data-api-key', apiKey)
+      document.head.appendChild(script)
     }
 
     // OAuth callback legacy - token in URL (backwards compat)
