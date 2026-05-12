@@ -1,7 +1,167 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background: #f6f6f7;
-  color: #1a1a1a;
+/* ───────────────────────────────────────────────────────────────────
+   UnitOne — Theme System
+   Adaptive light/dark based on user's Shopify Admin (via prefers-color-scheme)
+─────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light dark;
+
+  /* ─── Light theme (default) ─── */
+  --bg: #f6f6f7;
+  --bg-elev: #ffffff;
+  --bg-2: #fbfbfc;
+  --bg-3: #f1f1f3;
+  --sidebar: rgba(255, 255, 255, 0.72);
+  --sidebar-border: rgba(0, 0, 0, 0.06);
+
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.12);
+  --divider: rgba(0, 0, 0, 0.05);
+
+  --text: #1a1a1f;
+  --text-muted: #5a5d63;
+  --text-subtle: #8c9196;
+  --text-faint: #b5b9be;
+
+  --accent: #1a1a1f;
+  --accent-hover: #000000;
+  --accent-fg: #ffffff;
+
+  --brand: #5b51d8;
+  --brand-2: #7c70ff;
+  --brand-soft: rgba(91, 81, 216, 0.08);
+  --brand-border: rgba(91, 81, 216, 0.22);
+
+  --success: #007f5f;
+  --success-soft: rgba(0, 127, 95, 0.08);
+  --warning: #b54708;
+  --warning-soft: rgba(181, 71, 8, 0.08);
+  --danger: #b42318;
+  --danger-soft: rgba(180, 35, 24, 0.08);
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 8px 24px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 4px 12px rgba(16, 24, 40, 0.08), 0 24px 48px rgba(16, 24, 40, 0.08);
+  --shadow-glow: 0 0 0 1px rgba(91, 81, 216, 0.18), 0 12px 32px rgba(91, 81, 216, 0.14);
+
+  --hero-gradient:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(124, 112, 255, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 0%, rgba(255, 195, 113, 0.06) 0%, transparent 55%);
+
+  --mesh:
+    radial-gradient(at 0% 0%, rgba(91, 81, 216, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(255, 144, 200, 0.03) 0px, transparent 50%);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 }
-#root { min-height: 100vh; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --bg-elev: #202023;
+    --bg-2: #1e1e21;
+    --bg-3: #28282c;
+    --sidebar: rgba(20, 20, 23, 0.78);
+    --sidebar-border: rgba(255, 255, 255, 0.05);
+
+    --border: rgba(255, 255, 255, 0.07);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --divider: rgba(255, 255, 255, 0.05);
+
+    --text: #f7f7f8;
+    --text-muted: #b5b5bb;
+    --text-subtle: #80808a;
+    --text-faint: #4d4d56;
+
+    --accent: #ffffff;
+    --accent-hover: #f5f5f5;
+    --accent-fg: #1a1a1a;
+
+    --brand: #8b80ff;
+    --brand-2: #a99bff;
+    --brand-soft: rgba(139, 128, 255, 0.12);
+    --brand-border: rgba(139, 128, 255, 0.28);
+
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.10);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.10);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.10);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 48px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 0 1px rgba(139, 128, 255, 0.25), 0 12px 32px rgba(139, 128, 255, 0.22);
+
+    --hero-gradient:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(139, 128, 255, 0.16) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 0%, rgba(220, 130, 200, 0.08) 0%, transparent 55%);
+
+    --mesh:
+      radial-gradient(at 0% 0%, rgba(139, 128, 255, 0.06) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(220, 130, 200, 0.04) 0px, transparent 50%);
+  }
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
+}
+
+#root { min-height: 100vh; background: var(--bg); }
+
+/* ─── Scrollbar (cross-theme) ─── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--text-faint);
+  border-radius: 8px;
+  border: 2px solid var(--bg);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); background-clip: padding-box; }
+
+/* ─── Selection ─── */
+::selection { background: var(--brand); color: #ffffff; }
+
+/* ─── Focus rings ─── */
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ─── Animations ─── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideRight { from { transform: translateX(-12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fade-in { animation: fadeIn 0.3s ease both; }
+
+/* ─── App-wide reusable classes ─── */
+.surface {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.surface-soft {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}

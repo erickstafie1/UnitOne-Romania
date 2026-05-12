@@ -3,7 +3,6 @@ import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import Setup from './components/Setup.jsx'
-import Pricing from './components/Pricing.jsx'
 import { apiFetch } from './apiFetch.js'
 
 function LoginScreen({ onLogin }) {
@@ -37,54 +36,54 @@ function LoginScreen({ onLogin }) {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0b0f', color:'#fff', fontFamily:"'Inter','SF Pro Display',-apple-system,system-ui,sans-serif", display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ position:'fixed', inset:0, background:'radial-gradient(ellipse at top, rgba(59,130,246,0.08) 0%, transparent 70%)', pointerEvents:'none' }} />
-      <div style={{ position:'relative', width:'100%', maxWidth:420 }}>
-        <div style={{ textAlign:'center', marginBottom:36 }}>
-          <div style={{ width:60, height:60, borderRadius:16, background:'linear-gradient(135deg,#3b82f6,#2563eb)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', boxShadow:'0 8px 24px rgba(59,130,246,0.35)', fontSize:26 }}>🛒</div>
-          <h1 style={{ fontSize:28, fontWeight:800, letterSpacing:-0.8, marginBottom:8 }}>UnitOne Romania</h1>
-          <p style={{ color:'rgba(255,255,255,0.45)', fontSize:14 }}>Conectează-te cu magazinul tău Shopify</p>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--hero-gradient)', pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, var(--brand), var(--brand-2))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px color-mix(in srgb, var(--brand) 35%, transparent)', color: '#fff', fontWeight: 800, fontSize: 24, fontFamily: 'Fraunces, serif', fontStyle: 'italic' }}>U</div>
+          <h1 style={{ fontFamily: 'Fraunces, serif', fontSize: 36, fontWeight: 400, fontStyle: 'italic', letterSpacing: '-0.03em', marginBottom: 8 }}>UnitOne Romania</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Conectează-te cu magazinul tău Shopify</p>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
           <div>
-            <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.6)', display:'block', marginBottom:6 }}>Magazin Shopify</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Magazin Shopify</label>
             <input
               value={shopVal}
               onChange={e => setShopVal(e.target.value)}
               placeholder="magazinul-tau.myshopify.com"
-              style={{ width:'100%', padding:'12px 14px', borderRadius:10, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, background: 'var(--bg-elev)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
             />
           </div>
           <div>
-            <label style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.6)', display:'block', marginBottom:6 }}>Admin API Access Token</label>
-            <div style={{ position:'relative' }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Admin API Access Token</label>
+            <div style={{ position: 'relative' }}>
               <input
                 value={tokenVal}
                 onChange={e => setTokenVal(e.target.value)}
                 placeholder="shpat_xxxxxxxxxxxxxxxxxxxx"
                 type={showToken ? 'text' : 'password'}
-                style={{ width:'100%', padding:'12px 42px 12px 14px', borderRadius:10, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', color:'#fff', fontSize:14, outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
+                style={{ width: '100%', padding: '12px 42px 12px 14px', borderRadius: 10, background: 'var(--bg-elev)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
               />
-              <button onClick={() => setShowToken(v => !v)} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'rgba(255,255,255,0.4)', cursor:'pointer', fontSize:16, padding:0 }}>
+              <button onClick={() => setShowToken(v => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: 0 }}>
                 {showToken ? '🙈' : '👁️'}
               </button>
             </div>
           </div>
         </div>
 
-        {err && <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#f87171', marginBottom:14 }}>{err}</div>}
+        {err && <div style={{ background: 'var(--danger-soft)', border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--danger)', marginBottom: 14 }}>{err}</div>}
 
         <button onClick={handleLogin} disabled={loading}
-          style={{ width:'100%', padding:'13px', borderRadius:11, background: loading ? 'rgba(59,130,246,0.4)' : 'linear-gradient(135deg,#3b82f6,#2563eb)', color:'#fff', border:'none', fontSize:15, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', letterSpacing:-0.2, boxShadow:'0 4px 14px rgba(59,130,246,0.3)', marginBottom:20 }}>
+          style={{ width: '100%', padding: '13px', borderRadius: 11, background: loading ? 'var(--bg-3)' : 'var(--accent)', color: 'var(--accent-fg)', border: 'none', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em', marginBottom: 20 }}>
           {loading ? 'Se conectează...' : 'Conectează →'}
         </button>
 
-        <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'16px 18px' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.7)', marginBottom:10 }}>Cum obții tokenul:</div>
-          <ol style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:6 }}>
+        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Cum obții tokenul</div>
+          <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[
               'Shopify Admin → Settings → Apps and sales channels',
               'Develop apps → Create an app → Nume: UnitOne',
@@ -92,7 +91,7 @@ function LoginScreen({ onLogin }) {
               'Save → Install app → Install',
               'Copiază Admin API access token (apare o singură dată!)'
             ].map((s, i) => (
-              <li key={i} style={{ fontSize:12, color:'rgba(255,255,255,0.45)', lineHeight:1.5 }}>{s}</li>
+              <li key={i} style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>{s}</li>
             ))}
           </ol>
         </div>
@@ -110,6 +109,7 @@ export default function App() {
   const [token, setToken] = useState('')
   const [plan, setPlan] = useState('free')
   const [planLimit, setPlanLimit] = useState(3)
+  const [dashboardSection, setDashboardSection] = useState('home')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -118,7 +118,6 @@ export default function App() {
     const host = params.get('host')
     const chargeId = params.get('charge_id')
 
-    // Injecteaza App Bridge CDN cand e deschis din Shopify Admin
     const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
     if (host && apiKey) {
       if (!document.getElementById('shopify-app-bridge')) {
@@ -133,7 +132,6 @@ export default function App() {
       }
     }
 
-    // Billing callback - activeaza charge dupa aprobare Shopify
     if (s && chargeId) {
       fetch('/api/get-token?shop=' + encodeURIComponent(s)).then(r => r.json()).then(async d => {
         const tok = d.token || localStorage.getItem('unitone_token_' + s)
@@ -152,7 +150,6 @@ export default function App() {
       return
     }
 
-    // OAuth callback legacy - token in URL (backwards compat)
     if (s && t) {
       localStorage.setItem('unitone_shop', s)
       localStorage.setItem('unitone_token_' + s, t)
@@ -160,7 +157,6 @@ export default function App() {
       return
     }
 
-    // Shop in URL - incearca cookie persistent, apoi localStorage, apoi re-auth
     if (s) {
       fetch('/api/get-token?shop=' + encodeURIComponent(s))
         .then(r => r.json())
@@ -183,7 +179,6 @@ export default function App() {
       return
     }
 
-    // Credentials salvate din sesiune anterioara
     const savedShop = localStorage.getItem('unitone_shop')
     if (savedShop) {
       const savedToken = localStorage.getItem('unitone_token_' + savedShop)
@@ -213,38 +208,33 @@ export default function App() {
     setScreen(saved ? 'dashboard' : 'setup')
   }
 
-  function handleLogout() {
-    const s = shop
-    localStorage.removeItem('unitone_shop')
-    if (s) localStorage.removeItem('unitone_token_' + s)
-    setShop(''); setToken(''); setScreen('login')
+  function gotoPricing() {
+    setDashboardSection('pricing')
+    setGeneratedData(null); setEditingPage(null)
+    setScreen('dashboard')
   }
 
   if (screen === 'loading') return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a0f' }}>
-      <div style={{ width:36, height:36, border:'3px solid #3b82f6', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
+      <div style={{ width: 32, height: 32, border: '2.5px solid var(--bg-3)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
     </div>
   )
 
   if (screen === 'login') return <LoginScreen onLogin={(s, t) => initApp(s, t)} />
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {screen === 'setup' && (
         <Setup shop={shop} onComplete={(app) => { setCodFormApp(app); setScreen('dashboard') }} isReconfigure={codFormApp !== null} />
-      )}
-      {screen === 'pricing' && (
-        <Pricing currentPlan={plan} shop={shop} token={token} onBack={() => setScreen('dashboard')} />
       )}
       {screen === 'dashboard' && (
         <Dashboard shop={shop} token={token}
           plan={plan} planLimit={planLimit}
+          initialSection={dashboardSection}
+          onPlanChange={(p, l) => { setPlan(p); setPlanLimit(l) }}
           onNew={() => setScreen('generator')}
           onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
           onReconfigure={() => setScreen('setup')}
-          onLogout={handleLogout}
-          onUpgrade={() => setScreen('pricing')}
           onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
         />
       )}
@@ -263,7 +253,7 @@ export default function App() {
           planLimit={planLimit}
           onBack={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
           onPublished={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
-          onUpgrade={() => { setGeneratedData(null); setEditingPage(null); setScreen('pricing') }}
+          onUpgrade={gotoPricing}
         />
       )}
     </div>
