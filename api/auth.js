@@ -99,6 +99,28 @@ async function installTemplates(shop, token) {
   } catch(e) { console.log('Template install error:', e.message) }
 }
 
+function rotateToken(shop, token) {
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: shop,
+      path: '/admin/api/2024-10/access_tokens/rotate.json',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': token, 'Content-Length': 0 },
+      timeout: 10000
+    }, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString()).access_token || null) }
+        catch { resolve(null) }
+      })
+    })
+    req.on('error', () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+    req.end()
+  })
+}
+
 function exchangeToken(shop, code) {
   const clientId = process.env.SHOPIFY_CLIENT_ID
   const clientSecret = process.env.SHOPIFY_CLIENT_SECRET
@@ -132,7 +154,9 @@ module.exports = async function handler(req, res) {
     const digest = crypto.createHmac('sha256', clientSecret).update(params).digest('hex')
     if (digest !== hmac) return res.status(400).send('Invalid HMAC')
     try {
-      const { access_token } = await exchangeToken(shop, code)
+      const { access_token: rawToken } = await exchangeToken(shop, code)
+      const rotated = await rotateToken(shop, rawToken)
+      const access_token = rotated || rawToken
       installTemplates(shop, access_token).catch(() => {})
       const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
       const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')
