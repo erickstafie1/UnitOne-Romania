@@ -42,50 +42,9 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: clone vizual + delegare click pe placeholder
+// Releasit GemPages mode: triggerul face Releasit sa randeze butonul direct in .rsi-cod-form-gempages-button
 function buildReleasitGemPages(variantId) {
-  return '<script>\n' +
-    '(function(){\n' +
-    '  function findReal(){\n' +
-    '    var h=document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
-    '    if(h){var b=h.querySelector("button");if(b)return b;}\n' +
-    '    return document.querySelector("button.rsi_animation_none");\n' +
-    '  }\n' +
-    '\n' +
-    '  // Adauga click handler direct pe fiecare placeholder (nu delegare globala)\n' +
-    '  function setupPh(ph){\n' +
-    '    ph.style.cursor="pointer";\n' +
-    '    ph.addEventListener("click",function(e){\n' +
-    '      e.preventDefault();e.stopPropagation();\n' +
-    '      var btn=findReal();\n' +
-    '      if(btn) btn.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}));\n' +
-    '    });\n' +
-    '  }\n' +
-    '\n' +
-    '  var done=false;\n' +
-    '  function run(){\n' +
-    '    if(done) return;\n' +
-    '    var hook=document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
-    '    if(!hook||!hook.querySelector("button")) return;\n' +
-    '    var phs=document.querySelectorAll(".unitone-releasit-btn");\n' +
-    '    if(!phs.length) return;\n' +
-    '    done=true;\n' +
-    '    phs.forEach(function(ph){\n' +
-    '      ph.style.cssText="border:none!important;padding:0!important;min-height:0!important;display:block!important";\n' +
-    '      var s=ph.querySelector(".unitone-placeholder-text");if(s)s.style.display="none";\n' +
-    '      var clone=hook.cloneNode(true);\n' +
-    '      clone.style.setProperty("width","100%","important");\n' +
-    '      clone.style.setProperty("display","block","important");\n' +
-    '      clone.style.setProperty("pointer-events","none","important");\n' +
-    '      ph.appendChild(clone);\n' +
-    '      setupPh(ph);\n' +
-    '    });\n' +
-    '  }\n' +
-    '  document.addEventListener("DOMContentLoaded",run);\n' +
-    '  var iv=setInterval(function(){run();if(done)clearInterval(iv);},300);\n' +
-    '  setTimeout(function(){clearInterval(iv);},20000);\n' +
-    '})();\n' +
-    '<\/script>'
+  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>'
 }
 
 module.exports = async function handler(req, res) {
