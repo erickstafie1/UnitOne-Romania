@@ -188,7 +188,7 @@ export default function App() {
 
   async function initApp(s, t) {
     setShop(s); setToken(t)
-    fetch('/api/reinstall-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shop: s, token: t }) }).catch(() => {})
+    fetch('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reinstall', shop: s, token: t }) }).catch(() => {})
     try {
       const r = await fetch('/api/billing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

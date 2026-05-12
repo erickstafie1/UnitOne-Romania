@@ -35,9 +35,18 @@ function shopifyRequest(shop, token, path, method, body) {
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
+
+  // Billing callback - Shopify redirects here after merchant approves charge
+  if (req.method === 'GET') {
+    const { charge_id, shop } = req.query
+    if (!charge_id || !shop) return res.status(400).send('Parametri lipsa')
+    const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
+    const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')
+    return res.redirect(`${appUrl}?shop=${shop}&host=${host}&charge_id=${charge_id}`)
+  }
 
   try {
     const { action, shop, token, plan, chargeId } = req.body || {}
@@ -60,9 +69,8 @@ module.exports = async function handler(req, res) {
       const { name, price } = PLANS[plan]
       const result = await shopifyRequest(shop, token, '/recurring_application_charges.json', 'POST', {
         recurring_application_charge: {
-          name,
-          price,
-          return_url: `${appUrl}/api/billing/callback?shop=${shop}`,
+          name, price,
+          return_url: `${appUrl}/api/billing?shop=${shop}`,
           test: process.env.BILLING_TEST === 'true'
         }
       })
