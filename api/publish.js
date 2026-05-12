@@ -67,22 +67,20 @@ function buildReleasitGemPages(variantId) {
     '    });\n' +
     '  }\n' +
     '\n' +
-    '  // capture=true: handler-ul nostru porneste observer INAINTE ca Releasit sa adauge modalul\n' +
-    '  function watchRsiModals(realBtn){\n' +
-    '    realBtn.addEventListener("click", function(){\n' +
-    '      var observer = new MutationObserver(function(muts){\n' +
-    '        muts.forEach(function(m){\n' +
-    '          m.addedNodes.forEach(function(node){\n' +
-    '            if(node.nodeType!==1) return;\n' +
-    '            var overlay=getOverlay();\n' +
-    '            if(!overlay||overlay.contains(node)) return;\n' +
-    '            overlay.appendChild(node);\n' +
-    '          });\n' +
+    '  // Porneste observer INAINTE de realBtn.click() - prinde orice injecteaza Releasit in body\n' +
+    '  function watchRsiModals(){\n' +
+    '    var observer = new MutationObserver(function(muts){\n' +
+    '      muts.forEach(function(m){\n' +
+    '        m.addedNodes.forEach(function(node){\n' +
+    '          if(node.nodeType!==1) return;\n' +
+    '          var overlay=getOverlay();\n' +
+    '          if(!overlay||overlay.contains(node)) return;\n' +
+    '          overlay.appendChild(node);\n' +
     '        });\n' +
     '      });\n' +
-    '      observer.observe(document.body,{childList:true,subtree:false});\n' +
-    '      setTimeout(function(){ observer.disconnect(); },5000);\n' +
-    '    }, true);\n' +
+    '    });\n' +
+    '    observer.observe(document.body,{childList:true,subtree:false});\n' +
+    '    setTimeout(function(){ observer.disconnect(); },5000);\n' +
     '  }\n' +
     '\n' +
     '  function moveBtn(){\n' +
@@ -91,28 +89,24 @@ function buildReleasitGemPages(variantId) {
     '    var phs = document.querySelectorAll(".unitone-releasit-btn");\n' +
     '    if(!target || !phs.length) return;\n' +
     '    var overlay = getOverlay();\n' +
-    '    if(overlay && overlay.contains(target)){ done=true; return; }\n' +
     '    done = true;\n' +
     '    var realBtn = (target.querySelector && target.querySelector("button")) || target;\n' +
-    '    phs.forEach(function(ph, i){\n' +
+    '    // Nu mutam originalul - il lasam in loc cu contextul Releasit intact\n' +
+    '    // Punem clone vizuale in placeholderele noastre\n' +
+    '    phs.forEach(function(ph){\n' +
     '      ph.style.border="none"; ph.style.padding="0"; ph.style.minHeight="";\n' +
     '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
-    '      if(i===0){\n' +
-    '        target.style.setProperty("width","100%","important");\n' +
-    '        target.style.setProperty("display","block","important");\n' +
-    '        ph.appendChild(target);\n' +
-    '        enableClicks(target);\n' +
-    '        watchRsiModals(realBtn);\n' +
-    '      } else {\n' +
-    '        // Clone vizual identic cu originalul\n' +
-    '        var clone = target.cloneNode(true);\n' +
-    '        clone.style.setProperty("width","100%","important");\n' +
-    '        clone.style.setProperty("display","block","important");\n' +
-    '        enableClicks(clone);\n' +
-    '        var cloneBtn = clone.querySelector("button") || clone;\n' +
-    '        cloneBtn.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); realBtn.click(); });\n' +
-    '        ph.appendChild(clone);\n' +
-    '      }\n' +
+    '      var clone = target.cloneNode(true);\n' +
+    '      clone.style.setProperty("width","100%","important");\n' +
+    '      clone.style.setProperty("display","block","important");\n' +
+    '      enableClicks(clone);\n' +
+    '      var cloneBtn = clone.querySelector("button") || clone;\n' +
+    '      cloneBtn.addEventListener("click", function(e){\n' +
+    '        e.preventDefault(); e.stopPropagation();\n' +
+    '        watchRsiModals();\n' +
+    '        realBtn.click();\n' +
+    '      });\n' +
+    '      ph.appendChild(clone);\n' +
     '    });\n' +
     '  }\n' +
     '\n' +
