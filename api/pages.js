@@ -40,10 +40,12 @@ module.exports = async function handler(req, res) {
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'list') {
-      const data = await shopifyRequest(shop, token,
-        '/products.json?limit=250&status=any',
-        'GET', null)
-      const pages = (data.products || [])
+      const [active, draft] = await Promise.all([
+        shopifyRequest(shop, token, '/products.json?limit=250&status=active&fields=id,title,handle,status,created_at,updated_at,template_suffix,tags', 'GET', null),
+        shopifyRequest(shop, token, '/products.json?limit=250&status=draft&fields=id,title,handle,status,created_at,updated_at,template_suffix,tags', 'GET', null)
+      ])
+      const all = [...(active.products || []), ...(draft.products || [])]
+      const pages = all
         .filter(p => p.template_suffix === 'pagecod' || (p.tags || '').includes('unitone-cod-page'))
         .map(p => ({
           id: p.id,
@@ -54,7 +56,14 @@ module.exports = async function handler(req, res) {
           updated_at: p.updated_at,
           isProduct: true
         }))
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
       return res.status(200).json({ success: true, pages })
+    }
+
+    if (action === 'shop_info') {
+      const data = await shopifyRequest(shop, token, '/shop.json', 'GET', null)
+      const s = data.shop || {}
+      return res.status(200).json({ success: true, shopOwner: s.shop_owner, name: s.name, email: s.email })
     }
 
     if (action === 'delete') {

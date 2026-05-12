@@ -180,6 +180,7 @@ export default function App() {
           onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
           onReconfigure={() => setScreen('setup')}
           onLogout={handleLogout}
+          onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
         />
       )}
       {screen === 'generator' && (
