@@ -1,5 +1,6 @@
 // api/publish.js
 const https = require('https')
+const { verifySessionToken, getStoredToken } = require('./_verify')
 
 function shopifyRequest(shop, token, path, method, body) {
   return new Promise((resolve, reject) => {
@@ -50,13 +51,22 @@ function buildReleasitGemPages(variantId) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(200).json({ ok: true })
 
   try {
     const body = req.body || {}
-    const { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = body
+    let { shop, token, title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = body
+
+    const authHeader = req.headers['authorization'] || ''
+    if (authHeader.startsWith('Bearer ')) {
+      const verified = verifySessionToken(authHeader.slice(7))
+      if (verified) {
+        shop = verified.shop
+        token = getStoredToken(req.headers.cookie || '', shop) || token
+      }
+    }
 
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 

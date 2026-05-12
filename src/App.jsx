@@ -4,6 +4,7 @@ import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import Setup from './components/Setup.jsx'
 import Pricing from './components/Pricing.jsx'
+import { apiFetch } from './apiFetch.js'
 
 function LoginScreen({ onLogin }) {
   const [shopVal, setShopVal] = useState('')
@@ -119,12 +120,17 @@ export default function App() {
 
     // Injecteaza App Bridge CDN cand e deschis din Shopify Admin
     const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
-    if (host && apiKey && !document.getElementById('shopify-app-bridge')) {
-      const script = document.createElement('script')
-      script.id = 'shopify-app-bridge'
-      script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
-      script.setAttribute('data-api-key', apiKey)
-      document.head.appendChild(script)
+    if (host && apiKey) {
+      if (!document.getElementById('shopify-app-bridge')) {
+        const script = document.createElement('script')
+        script.id = 'shopify-app-bridge'
+        script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
+        script.setAttribute('data-api-key', apiKey)
+        script.onload = () => { window.__shopifyHost = true }
+        document.head.appendChild(script)
+      } else {
+        window.__shopifyHost = true
+      }
     }
 
     // Billing callback - activeaza charge dupa aprobare Shopify
@@ -134,7 +140,7 @@ export default function App() {
         if (!tok) { (window.top || window).location.href = '/api/auth?shop=' + s; return }
         if (d.token) { localStorage.setItem('unitone_shop', s); localStorage.setItem('unitone_token_' + s, tok) }
         try {
-          const br = await fetch('/api/billing', {
+          const br = await apiFetch('/api/billing', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'activate_charge', shop: s, token: tok, chargeId })
           })
@@ -192,9 +198,9 @@ export default function App() {
 
   async function initApp(s, t) {
     setShop(s); setToken(t)
-    fetch('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reinstall', shop: s, token: t }) }).catch(() => {})
+    apiFetch('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reinstall', shop: s, token: t }) }).catch(() => {})
     try {
-      const r = await fetch('/api/billing', {
+      const r = await apiFetch('/api/billing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get_status', shop: s, token: t })
       })

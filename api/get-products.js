@@ -1,4 +1,5 @@
 const https = require('https')
+const { verifySessionToken, getStoredToken } = require('./_verify')
 
 function shopifyRequest(shop, token, path) {
   return new Promise((resolve, reject) => {
@@ -25,11 +26,21 @@ function shopifyRequest(shop, token, path) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   try {
-    const { shop, token } = req.body || {}
+    let { shop, token } = req.body || {}
+
+    const authHeader = req.headers['authorization'] || ''
+    if (authHeader.startsWith('Bearer ')) {
+      const verified = verifySessionToken(authHeader.slice(7))
+      if (verified) {
+        shop = verified.shop
+        token = getStoredToken(req.headers.cookie || '', shop) || token
+      }
+    }
+
     if (!shop || !token) return res.status(400).json({ error: 'Missing params' })
     const [active, draft] = await Promise.all([
       shopifyRequest(shop, token, '/products.json?limit=250&status=active&fields=id,title,handle,status,images,variants'),

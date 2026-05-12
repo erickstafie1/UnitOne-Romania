@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
 
 const PLANS = [
   {
@@ -43,7 +44,7 @@ export default function Pricing({ currentPlan, shop, token, onBack }) {
     setLoading(planId)
     setError('')
     try {
-      const r = await fetch('/api/billing', {
+      const r = await apiFetch('/api/billing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create_charge', shop, token, plan: planId })

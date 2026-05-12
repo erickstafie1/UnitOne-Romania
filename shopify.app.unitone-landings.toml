@@ -1,0 +1,23 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "d57ef78d7ee691f06fa08912ddeda263"
+application_url = "https://unit-one-romania.vercel.app"
+embedded = true
+name = "UnitOne Landings"
+
+[webhooks]
+api_version = "2026-04"
+
+  [webhooks.privacy_compliance]
+  customer_deletion_url = "https://unit-one-romania.vercel.app/api/webhooks"
+  customer_data_request_url = "https://unit-one-romania.vercel.app/api/webhooks"
+  shop_deletion_url = "https://unit-one-romania.vercel.app/api/webhooks"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products,write_products,read_themes,write_themes"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://unit-one-romania.vercel.app/api/auth" ]

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { apiFetch } from '../apiFetch.js'
 
 const FONT_STACK = "'Inter','SF Pro Display',-apple-system,system-ui,sans-serif"
 const FONT_DISPLAY = "'Fraunces',Georgia,serif"
@@ -16,7 +17,7 @@ export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit,
 
   async function loadShopInfo() {
     try {
-      const r = await fetch('/api/pages', {
+      const r = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'shop_info', shop, token })
       })
@@ -31,7 +32,7 @@ export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit,
   async function loadPages() {
     setLoading(true)
     try {
-      const res = await fetch('/api/pages', {
+      const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'list', shop, token })
       })
@@ -45,7 +46,7 @@ export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit,
     if (!confirm('Stergi aceasta pagina?')) return
     setDeleting(pageId)
     try {
-      await fetch('/api/pages', {
+      await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', shop, token, pageId })
       })
@@ -56,7 +57,7 @@ export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit,
 
   async function togglePage(pageId, published) {
     try {
-      await fetch('/api/pages', {
+      await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle', shop, token, pageId, published: !published })
       })
@@ -67,7 +68,7 @@ export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit,
   async function unmarkPage(pageId) {
     if (!confirm('Detaseaza acest produs din lista LP? (produsul ramane in magazin, doar nu mai apare aici)')) return
     try {
-      await fetch('/api/pages', {
+      await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'unmark', shop, token, pageId })
       })
@@ -77,7 +78,7 @@ export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit,
 
   async function openEdit(page) {
     try {
-      const res = await fetch('/api/pages', {
+      const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get', shop, token, pageId: page.id })
       })

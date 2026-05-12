@@ -1,4 +1,5 @@
 const https = require('https')
+const { verifySessionToken, getStoredToken } = require('./_verify')
 
 const PLANS = {
   basic: { name: 'UnitOne Basic', price: 50.00, limit: 200 },
@@ -36,7 +37,7 @@ function shopifyRequest(shop, token, path, method, body) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   // Billing callback - Shopify redirects here after merchant approves charge
@@ -49,7 +50,17 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { action, shop, token, plan, chargeId } = req.body || {}
+    let { action, shop, token, plan, chargeId } = req.body || {}
+
+    const authHeader = req.headers['authorization'] || ''
+    if (authHeader.startsWith('Bearer ')) {
+      const verified = verifySessionToken(authHeader.slice(7))
+      if (verified) {
+        shop = verified.shop
+        token = getStoredToken(req.headers.cookie || '', shop) || token
+      }
+    }
+
     if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
 
     if (action === 'get_status') {

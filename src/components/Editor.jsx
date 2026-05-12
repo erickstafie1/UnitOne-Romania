@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
 
 export default function Editor({ data, shop, token, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
   const codFormApp = codFormAppProp || (typeof window !== 'undefined' ? localStorage.getItem('codform_' + shop) : null) || null
@@ -121,7 +122,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       throw new Error('Numele paginii trebuie sa aiba cel putin 2 caractere')
     }
     if (isEditing || pageIdRef.current) return  // editare aceeasi pagina = OK
-    const r = await fetch('/api/pages', {
+    const r = await apiFetch('/api/pages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list', shop, token })
     })
@@ -157,7 +158,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         title: pageTitle, html: fullHtml, hideHeaderFooter,
         codFormApp: finalCodFormApp, variantId
       }
-      const res = await fetch('/api/publish', {
+      const res = await apiFetch('/api/publish', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
@@ -174,7 +175,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     setLoadingProducts(true)
     setProductsError('')
     try {
-      const res = await fetch('/api/get-products', {
+      const res = await apiFetch('/api/get-products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shop, token })
@@ -197,7 +198,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
       // Verifica limita LP pentru pagini noi (nu pentru editari)
       if (!isEditing && !pageIdRef.current && planLimit) {
-        const lr = await fetch('/api/pages', {
+        const lr = await apiFetch('/api/pages', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'list', shop, token })
         })
@@ -260,7 +261,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         ? { action: 'update', shop, token, pageId: pid, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
         : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
 
-      const res = await fetch('/api/publish', {
+      const res = await apiFetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
