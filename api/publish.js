@@ -42,41 +42,41 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit: GemPages trigger + clona vizuala in placeholder
+// Releasit: delegare globala click + clone vizual in placeholder
 function buildReleasitGemPages(variantId) {
   return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>\n' +
     '<script>\n' +
     '(function(){\n' +
-    '  var done=false;\n' +
-    '  function findTarget(){\n' +
-    '    // GemPages mode: butonul randat de Releasit in placeholder\n' +
-    '    var gem=document.querySelector(".rsi-cod-form-gempages-button-overwrite");\n' +
-    '    if(gem) return gem.closest("._rsi-buy-now-button-app-block-hook")||gem;\n' +
+    '  function findReal(){\n' +
     '    var h=document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
-    '    if(h&&h.querySelector("button")) return h;\n' +
-    '    return document.querySelector("button.rsi_animation_none");\n' +
+    '    if(h){var b=h.querySelector("button");if(b)return b;}\n' +
+    '    return document.querySelector(".rsi-cod-form-gempages-button-overwrite")||document.querySelector("button.rsi_animation_none");\n' +
     '  }\n' +
+    '\n' +
+    '  // Delegare globala capture - prinde click pe orice .unitone-releasit-btn indiferent de pozitie\n' +
+    '  document.addEventListener("click",function(e){\n' +
+    '    if(!e.target.closest(".unitone-releasit-btn")) return;\n' +
+    '    e.preventDefault();e.stopImmediatePropagation();\n' +
+    '    var btn=findReal();\n' +
+    '    if(btn) btn.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}));\n' +
+    '  },true);\n' +
+    '\n' +
+    '  // Clone vizual - pointer-events:none ca click-ul sa ajunga la placeholder si sa fie prins de delegate\n' +
+    '  var done=false;\n' +
     '  function run(){\n' +
     '    if(done) return;\n' +
-    '    var target=findTarget();\n' +
+    '    var hook=document.querySelector("._rsi-buy-now-button-app-block-hook");\n' +
+    '    if(!hook||!hook.querySelector("button")) return;\n' +
     '    var phs=document.querySelectorAll(".unitone-releasit-btn");\n' +
-    '    if(!target||!phs.length) return;\n' +
-    '    // Daca butonul e deja in placeholder nostru, gata\n' +
-    '    if(phs[0].contains(target)){ done=true; return; }\n' +
+    '    if(!phs.length) return;\n' +
     '    done=true;\n' +
-    '    var realBtn=target.querySelector("button")||target;\n' +
     '    phs.forEach(function(ph){\n' +
-    '      ph.style.cssText="border:none!important;padding:0!important;min-height:0!important;display:block!important";\n' +
-    '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
-    '      var clone=target.cloneNode(true);\n' +
+    '      ph.style.cssText="border:none!important;padding:0!important;min-height:0!important;display:block!important;cursor:pointer!important";\n' +
+    '      var s=ph.querySelector(".unitone-placeholder-text");if(s)s.style.display="none";\n' +
+    '      var clone=hook.cloneNode(true);\n' +
     '      clone.style.setProperty("width","100%","important");\n' +
     '      clone.style.setProperty("display","block","important");\n' +
-    '      clone.style.setProperty("pointer-events","auto","important");\n' +
-    '      clone.querySelectorAll("*").forEach(function(c){c.style.setProperty("pointer-events","auto","important");});\n' +
-    '      (clone.querySelector("button")||clone).addEventListener("click",function(e){\n' +
-    '        e.preventDefault();e.stopPropagation();\n' +
-    '        realBtn.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}));\n' +
-    '      });\n' +
+    '      clone.style.setProperty("pointer-events","none","important");\n' +
     '      ph.appendChild(clone);\n' +
     '    });\n' +
     '  }\n' +
