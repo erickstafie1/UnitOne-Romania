@@ -1,15 +1,23 @@
-name = "UnitOne Romania"
-client_id = "739d96177faa9260522a4477f7153dec"
-application_url = "https://unitone-romania.vercel.app"
+name = "UnitOne Landings"
+client_id = "d57ef78d7ee691f86fa88912ddeda263"
+application_url = "https://unit-one-romania.vercel.app"
 embedded = true
 
 [access_scopes]
-scopes = "write_online_store_pages,read_online_store_pages,read_products,write_content,write_products"
+scopes = "write_products,read_products,read_themes,write_themes"
+
 [auth]
-redirect_urls = ["https://unitone-romania.vercel.app/api/auth/callback"]
+redirect_urls = [
+  "https://unit-one-romania.vercel.app/api/auth"
+]
 
 [webhooks]
-api_version = "2024-01"
+api_version = "2026-04"
+
+  [[webhooks.privacy_compliance]]
+  customer_deletion_url = "https://unit-one-romania.vercel.app/api/webhooks"
+  customer_data_request_url = "https://unit-one-romania.vercel.app/api/webhooks"
+  shop_deletion_url = "https://unit-one-romania.vercel.app/api/webhooks"
 
 [pos]
 embedded = false
