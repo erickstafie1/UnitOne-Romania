@@ -129,9 +129,9 @@ export default function App() {
 
     // Billing callback - activeaza charge dupa aprobare Shopify
     if (s && chargeId) {
-      fetch('/api/get-token').then(r => r.json()).then(async d => {
+      fetch('/api/get-token?shop=' + encodeURIComponent(s)).then(r => r.json()).then(async d => {
         const tok = d.token || localStorage.getItem('unitone_token_' + s)
-        if (!tok) { window.location.href = '/api/auth?shop=' + s; return }
+        if (!tok) { (window.top || window).location.href = '/api/auth?shop=' + s; return }
         if (d.token) { localStorage.setItem('unitone_shop', s); localStorage.setItem('unitone_token_' + s, tok) }
         try {
           const br = await fetch('/api/billing', {
@@ -142,7 +142,7 @@ export default function App() {
           if (bd.plan) { setPlan(bd.plan); setPlanLimit(bd.limit) }
         } catch(e) { console.log('Activate charge error:', e.message) }
         initApp(s, tok)
-      }).catch(() => { window.location.href = '/api/auth?shop=' + s })
+      }).catch(() => { (window.top || window).location.href = '/api/auth?shop=' + s })
       return
     }
 
@@ -154,9 +154,9 @@ export default function App() {
       return
     }
 
-    // Shop in URL - incearca cookie (OAuth proaspat), apoi localStorage, apoi re-auth
+    // Shop in URL - incearca cookie persistent, apoi localStorage, apoi re-auth
     if (s) {
-      fetch('/api/get-token')
+      fetch('/api/get-token?shop=' + encodeURIComponent(s))
         .then(r => r.json())
         .then(data => {
           if (data.token) {
@@ -166,10 +166,14 @@ export default function App() {
           } else {
             const saved = localStorage.getItem('unitone_token_' + s)
             if (saved) { initApp(s, saved); return }
-            window.location.href = '/api/auth?shop=' + s
+            const authUrl = '/api/auth?shop=' + s
+            try { window.top.location.href = authUrl } catch(e) { window.location.href = authUrl }
           }
         })
-        .catch(() => { window.location.href = '/api/auth?shop=' + s })
+        .catch(() => {
+          const authUrl = '/api/auth?shop=' + s
+          try { window.top.location.href = authUrl } catch(e) { window.location.href = authUrl }
+        })
       return
     }
 
