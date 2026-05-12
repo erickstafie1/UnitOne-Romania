@@ -1,6 +1,7 @@
 // api/pages.js
 const https = require('https')
 const { verifySessionToken, getStoredToken } = require('./_verify')
+const { getPlan, countLPs } = require('./_plan')
 
 function shopifyRequest(shop, token, path, method, body) {
   return new Promise((resolve, reject) => {
@@ -93,6 +94,16 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'toggle') {
+      // Enforce publish limit la activare (Free: max 1 active)
+      if (published) {
+        const plan = await getPlan(shop, token)
+        if (plan.publishLimit < 9999) {
+          const counts = await countLPs(shop, token)
+          if (counts.active >= plan.publishLimit) {
+            return res.status(402).json({ error: 'publish_limit_reached', plan: plan.plan, publishLimit: plan.publishLimit })
+          }
+        }
+      }
       const data = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, status: published ? 'active' : 'draft' }
       })

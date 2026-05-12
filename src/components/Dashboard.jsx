@@ -5,7 +5,7 @@ import ThemeToggle from './ThemeToggle.jsx'
 const CONTACT_EMAIL = 'bellatorixx@gmail.com'
 
 export default function Dashboard({
-  shop, token, plan, planLimit,
+  shop, token, plan, planLimit, publishLimit = 1,
   onNew, onEdit, onReconfigure, onUseTemplate,
   initialSection = 'home',
   onPlanChange
@@ -60,10 +60,15 @@ export default function Dashboard({
 
   async function togglePage(pageId, published) {
     try {
-      await apiFetch('/api/pages', {
+      const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle', shop, token, pageId, published: !published })
       })
+      if (res.status === 402) {
+        const d = await res.json()
+        alert(`Plan ${d.plan} permite ${d.publishLimit} pagină publicată simultan. Dezactivează pagina activă curentă sau fă upgrade.`)
+        return
+      }
       setPages(pages.map(p => p.id === pageId ? { ...p, published: !published } : p))
     } catch { alert('Eroare') }
   }
@@ -132,17 +137,34 @@ export default function Dashboard({
               </button>
             )}
           </div>
-          <div className="ud-plan-bar">
-            <div className="ud-plan-bar-fill" style={{
-              width: `${Math.min(100, (pages.length / (planLimit || 3)) * 100)}%`,
-              background: planMeta.tone
-            }} />
-          </div>
-          <div className="ud-plan-stat">
-            <span>{pages.length}</span>
-            <span className="ud-divider-dot" />
-            <span>{planLimit || 3} landing pages</span>
-          </div>
+          {(() => {
+            const isUnlimited = planLimit >= 9999
+            const activeCount = pages.filter(p => p.published).length
+            if (isUnlimited) {
+              return (
+                <div className="ud-plan-stat">
+                  <span>{pages.length} pagini</span>
+                  <span className="ud-divider-dot" />
+                  <span>nelimitate</span>
+                </div>
+              )
+            }
+            return (
+              <>
+                <div className="ud-plan-bar">
+                  <div className="ud-plan-bar-fill" style={{
+                    width: `${Math.min(100, (pages.length / planLimit) * 100)}%`,
+                    background: planMeta.tone
+                  }} />
+                </div>
+                <div className="ud-plan-stat">
+                  <span>{activeCount}/{publishLimit} publicate</span>
+                  <span className="ud-divider-dot" />
+                  <span>{pages.length}/{planLimit} create</span>
+                </div>
+              </>
+            )
+          })()}
         </div>
 
         <nav className="ud-nav">
@@ -171,7 +193,7 @@ export default function Dashboard({
 
         <div className="ud-sb-footer">
           <button onClick={() => {
-              if (pages.length >= (planLimit || 3)) { setSection('pricing'); setSidebarOpen(false); return }
+              if (planLimit < 9999 && pages.length >= planLimit) { setSection('pricing'); setSidebarOpen(false); return }
               onNew(); setSidebarOpen(false)
             }}
             className="ud-new-btn">
@@ -594,21 +616,27 @@ function TemplateCard({ t, onUse, index }) {
 /* ─── PRICING ───────────────────────────────────────────────────────── */
 const PLANS = [
   {
-    id: 'free', name: 'Free', price: 0, limit: 3,
+    id: 'free', name: 'Free', price: 0,
     tagline: 'Pentru a testa și a începe',
-    features: ['3 landing pages', 'Editor complet GrapesJS', 'Templates de bază', 'Publicare directă în Shopify'],
+    headline: '3 landing pages',
+    sub: '1 publicată simultan',
+    features: ['3 landing pages create', '1 publicată activ simultan', 'Editor complet GrapesJS', 'Templates de bază', 'Publicare directă în Shopify'],
     cta: null
   },
   {
-    id: 'basic', name: 'Basic', price: 50, limit: 200, highlight: true,
+    id: 'basic', name: 'Basic', price: 50, highlight: true,
     tagline: 'Pentru magazinele active',
-    features: ['200 landing pages', 'Editor complet GrapesJS', 'Toate templateurile', 'AI generator pagini', 'Autosave automat', 'Asistent AI integrat', 'Suport email'],
+    headline: 'Nelimitate',
+    sub: 'create și publicate',
+    features: ['Landing pages nelimitate', 'Toate publicate simultan', 'Editor complet GrapesJS', 'Toate templateurile', 'AI generator pagini', 'Autosave automat', 'Asistent AI integrat', 'Suport email'],
     cta: 'Activează Basic'
   },
   {
-    id: 'pro', name: 'Pro', price: 150, limit: 1000,
+    id: 'pro', name: 'Pro', price: 150,
     tagline: 'Pentru afaceri în creștere',
-    features: ['1000 landing pages', 'Editor complet GrapesJS', 'Toate templateurile', 'AI generator pagini', 'Generare imagini AI', 'Asistent AI prioritar', 'Suport prioritar', 'Acces beta features'],
+    headline: 'Nelimitate',
+    sub: 'create și publicate · prioritate AI',
+    features: ['Landing pages nelimitate', 'Toate publicate simultan', 'Editor complet GrapesJS', 'Toate templateurile', 'AI generator pagini', 'Generare imagini AI premium', 'Asistent AI prioritar', 'Suport prioritar', 'Acces beta features'],
     cta: 'Activează Pro'
   }
 ]
@@ -675,7 +703,8 @@ function PricingView({ currentPlan, shop, token, onPlanChange }) {
                   )}
                 </div>
                 <div className="ud-price-limit">
-                  {p.limit === 3 ? '3 landing pages' : `Până la ${p.limit} landing pages`}
+                  <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{p.headline}</strong>
+                  {p.sub && <span style={{ display: 'block', marginTop: 2, color: 'var(--text-subtle)', fontSize: 12 }}>{p.sub}</span>}
                 </div>
               </div>
 

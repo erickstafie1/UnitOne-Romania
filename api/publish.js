@@ -1,6 +1,7 @@
 // api/publish.js
 const https = require('https')
 const { verifySessionToken, getStoredToken } = require('./_verify')
+const { getPlan, countLPs } = require('./_plan')
 
 function shopifyRequest(shop, token, path, method, body) {
   return new Promise((resolve, reject) => {
@@ -94,6 +95,14 @@ module.exports = async function handler(req, res) {
     if (!html) return res.status(400).json({ error: 'Missing html' })
     if (!productId) return res.status(400).json({ error: 'Selecteaza un produs!' })
 
+    // Plan enforcement: total limit + auto-demote la draft daca publish limit atins
+    const plan = await getPlan(shop, token)
+    const counts = await countLPs(shop, token)
+    if (counts.total >= plan.limit) {
+      return res.status(402).json({ error: 'limit_reached', plan: plan.plan, limit: plan.limit })
+    }
+    const newStatus = counts.active >= plan.publishLimit ? 'draft' : 'active'
+
     let finalHtml = html
 
     if (codFormApp === 'releasit') {
@@ -106,7 +115,7 @@ module.exports = async function handler(req, res) {
     finalHtml = buildOverlay(finalHtml)
     finalHtml = buildHideScript() + finalHtml
 
-    console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB')
+    console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan)
 
     const result = await shopifyRequest(shop, token, '/products/' + productId + '.json', 'PUT', {
       product: {
@@ -114,18 +123,23 @@ module.exports = async function handler(req, res) {
         body_html: finalHtml,
         template_suffix: 'pagecod',
         tags: 'unitone-cod-page',
+        status: newStatus,
         ...(title && { title })
       }
     })
 
     if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
-    console.log('LP published:', result.product.id, result.product.handle)
+    console.log('LP published:', result.product.id, result.product.handle, 'status:', result.product.status)
 
     res.status(200).json({
       success: true,
       pageUrl: 'https://' + shop + '/products/' + result.product.handle,
       pageId: result.product.id,
-      variantId: result.product.variants?.[0]?.id
+      variantId: result.product.variants?.[0]?.id,
+      demoted: newStatus === 'draft',
+      status: newStatus,
+      plan: plan.plan,
+      publishLimit: plan.publishLimit
     })
 
   } catch(err) {

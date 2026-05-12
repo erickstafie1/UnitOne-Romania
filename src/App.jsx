@@ -109,6 +109,7 @@ export default function App() {
   const [token, setToken] = useState('')
   const [plan, setPlan] = useState('free')
   const [planLimit, setPlanLimit] = useState(3)
+  const [publishLimit, setPublishLimit] = useState(1)
   const [dashboardSection, setDashboardSection] = useState('home')
 
   useEffect(() => {
@@ -143,7 +144,7 @@ export default function App() {
             body: JSON.stringify({ action: 'activate_charge', shop: s, token: tok, chargeId })
           })
           const bd = await br.json()
-          if (bd.plan) { setPlan(bd.plan); setPlanLimit(bd.limit) }
+          if (bd.plan) { setPlan(bd.plan); setPlanLimit(bd.limit); setPublishLimit(bd.publishLimit ?? 1) }
         } catch(e) { console.log('Activate charge error:', e.message) }
         initApp(s, tok)
       }).catch(() => { (window.top || window).location.href = '/api/auth?shop=' + s })
@@ -202,7 +203,8 @@ export default function App() {
       const bd = await r.json()
       setPlan(bd.plan || 'free')
       setPlanLimit(bd.limit || 3)
-    } catch { setPlan('free'); setPlanLimit(3) }
+      setPublishLimit(bd.publishLimit ?? 1)
+    } catch { setPlan('free'); setPlanLimit(3); setPublishLimit(1) }
     const saved = localStorage.getItem('codform_' + s)
     setCodFormApp(saved || null)
     setScreen(saved ? 'dashboard' : 'setup')
@@ -229,9 +231,9 @@ export default function App() {
       )}
       {screen === 'dashboard' && (
         <Dashboard shop={shop} token={token}
-          plan={plan} planLimit={planLimit}
+          plan={plan} planLimit={planLimit} publishLimit={publishLimit}
           initialSection={dashboardSection}
-          onPlanChange={(p, l) => { setPlan(p); setPlanLimit(l) }}
+          onPlanChange={(p, l, pl) => { setPlan(p); setPlanLimit(l); if (pl !== undefined) setPublishLimit(pl) }}
           onNew={() => setScreen('generator')}
           onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
           onReconfigure={() => setScreen('setup')}

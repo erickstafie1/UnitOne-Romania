@@ -10,6 +10,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   const [publishing, setPublishing] = useState(false)
   const [published, setPublished] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState('')
+  const [publishedDemoted, setPublishedDemoted] = useState(false)
   const [error, setError] = useState('')
   const [showProductModal, setShowProductModal] = useState(false)
   const [products, setProducts] = useState([])
@@ -117,20 +118,24 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     gjsRef.current.Devices.select(name)
   }
 
-  // ─── Validare nume unic ─────────────────────────────────────────────────────
+  // ─── Validare + auto-rename pe duplicat ─────────────────────────────────────
   async function validateName() {
     if (!pageTitle || pageTitle.trim().length < 2) {
-      throw new Error('Numele paginii trebuie sa aiba cel putin 2 caractere')
+      throw new Error('Numele paginii trebuie să aibă cel puțin 2 caractere')
     }
-    if (isEditing || pageIdRef.current) return  // editare aceeasi pagina = OK
+    if (isEditing || pageIdRef.current) return pageTitle  // editare aceeași pagina = OK
     const r = await apiFetch('/api/pages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list', shop, token })
     })
     const d = await r.json()
-    const t = pageTitle.trim().toLowerCase()
-    const exists = (d.pages || []).find(p => (p.title || '').trim().toLowerCase() === t)
-    if (exists) throw new Error(`O pagina cu numele "${pageTitle}" exista deja. Alege alt nume.`)
+    const existing = (d.pages || []).map(p => (p.title || '').trim().toLowerCase())
+    const base = pageTitle.trim()
+    if (!existing.includes(base.toLowerCase())) return base  // unic deja
+    let n = 2, candidate
+    do { candidate = `${base} (${n++})` } while (existing.includes(candidate.toLowerCase()))
+    setPageTitle(candidate)
+    return candidate  // returnez noul titlu, ca să fie folosit imediat la PUT
   }
 
   // ─── Autosave silent (la 2 min) ─────────────────────────────────────────────
@@ -195,22 +200,8 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     setPublishing(true)
     setError('')
     try {
-      await validateName()
+      const finalTitle = await validateName()
 
-      // Verifica limita LP pentru pagini noi (nu pentru editari)
-      if (!isEditing && !pageIdRef.current && planLimit) {
-        const lr = await apiFetch('/api/pages', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'list', shop, token })
-        })
-        const ld = await lr.json()
-        const count = (ld.pages || []).length
-        if (count >= planLimit) {
-          setPublishing(false)
-          setError(`Ai atins limita de ${planLimit} landing pages pentru planul tau. Fa upgrade pentru mai multe.`)
-          return
-        }
-      }
       const html = gjsRef.current.getHtml()
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
@@ -259,14 +250,23 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
       const pid = pageIdRef.current || data.id
       const body = pid
-        ? { action: 'update', shop, token, pageId: pid, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
-        : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
+        ? { action: 'update', shop, token, pageId: pid, title: finalTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
+        : { shop, token, title: finalTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
 
       const res = await apiFetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
+      if (res.status === 402) {
+        const d = await res.json()
+        setPublishing(false)
+        const msg = d.error === 'limit_reached'
+          ? `Plan ${d.plan} permite ${d.limit} landing pages. Fă upgrade pentru mai multe.`
+          : `Plan ${d.plan} permite ${d.publishLimit} pagină publicată simultan. Dezactivează o pagină existentă sau fă upgrade.`
+        setError(msg)
+        return
+      }
       const json = await res.json()
       if (!json.success) throw new Error(json.error)
 
@@ -275,6 +275,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         setLastSaved(new Date())
         dirtyRef.current = false
         setPublishedUrl(json.pageUrl)
+        setPublishedDemoted(!!json.demoted)
         setPublished(true)
       }
     } catch(e) {
@@ -289,21 +290,39 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       <div className="ue-hero-gradient" />
       <div className="ue-mesh" />
       <div className="ue-published-card fade-up">
-        <div className="ue-published-orb">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
+        <div className={`ue-published-orb ${publishedDemoted ? 'draft' : ''}`}>
+          {publishedDemoted ? (
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+          ) : (
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
           <div className="ue-orb-glow" />
         </div>
-        <div className="ue-eyebrow">Publicat cu succes</div>
-        <h2 className="ue-h1">Pagina ta e <span className="ue-h1-italic">live</span></h2>
-        <p className="ue-published-text">Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.</p>
+        <div className="ue-eyebrow">{publishedDemoted ? 'Salvată ca draft' : 'Publicată cu succes'}</div>
+        <h2 className="ue-h1">
+          {publishedDemoted ? (
+            <>Pagină <span className="ue-h1-italic">salvată</span></>
+          ) : (
+            <>Pagina ta e <span className="ue-h1-italic">live</span></>
+          )}
+        </h2>
+        <p className="ue-published-text">
+          {publishedDemoted
+            ? 'Planul Free permite o singură pagină publicată simultan. Pagina nouă a fost creată ca draft — o poți activa din Dashboard schimbând pagina activă curentă, sau fă upgrade pentru pagini nelimitate.'
+            : 'Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.'}
+        </p>
         <div className="ue-published-actions">
-          <a href={publishedUrl} target="_blank" rel="noreferrer" className="ue-cta-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            <span>Vezi pagina live</span>
-          </a>
-          <button onClick={() => { setPublished(false); if(onPublished) onPublished(); else if(onBack) onBack() }} className="ue-cta-secondary">
+          {!publishedDemoted && (
+            <a href={publishedUrl} target="_blank" rel="noreferrer" className="ue-cta-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <span>Vezi pagina live</span>
+            </a>
+          )}
+          <button onClick={() => { setPublished(false); setPublishedDemoted(false); if(onPublished) onPublished(); else if(onBack) onBack() }} className={publishedDemoted ? 'ue-cta-primary' : 'ue-cta-secondary'}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             <span>Înapoi la dashboard</span>
           </button>
@@ -1009,12 +1028,19 @@ function EditorStyles() {
         position: relative;
         box-shadow: 0 12px 32px color-mix(in srgb, var(--success) 40%, transparent);
       }
+      .ue-published-orb.draft {
+        background: linear-gradient(135deg, var(--warning) 0%, color-mix(in srgb, var(--warning) 70%, var(--brand)) 100%);
+        box-shadow: 0 12px 32px color-mix(in srgb, var(--warning) 40%, transparent);
+      }
       .ue-orb-glow {
         position: absolute; inset: -3px; border-radius: 22px;
         background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 60%, var(--brand)));
         opacity: 0.4; filter: blur(14px);
         animation: orbPulse 2.5s ease-in-out infinite;
         z-index: -1;
+      }
+      .ue-published-orb.draft .ue-orb-glow {
+        background: linear-gradient(135deg, var(--warning), color-mix(in srgb, var(--warning) 60%, var(--brand)));
       }
       @keyframes orbPulse {
         0%, 100% { opacity: 0.4; transform: scale(1); }

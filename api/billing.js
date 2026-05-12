@@ -2,8 +2,8 @@ const https = require('https')
 const { verifySessionToken, getStoredToken } = require('./_verify')
 
 const PLANS = {
-  basic: { name: 'UnitOne Basic', price: 50.00, limit: 200 },
-  pro: { name: 'UnitOne Pro', price: 150.00, limit: 1000 }
+  basic: { name: 'UnitOne Basic', price: 50.00, limit: 9999, publishLimit: 9999 },
+  pro: { name: 'UnitOne Pro', price: 150.00, limit: 9999, publishLimit: 9999 }
 }
 
 function shopifyRequest(shop, token, path, method, body) {
@@ -67,11 +67,11 @@ module.exports = async function handler(req, res) {
       const data = await shopifyRequest(shop, token, '/recurring_application_charges.json', 'GET', null)
       const charges = data.recurring_application_charges || []
       const active = charges.find(c => c.status === 'active')
-      if (!active) return res.status(200).json({ plan: 'free', limit: 3 })
+      if (!active) return res.status(200).json({ plan: 'free', limit: 3, publishLimit: 1 })
       const price = parseFloat(active.price)
-      if (price === 50)  return res.status(200).json({ plan: 'basic', limit: 200, chargeId: active.id })
-      if (price === 150) return res.status(200).json({ plan: 'pro',   limit: 1000, chargeId: active.id })
-      return res.status(200).json({ plan: 'free', limit: 3 })
+      if (price === 50)  return res.status(200).json({ plan: 'basic', limit: 9999, publishLimit: 9999, chargeId: active.id })
+      if (price === 150) return res.status(200).json({ plan: 'pro',   limit: 9999, publishLimit: 9999, chargeId: active.id })
+      return res.status(200).json({ plan: 'free', limit: 3, publishLimit: 1 })
     }
 
     if (action === 'create_charge') {
@@ -97,14 +97,14 @@ module.exports = async function handler(req, res) {
       if (!charge) throw new Error('Charge negasit')
       if (charge.status === 'active') {
         const price = parseFloat(charge.price)
-        return res.status(200).json({ success: true, plan: price === 50 ? 'basic' : 'pro', limit: price === 50 ? 200 : 1000 })
+        return res.status(200).json({ success: true, plan: price === 50 ? 'basic' : 'pro', limit: 9999, publishLimit: 9999 })
       }
       if (charge.status !== 'pending') throw new Error(`Status charge: ${charge.status}`)
       await shopifyRequest(shop, token, `/recurring_application_charges/${chargeId}/activate.json`, 'POST', {
         recurring_application_charge: { id: chargeId }
       })
       const price = parseFloat(charge.price)
-      return res.status(200).json({ success: true, plan: price === 50 ? 'basic' : 'pro', limit: price === 50 ? 200 : 1000 })
+      return res.status(200).json({ success: true, plan: price === 50 ? 'basic' : 'pro', limit: 9999, publishLimit: 9999 })
     }
 
     res.status(400).json({ error: 'Actiune necunoscuta' })
