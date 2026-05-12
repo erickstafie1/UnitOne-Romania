@@ -16,7 +16,12 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   const [productsError, setProductsError] = useState('')
   const [hideHeaderFooter, setHideHeaderFooter] = useState(true)
   const [pageTitle, setPageTitle] = useState(data.title || data.productName || 'Pagina COD')
+  const [lastSaved, setLastSaved] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [autosaveOn, setAutosaveOn] = useState(true)
   const isEditing = !!data.fromDashboard
+  const dirtyRef = useRef(false)
+  const pageIdRef = useRef(data.id || null)
 
   useEffect(() => {
     Promise.all([
@@ -34,6 +39,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         deviceManager: {
           devices: [
             { name: 'Desktop', width: '' },
+            { name: 'Tablet', width: '768px', widthMedia: '992px' },
             { name: 'Mobile', width: '390px', widthMedia: '480px' }
           ]
         },
@@ -82,8 +88,19 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       addBlocks(editor, data)
 
       editor.on('device:change', () => {
-        setDevice(editor.Devices.getSelected().id === 'Mobile' ? 'mobile' : 'desktop')
+        const id = editor.Devices.getSelected().id
+        setDevice(id === 'Mobile' ? 'mobile' : id === 'Tablet' ? 'tablet' : 'desktop')
       })
+
+      // Track schimbari pentru autosave (ignora schimbarile din load-ul initial)
+      const markDirty = () => { dirtyRef.current = true }
+      setTimeout(() => {
+        dirtyRef.current = false
+        editor.on('component:update', markDirty)
+        editor.on('component:add', markDirty)
+        editor.on('component:remove', markDirty)
+        editor.on('style:update', markDirty)
+      }, 1000)
     })
 
     return () => {
@@ -94,7 +111,63 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   function switchDevice(d) {
     setDevice(d)
     if (!gjsRef.current) return
-    gjsRef.current.Devices.select(d === 'mobile' ? 'Mobile' : 'Desktop')
+    const name = d === 'mobile' ? 'Mobile' : d === 'tablet' ? 'Tablet' : 'Desktop'
+    gjsRef.current.Devices.select(name)
+  }
+
+  // ─── Validare nume unic ─────────────────────────────────────────────────────
+  async function validateName() {
+    if (!pageTitle || pageTitle.trim().length < 2) {
+      throw new Error('Numele paginii trebuie sa aiba cel putin 2 caractere')
+    }
+    if (isEditing || pageIdRef.current) return  // editare aceeasi pagina = OK
+    const r = await fetch('/api/pages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list', shop, token })
+    })
+    const d = await r.json()
+    const t = pageTitle.trim().toLowerCase()
+    const exists = (d.pages || []).find(p => (p.title || '').trim().toLowerCase() === t)
+    if (exists) throw new Error(`O pagina cu numele "${pageTitle}" exista deja. Alege alt nume.`)
+  }
+
+  // ─── Autosave silent (la 2 min) ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!autosaveOn) return
+    const interval = setInterval(() => {
+      if (dirtyRef.current && !publishing && !saving && (isEditing || pageIdRef.current)) {
+        autoSave()
+      }
+    }, 120000)  // 2 min
+    return () => clearInterval(interval)
+  }, [autosaveOn, publishing, saving])
+
+  async function autoSave() {
+    if (!gjsRef.current) return
+    setSaving(true)
+    try {
+      const html = gjsRef.current.getHtml()
+      const css = gjsRef.current.getCss()
+      const fullHtml = `<style>${css}</style>${html}`
+      const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
+      const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
+      const pid = pageIdRef.current || data.id
+      const body = {
+        action: 'update', shop, token, pageId: pid,
+        title: pageTitle, html: fullHtml, hideHeaderFooter,
+        codFormApp: finalCodFormApp, variantId
+      }
+      const res = await fetch('/api/publish', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      const json = await res.json()
+      if (json.success) {
+        setLastSaved(new Date())
+        dirtyRef.current = false
+      }
+    } catch(e) { console.log('Autosave error:', e.message) }
+    setSaving(false)
   }
 
   async function loadProducts() {
@@ -120,6 +193,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     setPublishing(true)
     setError('')
     try {
+      await validateName()
       const html = gjsRef.current.getHtml()
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
@@ -166,8 +240,9 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
       const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
 
-      const body = isEditing
-        ? { action: 'update', shop, token, pageId: data.id, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
+      const pid = pageIdRef.current || data.id
+      const body = pid
+        ? { action: 'update', shop, token, pageId: pid, title: pageTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
         : { shop, token, title: pageTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
 
       const res = await fetch('/api/publish', {
@@ -179,6 +254,9 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       if (!json.success) throw new Error(json.error)
 
       if (json.pageUrl) {
+        if (json.pageId) pageIdRef.current = json.pageId
+        setLastSaved(new Date())
+        dirtyRef.current = false
         setPublishedUrl(json.pageUrl)
         setPublished(true)
       }
@@ -223,18 +301,35 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         />
 
         <div style={{ display:'flex', background:'rgba(255,255,255,0.06)', borderRadius:10, padding:3, gap:2 }}>
-          {[['desktop','🖥️'],['mobile','📱']].map(([d,ic]) => (
-            <button key={d} onClick={() => switchDevice(d)}
-              style={{ padding:'5px 12px', borderRadius:8, border:'none', background: device===d ? 'rgba(229,62,62,0.8)' : 'transparent', color:'#fff', fontSize:14, cursor:'pointer' }}>
+          {[
+            ['desktop','Desktop', <svg key="d" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>],
+            ['tablet','Tablet', <svg key="t" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>],
+            ['mobile','Mobil', <svg key="m" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>]
+          ].map(([d,lbl,ic]) => (
+            <button key={d} onClick={() => switchDevice(d)} title={lbl}
+              style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 10px', borderRadius:8, border:'none', background: device===d ? 'rgba(229,62,62,0.8)' : 'transparent', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               {ic}
+              <span style={{ display: window.innerWidth > 900 ? 'inline' : 'none' }}>{lbl}</span>
             </button>
           ))}
         </div>
 
         <button onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
-          style={{ padding:'5px 12px', borderRadius:8, border:'none', background: hideHeaderFooter ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)', color: hideHeaderFooter ? '#4ade80' : 'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', fontWeight:600, whiteSpace:'nowrap', fontFamily:'inherit' }}>
-          {hideHeaderFooter ? '✓ Fara H/F' : 'Cu H/F'}
+          title={hideHeaderFooter ? 'Header/footer Shopify ascuns - apasa pentru a-l afisa' : 'Header/footer Shopify afisat - apasa pentru a-l ascunde'}
+          style={{ padding:'6px 12px', borderRadius:8, border:'none', background: hideHeaderFooter ? 'rgba(34,197,94,0.18)' : 'rgba(251,191,36,0.18)', color: hideHeaderFooter ? '#4ade80' : '#fbbf24', fontSize:12, cursor:'pointer', fontWeight:700, whiteSpace:'nowrap', fontFamily:'inherit', display:'flex', alignItems:'center', gap:5 }}>
+          {hideHeaderFooter ? '⊖ H/F ascuns' : '⊕ H/F vizibil'}
         </button>
+
+        {/* Indicator autosave */}
+        {(saving || lastSaved) && (
+          <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 10px', borderRadius:8, background:'rgba(255,255,255,0.04)', fontSize:11, color:'rgba(255,255,255,0.55)', whiteSpace:'nowrap', fontFamily:'inherit' }}>
+            {saving ? (
+              <><span style={{ width:6, height:6, borderRadius:'50%', background:'#fbbf24', animation:'pulse 1.2s ease-in-out infinite' }} />Se salveaza...</>
+            ) : (
+              <><span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e' }} />Salvat {lastSaved.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' })}</>
+            )}
+          </div>
+        )}
 
         <div style={{ display:'flex', gap:4 }}>
           <button onClick={() => gjsRef.current?.UndoManager.undo()}
@@ -329,16 +424,29 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   )
 }
 
-// ─── CSS de baza ─────────────────────────────────────────────────────────────
+// ─── CSS de baza (responsive) ────────────────────────────────────────────────
 function buildCSS(data) {
   const primary = data.style?.primaryColor || '#dc2626'
   const font = data.style?.fontFamily || 'Inter, system-ui, sans-serif'
   const radius = data.style?.borderRadius || '12px'
   return `
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ${font}; background: #fff; color: #111; max-width: 600px; margin: 0 auto; }
+    body { font-family: ${font}; background: #fff; color: #111; max-width: 650px; margin: 0 auto; width: 100%; }
+    img { max-width: 100%; height: auto; display: block; }
     .btn-main { width: 100%; padding: 17px; border-radius: ${radius}; background: ${primary}; color: #fff; border: none; font-size: 18px; font-weight: 900; cursor: pointer; font-family: inherit; }
     .inp { padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 15px; outline: none; width: 100%; font-family: inherit; box-sizing: border-box; }
+    /* Tablet */
+    @media (max-width: 992px) {
+      body { max-width: 100%; padding: 0; }
+    }
+    /* Mobile */
+    @media (max-width: 600px) {
+      body { font-size: 14px; }
+      h1 { font-size: 20px !important; line-height: 1.25 !important; }
+      h2 { font-size: 18px !important; }
+      h3 { font-size: 16px !important; }
+      .btn-main { padding: 14px; font-size: 16px; }
+    }
   `
 }
 
