@@ -76,11 +76,13 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         raw = raw.replace(/<div[^>]+class="[^"]*_rsi-cod-form-is-gempage[^"]*"[^>]*><\/div>/gi, '')
         // Extrage CSS din primul style tag (LP-ul generat de GrapesJS)
         const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
-        const css = styleMatch ? styleMatch[1] : ''
+        const savedCss = styleMatch ? styleMatch[1] : ''
         const htmlOnly = raw.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         // Re-wrap în #unitone-lp ca CSS-ul scoped să funcționeze în preview
         editor.setComponents(`<div id="unitone-lp">${htmlOnly.trim()}</div>`)
-        if (css) editor.setStyle(css)
+        // Aplică ÎNTOTDEAUNA buildCSS curent (responsive update) + override cu CSS salvat din GrapesJS
+        const baseCss = buildCSS(data)
+        editor.setStyle(savedCss ? baseCss + '\n' + savedCss : baseCss)
       } else {
         const html = buildHTML(data, codFormApp)
         const css = buildCSS(data)
@@ -532,15 +534,48 @@ function buildCSS(data) {
     #unitone-lp .btn-main { width: 100%; padding: 17px; border-radius: ${radius}; background: ${primary}; color: #fff; border: none; font-size: 18px; font-weight: 900; cursor: pointer; font-family: inherit; }
     #unitone-lp .inp { padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 15px; outline: none; width: 100%; font-family: inherit; box-sizing: border-box; }
 
-    /* ── Desktop: > 992px ── padding lateral generos */
+    /* ── DESKTOP > 992px — content mare, optimizat pt monitor ── */
     @media (min-width: 993px) {
-      #unitone-lp { padding: 0 40px !important; }
+      #unitone-lp {
+        font-size: 17px !important;
+        padding: 0 56px !important;
+      }
+      #unitone-lp h1 { font-size: clamp(38px, 4.2vw, 56px) !important; line-height: 1.1 !important; }
+      #unitone-lp h2 { font-size: clamp(28px, 3vw, 40px) !important; line-height: 1.18 !important; }
+      #unitone-lp h3 { font-size: clamp(22px, 2.2vw, 30px) !important; line-height: 1.25 !important; }
+      #unitone-lp p { font-size: 17px !important; line-height: 1.65 !important; }
+      #unitone-lp .btn-main { padding: 22px 24px !important; font-size: 20px !important; max-width: 520px; margin: 0 auto !important; display: block; }
+      #unitone-lp .inp { padding: 16px 18px !important; font-size: 17px !important; }
+      /* Secțiunile capătă mai mult breathing room pe desktop */
+      #unitone-lp [style*="padding:20px"] { padding: 56px 40px !important; }
+      #unitone-lp [style*="padding: 20px"] { padding: 56px 40px !important; }
+      #unitone-lp [style*="padding:32px 20px"] { padding: 64px 40px !important; }
+      #unitone-lp [style*="padding:24px"] { padding: 48px 32px !important; }
+      #unitone-lp [style*="padding: 24px"] { padding: 48px 32px !important; }
+      /* Header bar text mai mare */
+      #unitone-lp [style*="font-size:13px"] { font-size: 16px !important; }
+      /* Imagini hero / produs — păstrează ratio dar full width canvas */
+      #unitone-lp [style*="max-width:400px"] { max-width: 520px !important; }
     }
-    /* ── Tablet: 601-992px ── */
+
+    /* ── TABLET 601-992px — content mediu ── */
     @media (min-width: 601px) and (max-width: 992px) {
-      #unitone-lp { padding: 0 24px !important; }
+      #unitone-lp {
+        font-size: 15.5px !important;
+        padding: 0 28px !important;
+      }
+      #unitone-lp h1 { font-size: 32px !important; line-height: 1.15 !important; }
+      #unitone-lp h2 { font-size: 24px !important; line-height: 1.22 !important; }
+      #unitone-lp h3 { font-size: 19px !important; line-height: 1.3 !important; }
+      #unitone-lp p { font-size: 15.5px !important; line-height: 1.6 !important; }
+      #unitone-lp .btn-main { padding: 18px 22px !important; font-size: 18px !important; max-width: 480px; margin: 0 auto !important; display: block; }
+      #unitone-lp .inp { padding: 14px 16px !important; font-size: 16px !important; }
+      #unitone-lp [style*="padding:20px"] { padding: 36px 24px !important; }
+      #unitone-lp [style*="padding: 20px"] { padding: 36px 24px !important; }
+      #unitone-lp [style*="padding:32px 20px"] { padding: 44px 28px !important; }
     }
-    /* ── Mobile: ≤ 600px ── */
+
+    /* ── MOBILE ≤ 600px — compact, scrollabil ── */
     @media (max-width: 600px) {
       #unitone-lp { font-size: 14px !important; padding: 0 12px !important; }
       #unitone-lp h1 { font-size: 22px !important; line-height: 1.25 !important; }
@@ -548,7 +583,7 @@ function buildCSS(data) {
       #unitone-lp h3 { font-size: 16px !important; line-height: 1.35 !important; }
       #unitone-lp p { font-size: 14px !important; line-height: 1.55 !important; }
       #unitone-lp img { width: 100% !important; max-width: 100% !important; height: auto !important; }
-      #unitone-lp .btn-main { padding: 14px !important; font-size: 16px !important; width: 100% !important; }
+      #unitone-lp .btn-main { padding: 14px !important; font-size: 16px !important; width: 100% !important; max-width: 100% !important; }
       /* Stack flex pe mobile */
       #unitone-lp [style*="display:flex"], #unitone-lp [style*="display: flex"] { flex-direction: column !important; gap: 12px !important; }
       /* Override inline width fix > 100% */
