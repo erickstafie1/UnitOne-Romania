@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { apiFetch } from '../apiFetch.js'
+import ThemeToggle from './ThemeToggle.jsx'
 
 const CONTACT_EMAIL = 'bellatorixx@gmail.com'
 
@@ -184,6 +185,10 @@ export default function Dashboard({
               <span>Setări COD</span>
             </button>
           )}
+          <div className="ud-theme-row">
+            <span className="ud-theme-label">Temă</span>
+            <ThemeToggle size="sm" />
+          </div>
         </div>
       </aside>
 
@@ -1075,6 +1080,18 @@ function GlobalStyles() {
         cursor: pointer;
       }
       .ud-settings-btn:hover { background: var(--bg-3); color: var(--text); }
+
+      .ud-theme-row {
+        margin-top: 4px;
+        padding: 8px 12px;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 10px;
+      }
+      .ud-theme-label {
+        font-size: 12.5px; font-weight: 500;
+        color: var(--text-muted);
+        letter-spacing: -0.01em;
+      }
 
       /* ── Main ── */
       .ud-main {

@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import ThemeToggle from './ThemeToggle.jsx'
 
 const STEPS = [
-  [5,  'Conectare la AliExpress'],
-  [20, 'Extragere imagini produs'],
-  [40, 'Generare copywriting în română'],
-  [55, 'Imagini AI · Studio'],
-  [70, 'Imagini AI · Lifestyle'],
-  [82, 'Imagini AI · Detaliu'],
-  [92, 'Imagini AI · Social proof'],
-  [98, 'Finalizare pagină'],
+  { pct: 12, msg: 'Conectare la AliExpress', delay: 700 },
+  { pct: 28, msg: 'Extragere imagini produs', delay: 900 },
+  { pct: 46, msg: 'Generare copywriting în română', delay: 1100 },
+  { pct: 62, msg: 'Imagini AI · Studio', delay: 1100 },
+  { pct: 78, msg: 'Imagini AI · Lifestyle', delay: 1200 },
+  { pct: 86, msg: 'Imagini AI · Detaliu', delay: 6500 },
+  { pct: 92, msg: 'Imagini AI · Social proof', delay: 8500 },
+  { pct: 97, msg: 'Finalizare pagină', delay: 14000 },
 ]
 
 export default function Generator({ shop, token, onGenerated, onBack }) {
@@ -18,23 +19,29 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
   const [error, setError] = useState('')
+  const cancelRef = useRef(false)
 
   async function generate() {
     if (!aliUrl.trim()) return
-    setError(''); setLoading(true); setLoadPct(5); setLoadMsg(STEPS[0][1])
+    setError(''); setLoading(true); setLoadPct(STEPS[0].pct); setLoadMsg(STEPS[0].msg)
+    cancelRef.current = false
 
-    let si = 0
-    const tid = setInterval(() => {
-      si = Math.min(si + 1, STEPS.length - 1)
-      setLoadMsg(STEPS[si][1]); setLoadPct(STEPS[si][0])
-    }, 8000)
+    let i = 1
+    const advance = () => {
+      if (cancelRef.current || i >= STEPS.length) return
+      const s = STEPS[i]
+      setLoadPct(s.pct); setLoadMsg(s.msg)
+      i++
+      setTimeout(advance, s.delay)
+    }
+    setTimeout(advance, STEPS[0].delay)
 
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() })
       })
-      clearInterval(tid)
+      cancelRef.current = true
       if (!res.ok) throw new Error('Server error ' + res.status)
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Eroare')
@@ -42,7 +49,8 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
       await new Promise(r => setTimeout(r, 700))
       onGenerated(json.data)
     } catch(e) {
-      clearInterval(tid); setError(e.message); setLoading(false)
+      cancelRef.current = true
+      setError(e.message); setLoading(false)
     }
   }
 
@@ -78,18 +86,18 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
       <div className="ug-mesh" />
 
       <header className="ug-topbar">
-        <div className="ug-topbar-inner">
-          <button onClick={onBack} className="ug-back">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            <span>Înapoi</span>
-          </button>
-          <div className="ug-breadcrumb">
-            <span className="ug-bc-dot" />
-            <span>Pagină nouă</span>
-          </div>
+        <button onClick={onBack} className="ug-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Înapoi</span>
+        </button>
+        <div className="ug-breadcrumb">
+          <span className="ug-bc-dot" />
+          <span>Pagină nouă</span>
         </div>
+        <div className="ug-spacer" />
+        <ThemeToggle />
       </header>
 
       <main className="ug-container">
@@ -98,9 +106,6 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
           <h1 className="ug-h1">
             Generează landing page <span className="ug-h1-italic">COD</span>
           </h1>
-          <p className="ug-lede">
-            Pune linkul AliExpress și descrie stilul dorit. AI-ul generează copywriting în română și 4 imagini profesionale.
-          </p>
         </div>
 
         <div className="ug-card">
@@ -136,18 +141,6 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
 
           <p className="ug-fine">≈ 1 minut de procesare</p>
         </div>
-
-        <div className="ug-tips">
-          <div className="ug-tips-head">
-            <span className="ug-tips-icon">✦</span>
-            <span>Sfaturi pentru rezultate mai bune</span>
-          </div>
-          <ul className="ug-tips-list">
-            <li>Folosește link-uri AliExpress complete (cu toate paramerii URL)</li>
-            <li>În descrierea de stil specifică publicul țintă și tonul dorit</li>
-            <li>Menționează culorile preferate pentru personalizare AI</li>
-          </ul>
-        </div>
       </main>
     </div>
   )
@@ -177,12 +170,10 @@ function Styles() {
         backdrop-filter: blur(16px) saturate(120%);
         -webkit-backdrop-filter: blur(16px) saturate(120%);
         border-bottom: 1px solid var(--divider);
-      }
-      .ug-topbar-inner {
-        max-width: 720px; margin: 0 auto;
-        padding: 16px 32px;
+        padding: 14px 24px;
         display: flex; align-items: center; gap: 14px;
       }
+      .ug-spacer { flex: 1; }
       .ug-back {
         display: inline-flex; align-items: center; gap: 7px;
         padding: 7px 12px; border-radius: 9px;
@@ -230,12 +221,6 @@ function Styles() {
         color: var(--text);
       }
       .ug-h1-italic { font-style: italic; color: var(--text-muted); }
-      .ug-lede {
-        margin: 14px auto 0;
-        font-size: 15px; line-height: 1.55;
-        color: var(--text-muted);
-        max-width: 460px;
-      }
 
       .ug-card {
         background: var(--bg-elev);
@@ -305,43 +290,6 @@ function Styles() {
         text-align: center; font-weight: 500;
       }
 
-      .ug-tips {
-        margin-top: 24px;
-        padding: 20px 22px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-      }
-      .ug-tips-head {
-        display: flex; align-items: center; gap: 10px;
-        font-size: 13px; font-weight: 700;
-        color: var(--text);
-        margin-bottom: 12px;
-        letter-spacing: -0.01em;
-      }
-      .ug-tips-icon {
-        width: 22px; height: 22px; border-radius: 50%;
-        background: linear-gradient(135deg, var(--brand), var(--brand-2));
-        color: #fff; font-size: 11px;
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 0 14px color-mix(in srgb, var(--brand) 35%, transparent);
-      }
-      .ug-tips-list {
-        list-style: none; padding: 0; margin: 0;
-        display: flex; flex-direction: column; gap: 8px;
-      }
-      .ug-tips-list li {
-        font-size: 13px; color: var(--text-muted);
-        line-height: 1.55;
-        padding-left: 18px; position: relative;
-      }
-      .ug-tips-list li::before {
-        content: '→';
-        position: absolute; left: 0; top: 0;
-        color: var(--brand);
-        font-weight: 700;
-      }
-
       /* Loading screen */
       .ug-loading {
         position: relative; z-index: 1;
@@ -396,7 +344,7 @@ function Styles() {
       .ug-progress-fill {
         height: 100%; border-radius: 999px;
         background: linear-gradient(90deg, var(--brand), var(--brand-2));
-        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 0 12px color-mix(in srgb, var(--brand) 40%, transparent);
       }
       .ug-progress-meta {
@@ -404,6 +352,7 @@ function Styles() {
         color: var(--text-subtle);
         letter-spacing: 0.1em;
       }
+
     `}</style>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../apiFetch.js'
+import ThemeToggle from './ThemeToggle.jsx'
 
 export default function Editor({ data, shop, token, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
   const codFormApp = codFormAppProp || (typeof window !== 'undefined' ? localStorage.getItem('codform_' + shop) : null) || null
@@ -365,6 +366,8 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           </button>
         </div>
+
+        <ThemeToggle size="sm" />
 
         {error && (
           <div className="ue-tb-error">

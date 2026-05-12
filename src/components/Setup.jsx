@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ThemeToggle from './ThemeToggle.jsx'
 
 export default function Setup({ shop, onComplete, isReconfigure }) {
   const [step, setStep] = useState(1)
@@ -54,6 +55,10 @@ export default function Setup({ shop, onComplete, isReconfigure }) {
       <Styles />
       <div className="us-hero-gradient" />
       <div className="us-mesh" />
+
+      <div className="us-theme-corner">
+        <ThemeToggle size="sm" />
+      </div>
 
       <main className="us-container">
         {step === 1 && (
@@ -160,6 +165,11 @@ function Styles() {
         min-height: 100vh; position: relative;
         background: var(--bg); color: var(--text);
         font-family: var(--font-sans);
+      }
+      .us-theme-corner {
+        position: fixed;
+        top: 20px; right: 20px;
+        z-index: 20;
       }
       .us-hero-gradient {
         position: absolute; top: 0; left: 0; right: 0; height: 540px;
