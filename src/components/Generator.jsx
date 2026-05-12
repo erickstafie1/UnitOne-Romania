@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react'
-import ThemeToggle from './ThemeToggle.jsx'
 
 const STEPS = [
   { pct: 12, msg: 'Conectare la AliExpress', delay: 700 },
@@ -54,39 +53,14 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
     }
   }
 
-  if (loading) return (
-    <div className="ug-shell">
-      <Styles />
-      <div className="ug-hero-gradient" />
-      <div className="ug-loading">
-        <div className="ug-loading-orb">
-          <div className="ug-orb-glow" />
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-        <div className="ug-eyebrow">Generare în curs</div>
-        <h2 className="ug-h1-loading">Pregătim pagina ta</h2>
-        <p className="ug-loading-step">{loadMsg}</p>
-        <p className="ug-loading-hint">Imaginile AI durează ~1 minut · Calitate maximă</p>
-        <div className="ug-progress">
-          <div className="ug-progress-fill" style={{ width: `${loadPct}%` }} />
-        </div>
-        <div className="ug-progress-meta">
-          <span>{loadPct}%</span>
-        </div>
-      </div>
-    </div>
-  )
-
   return (
     <div className="ug-shell">
       <Styles />
       <div className="ug-hero-gradient" />
-      <div className="ug-mesh" />
+      {!loading && <div className="ug-mesh" />}
 
       <header className="ug-topbar">
-        <button onClick={onBack} className="ug-back">
+        <button onClick={loading ? undefined : onBack} disabled={loading} className="ug-back">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
@@ -94,54 +68,75 @@ export default function Generator({ shop, token, onGenerated, onBack }) {
         </button>
         <div className="ug-breadcrumb">
           <span className="ug-bc-dot" />
-          <span>Pagină nouă</span>
+          <span>{loading ? 'Generare în curs' : 'Pagină nouă'}</span>
         </div>
-        <div className="ug-spacer" />
-        <ThemeToggle />
       </header>
 
-      <main className="ug-container">
-        <div className="ug-page-header">
-          <div className="ug-eyebrow">Generator AI</div>
-          <h1 className="ug-h1">
-            Generează landing page <span className="ug-h1-italic">COD</span>
-          </h1>
-        </div>
-
-        <div className="ug-card">
-          <div className="ug-field">
-            <label className="ug-label" htmlFor="ali-url">Link AliExpress</label>
-            <input id="ali-url" value={aliUrl} onChange={e => setAliUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && aliUrl.trim() && generate()}
-              placeholder="https://www.aliexpress.com/item/..."
-              className="ug-input" />
-          </div>
-
-          <div className="ug-field">
-            <label className="ug-label" htmlFor="style-desc">
-              Descriere stil <span className="ug-label-opt">opțional</span>
-            </label>
-            <textarea id="style-desc" value={styleDesc} onChange={e => setStyleDesc(e.target.value)}
-              rows={3}
-              placeholder="Ex: Pagină pentru bărbați 25-45 ani, culori negru și roșu, ton direct, accent pe durabilitate..."
-              className="ug-input" />
-          </div>
-
-          {error && (
-            <div className="ug-error">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
-              <span>{error}</span>
+      {loading ? (
+        <div className="ug-loading-main">
+          <div className="ug-loading">
+            <div className="ug-loading-orb">
+              <div className="ug-orb-glow" />
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
             </div>
-          )}
-
-          <button onClick={generate} disabled={!aliUrl.trim()} className="ug-cta">
-            <span>Generează pagina</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-
-          <p className="ug-fine">≈ 1 minut de procesare</p>
+            <div className="ug-eyebrow">Generare în curs</div>
+            <h2 className="ug-h1-loading">Pregătim pagina ta</h2>
+            <p className="ug-loading-step">{loadMsg}</p>
+            <p className="ug-loading-hint">Imaginile AI durează ~1 minut · Calitate maximă</p>
+            <div className="ug-progress">
+              <div className="ug-progress-fill" style={{ width: `${loadPct}%` }} />
+            </div>
+            <div className="ug-progress-meta">
+              <span>{loadPct}%</span>
+            </div>
+          </div>
         </div>
-      </main>
+      ) : (
+        <main className="ug-container">
+          <div className="ug-page-header">
+            <div className="ug-eyebrow">Generator AI</div>
+            <h1 className="ug-h1">
+              Generează landing page <span className="ug-h1-italic">COD</span>
+            </h1>
+          </div>
+
+          <div className="ug-card">
+            <div className="ug-field">
+              <label className="ug-label" htmlFor="ali-url">Link AliExpress</label>
+              <input id="ali-url" value={aliUrl} onChange={e => setAliUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && aliUrl.trim() && generate()}
+                placeholder="https://www.aliexpress.com/item/..."
+                className="ug-input" />
+            </div>
+
+            <div className="ug-field">
+              <label className="ug-label" htmlFor="style-desc">
+                Descriere stil <span className="ug-label-opt">opțional</span>
+              </label>
+              <textarea id="style-desc" value={styleDesc} onChange={e => setStyleDesc(e.target.value)}
+                rows={3}
+                placeholder="Ex: Pagină pentru bărbați 25-45 ani, culori negru și roșu, ton direct, accent pe durabilitate..."
+                className="ug-input" />
+            </div>
+
+            {error && (
+              <div className="ug-error">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button onClick={generate} disabled={!aliUrl.trim()} className="ug-cta">
+              <span>Generează pagina</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+
+            <p className="ug-fine">≈ 1 minut de procesare</p>
+          </div>
+        </main>
+      )}
     </div>
   )
 }
@@ -173,7 +168,6 @@ function Styles() {
         padding: 14px 24px;
         display: flex; align-items: center; gap: 14px;
       }
-      .ug-spacer { flex: 1; }
       .ug-back {
         display: inline-flex; align-items: center; gap: 7px;
         padding: 7px 12px; border-radius: 9px;
@@ -184,11 +178,12 @@ function Styles() {
         cursor: pointer; letter-spacing: -0.01em;
         transition: all 0.15s ease;
       }
-      .ug-back:hover {
+      .ug-back:hover:not(:disabled) {
         background: var(--bg-3);
         color: var(--text);
         border-color: var(--border-strong);
       }
+      .ug-back:disabled { opacity: 0.5; cursor: not-allowed; }
       .ug-breadcrumb {
         display: flex; align-items: center; gap: 9px;
         font-size: 13.5px; font-weight: 600;
@@ -200,11 +195,11 @@ function Styles() {
         box-shadow: 0 0 0 4px var(--brand-soft);
       }
 
-      .ug-container {
+      .ug-container, .ug-loading-main {
         position: relative; z-index: 1;
         max-width: 560px; margin: 0 auto;
         padding: clamp(48px, 8vw, 80px) 32px clamp(40px, 6vw, 64px);
-        animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: fadeIn 0.2s ease both;
       }
       .ug-page-header { text-align: center; margin-bottom: 36px; }
       .ug-eyebrow {
@@ -292,11 +287,8 @@ function Styles() {
 
       /* Loading screen */
       .ug-loading {
-        position: relative; z-index: 1;
-        max-width: 440px; margin: 0 auto;
-        padding: clamp(80px, 14vh, 140px) 32px;
         text-align: center;
-        animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        max-width: 440px; margin: 0 auto;
       }
       .ug-loading-orb {
         width: 74px; height: 74px; border-radius: 20px;
@@ -352,7 +344,6 @@ function Styles() {
         color: var(--text-subtle);
         letter-spacing: 0.1em;
       }
-
     `}</style>
   )
 }

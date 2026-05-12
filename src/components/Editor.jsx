@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../apiFetch.js'
-import ThemeToggle from './ThemeToggle.jsx'
 
 export default function Editor({ data, shop, token, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
   const codFormApp = codFormAppProp || (typeof window !== 'undefined' ? localStorage.getItem('codform_' + shop) : null) || null
@@ -393,8 +392,6 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
           </button>
         </div>
 
-        <ThemeToggle size="sm" />
-
         {error && (
           <div className="ue-tb-error">
             <span>{error}</span>
@@ -516,36 +513,42 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   )
 }
 
-// ─── CSS de baza (scoped la #unitone-lp + responsive agresiv) ────────────────
+// ─── CSS de baza (scoped la #unitone-lp + fullscreen per device) ─────────────
 function buildCSS(data) {
   const primary = data.style?.primaryColor || '#dc2626'
   const font = data.style?.fontFamily || 'Inter, system-ui, sans-serif'
   const radius = data.style?.borderRadius || '12px'
   return `
     #unitone-lp, #unitone-lp * { box-sizing: border-box; }
-    #unitone-lp { font-family: ${font}; background: #fff; color: #111; max-width: 650px; margin: 0 auto; width: 100%; }
+    #unitone-lp {
+      font-family: ${font}; background: #fff; color: #111;
+      width: 100%; max-width: 100%;
+      margin: 0; padding: 0 16px;
+    }
+    /* Override max-width inline din buildHTML/legacy: forțează full width */
+    #unitone-lp > div { max-width: 100% !important; margin: 0 !important; }
     #unitone-lp p, #unitone-lp h1, #unitone-lp h2, #unitone-lp h3, #unitone-lp h4 { margin: 0; padding: 0; }
-    #unitone-lp img { max-width: 100%; height: auto; display: block; }
+    #unitone-lp img { width: 100%; max-width: 100%; height: auto; display: block; }
     #unitone-lp .btn-main { width: 100%; padding: 17px; border-radius: ${radius}; background: ${primary}; color: #fff; border: none; font-size: 18px; font-weight: 900; cursor: pointer; font-family: inherit; }
     #unitone-lp .inp { padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 15px; outline: none; width: 100%; font-family: inherit; box-sizing: border-box; }
 
-    /* ── Tablet: ≤ 992px ── */
-    @media (max-width: 992px) {
-      #unitone-lp { max-width: 100% !important; padding: 0 !important; }
-      #unitone-lp img { max-width: 100% !important; }
+    /* ── Desktop: > 992px ── padding lateral generos */
+    @media (min-width: 993px) {
+      #unitone-lp { padding: 0 40px !important; }
     }
-
+    /* ── Tablet: 601-992px ── */
+    @media (min-width: 601px) and (max-width: 992px) {
+      #unitone-lp { padding: 0 24px !important; }
+    }
     /* ── Mobile: ≤ 600px ── */
     @media (max-width: 600px) {
-      #unitone-lp { font-size: 14px !important; }
+      #unitone-lp { font-size: 14px !important; padding: 0 12px !important; }
       #unitone-lp h1 { font-size: 22px !important; line-height: 1.25 !important; }
       #unitone-lp h2 { font-size: 18px !important; line-height: 1.3 !important; }
       #unitone-lp h3 { font-size: 16px !important; line-height: 1.35 !important; }
       #unitone-lp p { font-size: 14px !important; line-height: 1.55 !important; }
       #unitone-lp img { width: 100% !important; max-width: 100% !important; height: auto !important; }
       #unitone-lp .btn-main { padding: 14px !important; font-size: 16px !important; width: 100% !important; }
-      /* Padding pe secțiunile direct copii ale wrapper-ului */
-      #unitone-lp > div { padding-left: 14px !important; padding-right: 14px !important; box-sizing: border-box !important; }
       /* Stack flex pe mobile */
       #unitone-lp [style*="display:flex"], #unitone-lp [style*="display: flex"] { flex-direction: column !important; gap: 12px !important; }
       /* Override inline width fix > 100% */
@@ -594,7 +597,7 @@ function buildHTML(data, codFormApp) {
   return [
     `<div id="unitone-lp">`,
     `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>`,
-    `<div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;background:#fff;color:#111">`,
+    `<div style="font-family:Arial,sans-serif;width:100%;background:#fff;color:#111">`,
 
     `<div style="background:#111;color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600">`,
     `&#128222; 0700 000 000 &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDA IN TOATA ROMANIA`,
@@ -1012,14 +1015,15 @@ function EditorStyles() {
         flex: 1; display: flex; overflow: hidden;
       }
       .ue-panel {
-        width: 240px; flex-shrink: 0;
+        width: 244px; flex-shrink: 0;
         background: var(--bg-2);
         overflow: auto;
+        padding: 14px 12px;
       }
       .ue-panel-left { border-right: 1px solid var(--divider); }
-      .ue-panel-right { border-left: 1px solid var(--divider); width: 270px; }
+      .ue-panel-right { border-left: 1px solid var(--divider); width: 272px; }
       .ue-panel-title {
-        padding: 14px 16px 8px;
+        padding: 6px 4px 12px;
         font-size: 10.5px; font-weight: 700;
         color: var(--text-subtle);
         text-transform: uppercase; letter-spacing: 0.12em;
@@ -1028,6 +1032,164 @@ function EditorStyles() {
         flex: 1; overflow: hidden; position: relative;
         background: var(--bg-3);
       }
+
+      /* ── GrapesJS Blocks overrides ── */
+      #blocks-panel .gjs-blocks-c {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 0;
+      }
+      .gjs-block {
+        background: var(--bg-elev) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+        color: var(--text) !important;
+        padding: 14px 8px !important;
+        min-height: auto !important;
+        width: auto !important;
+        margin: 0 !important;
+        font-family: var(--font-sans) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 6px !important;
+        cursor: grab;
+        transition: all 0.15s ease;
+        box-shadow: var(--shadow-sm);
+      }
+      .gjs-block:hover {
+        border-color: var(--brand-border) !important;
+        background: var(--brand-soft) !important;
+        transform: translateY(-1px);
+      }
+      .gjs-block-label, .gjs-block .gjs-block-label {
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        color: var(--text) !important;
+        text-align: center;
+        letter-spacing: -0.005em;
+        line-height: 1.3;
+      }
+      .gjs-block svg, .gjs-block .fa {
+        color: var(--text-muted);
+        font-size: 18px;
+      }
+      .gjs-block-category {
+        border: none !important;
+        margin-bottom: 14px;
+        background: transparent !important;
+      }
+      .gjs-category-title, .gjs-block-category > .gjs-title {
+        background: transparent !important;
+        color: var(--text-subtle) !important;
+        font-weight: 700 !important;
+        font-size: 10.5px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        padding: 6px 4px 10px !important;
+        border: none !important;
+        font-family: var(--font-sans) !important;
+      }
+      .gjs-category-title:hover { color: var(--text) !important; }
+      .gjs-category-open .gjs-category-title { color: var(--text) !important; }
+
+      /* ── GrapesJS Style Manager overrides ── */
+      .gjs-sm-sectors { padding: 0; background: transparent; }
+      .gjs-sm-sector {
+        border-bottom: 1px solid var(--divider) !important;
+        background: transparent !important;
+      }
+      .gjs-sm-sector:last-child { border-bottom: none !important; }
+      .gjs-sm-sector .gjs-sm-title, .gjs-sm-sector-title, .gjs-sm-sector__head {
+        background: transparent !important;
+        color: var(--text) !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 12px 4px !important;
+        border: none !important;
+        font-family: var(--font-sans) !important;
+      }
+      .gjs-sm-properties {
+        padding: 0 0 12px;
+        background: transparent !important;
+      }
+      .gjs-sm-property {
+        padding: 6px 4px !important;
+        background: transparent !important;
+      }
+      .gjs-sm-label, .gjs-sm-property .gjs-sm-label {
+        color: var(--text-muted) !important;
+        font-size: 10.5px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+        font-family: var(--font-sans) !important;
+      }
+      .gjs-field, .gjs-sm-field, .gjs-clm-tags-c .gjs-field {
+        background: var(--bg-elev) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 7px !important;
+        color: var(--text) !important;
+        font-family: var(--font-sans) !important;
+        font-size: 12.5px !important;
+        padding: 5px 8px !important;
+        min-height: 28px;
+      }
+      .gjs-field:focus-within, .gjs-sm-field:focus-within {
+        border-color: var(--brand) !important;
+        box-shadow: 0 0 0 2px var(--brand-soft) !important;
+      }
+      .gjs-input-holder, .gjs-field input, .gjs-field select, .gjs-field textarea {
+        background: transparent !important;
+        color: var(--text) !important;
+      }
+      .gjs-clm-tag, .gjs-clm-tags-c {
+        background: transparent !important;
+        border-color: var(--border) !important;
+        color: var(--text-muted) !important;
+      }
+      .gjs-radio-item-label, .gjs-sm-btn {
+        background: var(--bg-2) !important;
+        color: var(--text-muted) !important;
+        border-color: var(--border) !important;
+        font-family: var(--font-sans) !important;
+      }
+      .gjs-radio-item input:checked + .gjs-radio-item-label,
+      .gjs-sm-btn.gjs-four-color {
+        background: var(--accent) !important;
+        color: var(--accent-fg) !important;
+        border-color: var(--accent) !important;
+      }
+      .gjs-sm-colorp-c .gjs-field-color-picker {
+        border: 1px solid var(--border) !important;
+      }
+      .gjs-sm-slider-h, .gjs-sm-input-numb {
+        background: var(--bg-elev) !important;
+      }
+
+      /* ── GrapesJS Traits overrides ── */
+      .gjs-trt-traits { padding: 0; background: transparent !important; }
+      .gjs-trt-trait {
+        padding: 6px 4px !important;
+        border: none !important;
+        background: transparent !important;
+      }
+      .gjs-trt-label, .gjs-trt-trait .gjs-trt-label {
+        color: var(--text-muted) !important;
+        font-size: 10.5px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-family: var(--font-sans) !important;
+      }
+
+      /* ── GrapesJS dropdown / panel general ── */
+      .gjs-pn-panel, .gjs-cv-canvas { background: var(--bg-3) !important; }
+      .gjs-color-picker { background: var(--bg-elev) !important; }
 
       /* ── Published screen ── */
       .ue-published-shell {
