@@ -71,6 +71,16 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ success: true })
     }
 
+    if (action === 'unmark') {
+      // Scoate marcajele LP dar pastreaza produsul (utilizat pentru curatare produse contaminate de fluxul vechi)
+      const current = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'GET', null)
+      const currentTags = (current.product?.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== 'unitone-cod-page').join(', ')
+      await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
+        product: { id: pageId, template_suffix: null, tags: currentTags }
+      })
+      return res.status(200).json({ success: true })
+    }
+
     if (action === 'toggle') {
       const data = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, status: published ? 'active' : 'draft' }
