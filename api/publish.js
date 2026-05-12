@@ -73,8 +73,10 @@ function buildReleasitGemPages(variantId) {
     '      ph.style.border="none"; ph.style.padding="0"; ph.style.minHeight="";\n' +
     '      var s=ph.querySelector(".unitone-placeholder-text"); if(s) s.style.display="none";\n' +
     '      if(i===0){\n' +
-    '        target.style.cssText="width:100%!important;display:block!important;";\n' +
+    '        target.style.setProperty("width","100%","important");\n' +
+    '        target.style.setProperty("display","block","important");\n' +
     '        ph.appendChild(target);\n' +
+    '        enableClicks(target);\n' +
     '      } else {\n' +
     '        var proxy = document.createElement("button");\n' +
     '        proxy.className = realBtn.className;\n' +
@@ -84,27 +86,33 @@ function buildReleasitGemPages(variantId) {
     '        ph.appendChild(proxy);\n' +
     '      }\n' +
     '    });\n' +
+    '    watchRsiModals(realBtn);\n' +
     '  }\n' +
     '\n' +
-    '  // Orice injecteaza Releasit in body (modal, form popup) - muta in overlay\n' +
-    '  function watchRsiModals(){\n' +
-    '    var observer = new MutationObserver(function(muts){\n' +
-    '      muts.forEach(function(m){\n' +
-    '        m.addedNodes.forEach(function(node){\n' +
-    '          if(node.nodeType!==1) return;\n' +
-    '          var cls=(node.className||"").toString().toLowerCase();\n' +
-    '          var id=(node.id||"").toString().toLowerCase();\n' +
-    '          if(!cls.includes("rsi")&&!id.includes("rsi")) return;\n' +
-    '          var overlay=getOverlay();\n' +
-    '          if(!overlay||overlay.contains(node)) return;\n' +
-    '          overlay.appendChild(node);\n' +
+    '  // Dupa click pe buton Releasit, muta orice modal/form injectat in body in overlay\n' +
+    '  function watchRsiModals(realBtn){\n' +
+    '    realBtn.addEventListener("click", function(){\n' +
+    '      var observer = new MutationObserver(function(muts){\n' +
+    '        muts.forEach(function(m){\n' +
+    '          m.addedNodes.forEach(function(node){\n' +
+    '            if(node.nodeType!==1) return;\n' +
+    '            var overlay=getOverlay();\n' +
+    '            if(!overlay||overlay.contains(node)) return;\n' +
+    '            overlay.appendChild(node);\n' +
+    '          });\n' +
     '        });\n' +
     '      });\n' +
+    '      observer.observe(document.body,{childList:true,subtree:false});\n' +
+    '      setTimeout(function(){ observer.disconnect(); },5000);\n' +
     '    });\n' +
-    '    observer.observe(document.body,{childList:true});\n' +
     '  }\n' +
     '\n' +
-    '  document.addEventListener("DOMContentLoaded", function(){ moveBtn(); watchRsiModals(); });\n' +
+    '  function enableClicks(el){\n' +
+    '    el.style.setProperty("pointer-events","auto","important");\n' +
+    '    el.querySelectorAll("*").forEach(function(c){ c.style.setProperty("pointer-events","auto","important"); });\n' +
+    '  }\n' +
+    '\n' +
+    '  document.addEventListener("DOMContentLoaded", moveBtn);\n' +
     '  var iv=setInterval(function(){ moveBtn(); if(done) clearInterval(iv); },300);\n' +
     '  setTimeout(function(){ clearInterval(iv); },15000);\n' +
     '})();\n' +
