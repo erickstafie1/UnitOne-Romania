@@ -58,7 +58,7 @@ module.exports = async function handler(req, res) {
       ])
       const all = [...(active.products || []), ...(draft.products || [])]
       const pages = all
-        .filter(p => p.template_suffix === 'pagecod' || (p.tags || '').includes('unitone-cod-page'))
+        .filter(p => p.template_suffix === 'pagecod' || p.template_suffix === 'pagecodfull' || (p.tags || '').includes('unitone-cod-page'))
         .map(p => ({
           id: p.id,
           title: p.title,
@@ -66,6 +66,7 @@ module.exports = async function handler(req, res) {
           published: p.status === 'active',
           created_at: p.created_at,
           updated_at: p.updated_at,
+          template_suffix: p.template_suffix,
           isProduct: true
         }))
         .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
@@ -118,6 +119,7 @@ module.exports = async function handler(req, res) {
         page: {
           id: p.id, title: p.title, handle: p.handle,
           body_html: p.body_html, published: p.status === 'active',
+          template_suffix: p.template_suffix,
           isProduct: true
         }
       })
@@ -177,9 +179,30 @@ module.exports = async function handler(req, res) {
         '})();','<\/script>','</body>','</html>'
       ]
       shopifyRequest(shop, token, '/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE', null).catch(() => {})
+
+      // Layout pentru modul "H/F vizibil"
+      const fullLayout = [
+        '<!DOCTYPE html>',
+        '<html lang="{{ shop.locale }}">',
+        '<head>',
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        '<title>{{ product.title }}</title>',
+        '{{ content_for_header }}',
+        '</head>',
+        '<body style="margin:0;padding:0">',
+        "{% section 'header' %}",
+        '<main>{{ content_for_layout }}</main>',
+        "{% section 'footer' %}",
+        '</body>',
+        '</html>'
+      ].join('\n')
+
       await Promise.all([
         shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') } }),
+        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecodfull.liquid', value: fullLayout } }),
         shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" } }),
+        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" } }),
         shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' } }),
         shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) } })
       ])

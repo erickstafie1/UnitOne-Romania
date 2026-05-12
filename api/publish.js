@@ -31,12 +31,35 @@ function shopifyRequest(shop, token, path, method, body) {
   })
 }
 
-// Overlay la z-index 9999 - Releasit popup e la 99999+ si apare deasupra
-function buildOverlay(html) {
-  return '<div id="unitone-lp" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box">' +
-    html +
-    '</div><!--/unitone-lp-->'
+const OVERLAY_STYLE = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box'
+const EMBED_STYLE = 'background:#fff;width:100%;max-width:100%;margin:0 auto'
+
+// Aplică style pe wrapper-ul existent #unitone-lp sau adaugă unul dacă lipsește
+function applyWrapper(html, mode) {
+  const style = mode === 'embed' ? EMBED_STYLE : OVERLAY_STYLE
+  const wrapperMatch = html.match(/<div[^>]*id="unitone-lp"[^>]*>/)
+  if (wrapperMatch) {
+    // Scoate orice style existent + injectează noul style
+    const newWrapper = wrapperMatch[0]
+      .replace(/\sstyle="[^"]*"/, '')
+      .replace(/>$/, ` style="${style}">`)
+    return html.replace(wrapperMatch[0], newWrapper)
+  }
+  // Fallback: nu există wrapper - îl adaug
+  return `<div id="unitone-lp" style="${style}">${html}</div><!--/unitone-lp-->`
 }
+
+// Adaugă comment de închidere ca să existe marker pentru extracție la edit
+function ensureCloseMarker(html) {
+  if (html.includes('<!--/unitone-lp-->')) return html
+  // Adaugă markerul după ultimul </div> ca să găsim wrapper-ul mai târziu
+  const lastClose = html.lastIndexOf('</div>')
+  if (lastClose === -1) return html + '<!--/unitone-lp-->'
+  return html.slice(0, lastClose + 6) + '<!--/unitone-lp-->' + html.slice(lastClose + 6)
+}
+
+function buildOverlay(html) { return ensureCloseMarker(applyWrapper(html, 'overlay')) }
+function buildEmbed(html) { return ensureCloseMarker(applyWrapper(html, 'embed')) }
 
 function buildHideScript() {
   return '<style>\n' +
@@ -81,13 +104,22 @@ module.exports = async function handler(req, res) {
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
       if (codFormApp === 'releasit') finalHtml = buildReleasitGemPages(variantId) + finalHtml
-      finalHtml = buildOverlay(finalHtml)
-      finalHtml = buildHideScript() + finalHtml
+
+      let templateSuffix
+      if (hideHeaderFooter === false) {
+        finalHtml = buildEmbed(finalHtml)
+        templateSuffix = 'pagecodfull'
+      } else {
+        finalHtml = buildOverlay(finalHtml)
+        finalHtml = buildHideScript() + finalHtml
+        templateSuffix = 'pagecod'
+      }
+
       const result = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
-        product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml, template_suffix: 'pagecod' }
+        product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml, template_suffix: templateSuffix }
       })
       if (result.product) {
-        return res.status(200).json({ success: true, pageUrl: 'https://' + shop + '/products/' + result.product.handle })
+        return res.status(200).json({ success: true, pageUrl: 'https://' + shop + '/products/' + result.product.handle, template_suffix: templateSuffix })
       }
       throw new Error(JSON.stringify(result.errors || 'Update failed'))
     }
@@ -112,16 +144,23 @@ module.exports = async function handler(req, res) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
 
-    finalHtml = buildOverlay(finalHtml)
-    finalHtml = buildHideScript() + finalHtml
+    let templateSuffix
+    if (hideHeaderFooter === false) {
+      finalHtml = buildEmbed(finalHtml)
+      templateSuffix = 'pagecodfull'
+    } else {
+      finalHtml = buildOverlay(finalHtml)
+      finalHtml = buildHideScript() + finalHtml
+      templateSuffix = 'pagecod'
+    }
 
-    console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan)
+    console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
 
     const result = await shopifyRequest(shop, token, '/products/' + productId + '.json', 'PUT', {
       product: {
         id: productId,
         body_html: finalHtml,
-        template_suffix: 'pagecod',
+        template_suffix: templateSuffix,
         tags: 'unitone-cod-page',
         status: newStatus,
         ...(title && { title })
@@ -129,7 +168,7 @@ module.exports = async function handler(req, res) {
     })
 
     if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
-    console.log('LP published:', result.product.id, result.product.handle, 'status:', result.product.status)
+    console.log('LP published:', result.product.id, result.product.handle, 'status:', result.product.status, 'template:', result.product.template_suffix)
 
     res.status(200).json({
       success: true,
@@ -138,6 +177,7 @@ module.exports = async function handler(req, res) {
       variantId: result.product.variants?.[0]?.id,
       demoted: newStatus === 'draft',
       status: newStatus,
+      template_suffix: templateSuffix,
       plan: plan.plan,
       publishLimit: plan.publishLimit
     })

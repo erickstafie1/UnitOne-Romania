@@ -89,9 +89,30 @@ async function installTemplates(shop, token) {
       '})();','<\/script>','</body>','</html>'
     ]
     shopifyRequest(shop, token, '/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE', null).catch(() => {})
+
+    // Layout pentru modul "H/F vizibil" - foloseste sectiunile header/footer din tema
+    const fullLayout = [
+      '<!DOCTYPE html>',
+      '<html lang="{{ shop.locale }}">',
+      '<head>',
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1">',
+      '<title>{{ product.title }}</title>',
+      '{{ content_for_header }}',
+      '</head>',
+      '<body style="margin:0;padding:0">',
+      "{% section 'header' %}",
+      '<main>{{ content_for_layout }}</main>',
+      "{% section 'footer' %}",
+      '</body>',
+      '</html>'
+    ].join('\n')
+
     await Promise.all([
       shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') } }),
+      shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecodfull.liquid', value: fullLayout } }),
       shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" } }),
+      shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" } }),
       shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' } }),
       shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) } })
     ])

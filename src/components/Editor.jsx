@@ -17,7 +17,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [productsError, setProductsError] = useState('')
-  const [hideHeaderFooter, setHideHeaderFooter] = useState(true)
+  const [hideHeaderFooter, setHideHeaderFooter] = useState(data.template_suffix !== 'pagecodfull')
   const [pageTitle, setPageTitle] = useState(data.title || data.productName || 'Pagina COD')
   const [lastSaved, setLastSaved] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -43,7 +43,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
           devices: [
             { name: 'Desktop', width: '' },
             { name: 'Tablet', width: '768px', widthMedia: '992px' },
-            { name: 'Mobile', width: '390px', widthMedia: '480px' }
+            { name: 'Mobile', width: '390px', widthMedia: '600px' }
           ]
         },
         panels: { defaults: [] },
@@ -79,7 +79,8 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
         const css = styleMatch ? styleMatch[1] : ''
         const htmlOnly = raw.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        editor.setComponents(htmlOnly.trim())
+        // Re-wrap în #unitone-lp ca CSS-ul scoped să funcționeze în preview
+        editor.setComponents(`<div id="unitone-lp">${htmlOnly.trim()}</div>`)
         if (css) editor.setStyle(css)
       } else {
         const html = buildHTML(data, codFormApp)
@@ -363,6 +364,12 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
           ))}
         </div>
 
+        {device !== 'desktop' && (
+          <div className="ue-tb-device-hint">
+            Editezi pentru <strong>{device === 'mobile' ? 'Mobile' : 'Tablet'}</strong>
+          </div>
+        )}
+
         <button onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
           title={hideHeaderFooter ? 'Header/footer Shopify ascuns' : 'Header/footer Shopify afișat'}
           className={`ue-tb-toggle ${hideHeaderFooter ? 'on' : 'off'}`}>
@@ -509,28 +516,40 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   )
 }
 
-// ─── CSS de baza (responsive) ────────────────────────────────────────────────
+// ─── CSS de baza (scoped la #unitone-lp + responsive agresiv) ────────────────
 function buildCSS(data) {
   const primary = data.style?.primaryColor || '#dc2626'
   const font = data.style?.fontFamily || 'Inter, system-ui, sans-serif'
   const radius = data.style?.borderRadius || '12px'
   return `
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ${font}; background: #fff; color: #111; max-width: 650px; margin: 0 auto; width: 100%; }
-    img { max-width: 100%; height: auto; display: block; }
-    .btn-main { width: 100%; padding: 17px; border-radius: ${radius}; background: ${primary}; color: #fff; border: none; font-size: 18px; font-weight: 900; cursor: pointer; font-family: inherit; }
-    .inp { padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 15px; outline: none; width: 100%; font-family: inherit; box-sizing: border-box; }
-    /* Tablet */
+    #unitone-lp, #unitone-lp * { box-sizing: border-box; }
+    #unitone-lp { font-family: ${font}; background: #fff; color: #111; max-width: 650px; margin: 0 auto; width: 100%; }
+    #unitone-lp p, #unitone-lp h1, #unitone-lp h2, #unitone-lp h3, #unitone-lp h4 { margin: 0; padding: 0; }
+    #unitone-lp img { max-width: 100%; height: auto; display: block; }
+    #unitone-lp .btn-main { width: 100%; padding: 17px; border-radius: ${radius}; background: ${primary}; color: #fff; border: none; font-size: 18px; font-weight: 900; cursor: pointer; font-family: inherit; }
+    #unitone-lp .inp { padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 15px; outline: none; width: 100%; font-family: inherit; box-sizing: border-box; }
+
+    /* ── Tablet: ≤ 992px ── */
     @media (max-width: 992px) {
-      body { max-width: 100%; padding: 0; }
+      #unitone-lp { max-width: 100% !important; padding: 0 !important; }
+      #unitone-lp img { max-width: 100% !important; }
     }
-    /* Mobile */
+
+    /* ── Mobile: ≤ 600px ── */
     @media (max-width: 600px) {
-      body { font-size: 14px; }
-      h1 { font-size: 20px !important; line-height: 1.25 !important; }
-      h2 { font-size: 18px !important; }
-      h3 { font-size: 16px !important; }
-      .btn-main { padding: 14px; font-size: 16px; }
+      #unitone-lp { font-size: 14px !important; }
+      #unitone-lp h1 { font-size: 22px !important; line-height: 1.25 !important; }
+      #unitone-lp h2 { font-size: 18px !important; line-height: 1.3 !important; }
+      #unitone-lp h3 { font-size: 16px !important; line-height: 1.35 !important; }
+      #unitone-lp p { font-size: 14px !important; line-height: 1.55 !important; }
+      #unitone-lp img { width: 100% !important; max-width: 100% !important; height: auto !important; }
+      #unitone-lp .btn-main { padding: 14px !important; font-size: 16px !important; width: 100% !important; }
+      /* Padding pe secțiunile direct copii ale wrapper-ului */
+      #unitone-lp > div { padding-left: 14px !important; padding-right: 14px !important; box-sizing: border-box !important; }
+      /* Stack flex pe mobile */
+      #unitone-lp [style*="display:flex"], #unitone-lp [style*="display: flex"] { flex-direction: column !important; gap: 12px !important; }
+      /* Override inline width fix > 100% */
+      #unitone-lp [style*="width:"] { max-width: 100% !important; }
     }
   `
 }
@@ -573,6 +592,7 @@ function buildHTML(data, codFormApp) {
   ].join('')).join('')
 
   return [
+    `<div id="unitone-lp">`,
     `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>`,
     `<div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;background:#fff;color:#111">`,
 
@@ -668,6 +688,7 @@ function buildHTML(data, codFormApp) {
     `}`,
     `<\/script>`,
 
+    `</div>`,
     `</div>`
   ].join('\n')
 }
@@ -857,6 +878,18 @@ function EditorStyles() {
         color: var(--text);
         box-shadow: var(--shadow-sm);
       }
+      .ue-tb-device-hint {
+        display: inline-flex; align-items: center;
+        padding: 6px 11px; border-radius: 9px;
+        background: var(--brand-soft);
+        border: 1px solid var(--brand-border);
+        color: var(--brand);
+        font-size: 11.5px; font-weight: 500;
+        white-space: nowrap; letter-spacing: -0.005em;
+        animation: fadeIn 0.2s ease;
+      }
+      .ue-tb-device-hint strong { font-weight: 700; margin-left: 4px; }
+      @media (max-width: 1100px) { .ue-tb-device-hint { display: none; } }
       .ue-tb-toggle {
         display: inline-flex; align-items: center; gap: 7px;
         padding: 7px 11px; border-radius: 9px;
