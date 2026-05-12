@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 const FONT_STACK = "'Inter','SF Pro Display',-apple-system,system-ui,sans-serif"
 const FONT_DISPLAY = "'Fraunces',Georgia,serif"
 
-export default function Dashboard({ shop, token, onNew, onEdit, onReconfigure, onLogout, onUseTemplate }) {
+export default function Dashboard({ shop, token, plan, planLimit, onNew, onEdit, onReconfigure, onLogout, onUpgrade, onUseTemplate }) {
   const [section, setSection] = useState('home')
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -138,9 +138,39 @@ export default function Dashboard({ shop, token, onNew, onEdit, onReconfigure, o
             />
           ))}
 
-          <div style={{ height: 18 }} />
+          <div style={{ height: 14 }} />
 
-          <button onClick={() => { onNew(); setSidebarOpen(false) }}
+          {/* Plan badge */}
+          <div style={{
+            padding: '10px 12px', borderRadius: 10,
+            background: plan === 'pro' ? 'rgba(168,85,247,0.1)' : plan === 'basic' ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${plan === 'pro' ? 'rgba(168,85,247,0.25)' : plan === 'basic' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.07)'}`,
+            marginBottom: 10
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: plan === 'pro' ? '#c084fc' : plan === 'basic' ? '#60a5fa' : 'rgba(255,255,255,0.4)' }}>
+                {plan === 'pro' ? '★ Pro' : plan === 'basic' ? '◆ Basic' : 'Free'}
+              </span>
+              {plan !== 'pro' && (
+                <button onClick={onUpgrade} style={{ fontSize: 10, fontWeight: 700, color: '#60a5fa', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>Upgrade →</button>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', borderRadius: 2, background: plan === 'pro' ? '#a855f7' : plan === 'basic' ? '#3b82f6' : '#6b7280', width: `${Math.min(100, (pages.length / (planLimit || 3)) * 100)}%`, transition: 'width 0.5s ease' }} />
+              </div>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap' }}>{pages.length}/{planLimit || 3} LP</span>
+            </div>
+          </div>
+
+          <button onClick={() => {
+              if (pages.length >= (planLimit || 3)) {
+                if (onUpgrade) onUpgrade()
+                setSidebarOpen(false)
+                return
+              }
+              onNew(); setSidebarOpen(false)
+            }}
             style={{
               display: 'flex', alignItems: 'center', gap: 11,
               padding: '11px 14px', borderRadius: 10,

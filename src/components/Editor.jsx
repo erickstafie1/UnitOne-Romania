@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function Editor({ data, shop, token, codFormApp: codFormAppProp, onBack, onPublished }) {
+export default function Editor({ data, shop, token, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
   const codFormApp = codFormAppProp || (typeof window !== 'undefined' ? localStorage.getItem('codform_' + shop) : null) || null
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
@@ -194,6 +194,21 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     setError('')
     try {
       await validateName()
+
+      // Verifica limita LP pentru pagini noi (nu pentru editari)
+      if (!isEditing && !pageIdRef.current && planLimit) {
+        const lr = await fetch('/api/pages', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'list', shop, token })
+        })
+        const ld = await lr.json()
+        const count = (ld.pages || []).length
+        if (count >= planLimit) {
+          setPublishing(false)
+          setError(`Ai atins limita de ${planLimit} landing pages pentru planul tau. Fa upgrade pentru mai multe.`)
+          return
+        }
+      }
       const html = gjsRef.current.getHtml()
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
@@ -338,7 +353,14 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
             style={{ background:'rgba(255,255,255,0.06)', border:'none', color:'#fff', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:13 }}>↪️</button>
         </div>
 
-        {error && <span style={{ fontSize:12, color:'#fc8181' }}>⚠️ {error}</span>}
+        {error && (
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontSize:12, color:'#fc8181' }}>⚠️ {error}</span>
+            {error.includes('limita') && onUpgrade && (
+              <button onClick={onUpgrade} style={{ fontSize:11, fontWeight:700, color:'#60a5fa', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.3)', borderRadius:6, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>Upgrade →</button>
+            )}
+          </div>
+        )}
 
         <button onClick={() => {
           if (isEditing) {

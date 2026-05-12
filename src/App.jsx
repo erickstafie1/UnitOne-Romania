@@ -3,6 +3,7 @@ import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import Setup from './components/Setup.jsx'
+import Pricing from './components/Pricing.jsx'
 
 function LoginScreen({ onLogin }) {
   const [shopVal, setShopVal] = useState('')
@@ -106,11 +107,15 @@ export default function App() {
   const [editingPage, setEditingPage] = useState(null)
   const [shop, setShop] = useState('')
   const [token, setToken] = useState('')
+  const [plan, setPlan] = useState('free')
+  const [planLimit, setPlanLimit] = useState(3)
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const s = params.get('shop')
     const t = params.get('token')
     const host = params.get('host')
+    const chargeId = params.get('charge_id')
 
     // Injecteaza App Bridge CDN cand e deschis din Shopify Admin
     const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
@@ -120,6 +125,25 @@ export default function App() {
       script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
       script.setAttribute('data-api-key', apiKey)
       document.head.appendChild(script)
+    }
+
+    // Billing callback - activeaza charge dupa aprobare Shopify
+    if (s && chargeId) {
+      fetch('/api/get-token').then(r => r.json()).then(async d => {
+        const tok = d.token || localStorage.getItem('unitone_token_' + s)
+        if (!tok) { window.location.href = '/api/auth?shop=' + s; return }
+        if (d.token) { localStorage.setItem('unitone_shop', s); localStorage.setItem('unitone_token_' + s, tok) }
+        try {
+          const br = await fetch('/api/billing', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'activate_charge', shop: s, token: tok, chargeId })
+          })
+          const bd = await br.json()
+          if (bd.plan) { setPlan(bd.plan); setPlanLimit(bd.limit) }
+        } catch(e) { console.log('Activate charge error:', e.message) }
+        initApp(s, tok)
+      }).catch(() => { window.location.href = '/api/auth?shop=' + s })
+      return
     }
 
     // OAuth callback legacy - token in URL (backwards compat)
@@ -162,9 +186,18 @@ export default function App() {
     setScreen('login')
   }, [])
 
-  function initApp(s, t) {
+  async function initApp(s, t) {
     setShop(s); setToken(t)
     fetch('/api/reinstall-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shop: s, token: t }) }).catch(() => {})
+    try {
+      const r = await fetch('/api/billing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_status', shop: s, token: t })
+      })
+      const bd = await r.json()
+      setPlan(bd.plan || 'free')
+      setPlanLimit(bd.limit || 3)
+    } catch { setPlan('free'); setPlanLimit(3) }
     const saved = localStorage.getItem('codform_' + s)
     setCodFormApp(saved || null)
     setScreen(saved ? 'dashboard' : 'setup')
@@ -191,12 +224,17 @@ export default function App() {
       {screen === 'setup' && (
         <Setup shop={shop} onComplete={(app) => { setCodFormApp(app); setScreen('dashboard') }} isReconfigure={codFormApp !== null} />
       )}
+      {screen === 'pricing' && (
+        <Pricing currentPlan={plan} shop={shop} token={token} onBack={() => setScreen('dashboard')} />
+      )}
       {screen === 'dashboard' && (
         <Dashboard shop={shop} token={token}
+          plan={plan} planLimit={planLimit}
           onNew={() => setScreen('generator')}
           onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
           onReconfigure={() => setScreen('setup')}
           onLogout={handleLogout}
+          onUpgrade={() => setScreen('pricing')}
           onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
         />
       )}
@@ -212,8 +250,10 @@ export default function App() {
           shop={shop}
           token={token}
           codFormApp={codFormApp}
+          planLimit={planLimit}
           onBack={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
           onPublished={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
+          onUpgrade={() => { setGeneratedData(null); setEditingPage(null); setScreen('pricing') }}
         />
       )}
     </div>
