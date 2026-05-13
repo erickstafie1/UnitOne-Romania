@@ -180,10 +180,14 @@ module.exports = async function handler(req, res) {
       // pe care Shopify nu le mai accepta. Folosim token-ul fresh din OAuth direct.
       console.log('OAuth complete for', shop, '- token prefix:', access_token?.substring(0, 12))
       installTemplates(shop, access_token).catch(() => {})
-      const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
-      const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')
       const sessKey = 'unitone_sess_' + shop.replace(/[^a-zA-Z0-9]/g, '_')
       res.setHeader('Set-Cookie', `${sessKey}=${encodeURIComponent(access_token)}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=7776000`)
+      // Redirect back into Shopify Admin (embedded), not to the raw app URL.
+      // This ensures App Bridge is active and session tokens work normally.
+      const clientId = process.env.SHOPIFY_CLIENT_ID
+      if (clientId) return res.redirect(`https://${shop}/admin/apps/${clientId}`)
+      const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
+      const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')
       return res.redirect(appUrl + '?shop=' + shop + '&host=' + host)
     } catch(e) { return res.status(500).send('OAuth error: ' + e.message) }
   }
