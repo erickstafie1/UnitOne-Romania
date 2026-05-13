@@ -198,5 +198,5 @@ module.exports = async function handler(req, res) {
   const scopes = 'write_products,read_products,read_themes,write_themes'
   const state = crypto.randomBytes(16).toString('hex')
   res.setHeader('Set-Cookie', `shopify_state=${state}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=600`)
-  res.redirect(`https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&grant_options%5B%5D=per-user`)
+  res.redirect(`https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`)
 }
