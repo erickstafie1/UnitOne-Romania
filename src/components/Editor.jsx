@@ -184,17 +184,26 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     setLoadingProducts(true)
     setProductsError('')
     try {
-      const res = await apiFetch('/api/get-products', {
+      // Plain fetch — never redirect to OAuth from here (user would lose editor state).
+      // Auth errors surface as a reconnect prompt instead.
+      const res = await fetch('/api/get-products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shop, token })
       })
       const d = await res.json()
-      console.log('get-products response:', d)
-      if (!res.ok || d.error) throw new Error(d.error || 'Eroare server')
-      if ((d.products || []).length === 0) setProductsError('Niciun produs găsit. Debug: ' + JSON.stringify(d.debug))
-      else setProducts(d.products)
-    } catch(e) { setProductsError('Eroare: ' + e.message) }
+      if (d.error === 'reauth_required') {
+        setProductsError('REAUTH')
+      } else if (!res.ok || d.error) {
+        throw new Error(d.error || 'Eroare server')
+      } else if ((d.products || []).length === 0) {
+        setProductsError('Niciun produs găsit în magazin.')
+      } else {
+        setProducts(d.products)
+      }
+    } catch(e) {
+      if (e.message !== 'REAUTH') setProductsError('Eroare: ' + e.message)
+    }
     setLoadingProducts(false)
   }
 
@@ -473,6 +482,14 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
                 <div className="ue-modal-empty">
                   <div className="ue-spinner" />
                   <span>Se încarcă produsele...</span>
+                </div>
+              ) : productsError === 'REAUTH' ? (
+                <div className="ue-modal-empty">
+                  <div className="ue-modal-error">Sesiunea Shopify a expirat.</div>
+                  <button onClick={() => {
+                    try { (window.top || window).location.href = '/api/auth?shop=' + shop }
+                    catch { window.location.href = '/api/auth?shop=' + shop }
+                  }} className="ue-cta-primary" style={{marginTop:8}}>Reconectează Shopify</button>
                 </div>
               ) : productsError ? (
                 <div className="ue-modal-empty">
