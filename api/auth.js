@@ -175,9 +175,10 @@ module.exports = async function handler(req, res) {
     const digest = crypto.createHmac('sha256', clientSecret).update(params).digest('hex')
     if (digest !== hmac) return res.status(400).send('Invalid HMAC')
     try {
-      const { access_token: rawToken } = await exchangeToken(shop, code)
-      const rotated = await rotateToken(shop, rawToken)
-      const access_token = rotated || rawToken
+      const { access_token } = await exchangeToken(shop, code)
+      // NOTE: nu mai rotam token-ul - rotation API da inapoi token-uri NON-expiring,
+      // pe care Shopify nu le mai accepta. Folosim token-ul fresh din OAuth direct.
+      console.log('OAuth complete for', shop, '- token prefix:', access_token?.substring(0, 12))
       installTemplates(shop, access_token).catch(() => {})
       const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
       const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')

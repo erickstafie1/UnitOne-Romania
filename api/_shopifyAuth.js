@@ -35,10 +35,15 @@ function rawShopifyCall(shop, accessToken, path, method, body) {
 }
 
 function tokenExchange(shop, sessionToken) {
+  const clientId = process.env.SHOPIFY_CLIENT_ID
+  const clientSecret = process.env.SHOPIFY_CLIENT_SECRET
+  if (!clientId || !clientSecret) {
+    return Promise.reject(new Error('Token exchange config missing: SHOPIFY_CLIENT_ID or SHOPIFY_CLIENT_SECRET not set in env'))
+  }
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
-      client_id: process.env.SHOPIFY_CLIENT_ID,
-      client_secret: process.env.SHOPIFY_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
       subject_token: sessionToken,
       subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
@@ -57,12 +62,20 @@ function tokenExchange(shop, sessionToken) {
         const text = Buffer.concat(chunks).toString()
         try {
           const j = JSON.parse(text)
-          if (j.access_token) resolve(j.access_token)
-          else reject(new Error('Token exchange failed: ' + text.substring(0, 200)))
-        } catch { reject(new Error('Token exchange parse error: ' + text.substring(0, 200))) }
+          if (j.access_token) {
+            console.log('Token Exchange OK for', shop, '- expires_in:', j.expires_in, 'scope:', j.scope)
+            resolve(j.access_token)
+          } else {
+            console.error('Token Exchange rejected for', shop, '- status:', res.statusCode, 'body:', text.substring(0, 300))
+            reject(new Error('Token exchange failed (' + res.statusCode + '): ' + text.substring(0, 200)))
+          }
+        } catch (e) {
+          console.error('Token Exchange parse error for', shop, '- raw:', text.substring(0, 300))
+          reject(new Error('Token exchange parse error: ' + text.substring(0, 200)))
+        }
       })
     })
-    req.on('error', reject)
+    req.on('error', e => { console.error('Token Exchange network error:', e.message); reject(e) })
     req.on('timeout', () => { req.destroy(); reject(new Error('Token exchange timeout')) })
     req.write(body)
     req.end()
@@ -71,10 +84,16 @@ function tokenExchange(shop, sessionToken) {
 
 function getSessionInfo(req) {
   const authHeader = req.headers['authorization'] || ''
-  if (!authHeader.startsWith('Bearer ')) return null
+  if (!authHeader.startsWith('Bearer ')) {
+    console.log('No session token in Authorization header (Bearer missing)')
+    return null
+  }
   const sessionToken = authHeader.slice(7)
   const verified = verifySessionToken(sessionToken)
-  if (!verified) return null
+  if (!verified) {
+    console.log('Session token JWT failed verification (signature/exp/aud)')
+    return null
+  }
   return { shop: verified.shop, sessionToken }
 }
 

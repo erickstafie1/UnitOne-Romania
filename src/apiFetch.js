@@ -22,6 +22,15 @@ export async function apiFetch(path, options = {}) {
       const clone = res.clone()
       const data = await clone.json()
       if (data?.error === 'reauth_required' && data.authUrl) {
+        // Loop prevention: max 1 reauth redirect per 30s window
+        const key = 'unitone_last_reauth'
+        const now = Date.now()
+        const last = parseInt(sessionStorage.getItem(key) || '0', 10)
+        if (now - last < 30000) {
+          console.error('[apiFetch] reauth_required loop prevented — Token Exchange or OAuth still failing')
+          return res
+        }
+        sessionStorage.setItem(key, String(now))
         const url = data.authUrl
         try { (window.top || window).location.href = url }
         catch { window.location.href = url }
