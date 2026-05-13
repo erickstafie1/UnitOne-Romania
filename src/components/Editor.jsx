@@ -613,7 +613,7 @@ function buildHTML(data, codFormApp) {
 
   const relBtn = `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
 
-  const tCards = testimonials.slice(0, 3).map(t => [
+  const tCards = testimonials.map(t => [
     `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #f0f0f0;margin-bottom:14px">`,
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">`,
     `<span style="color:#f59e0b;font-size:17px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
@@ -721,8 +721,32 @@ function buildHTML(data, codFormApp) {
       `</div>`
     ].join('') : '',
 
-    // 9. Imagine suplimentară
+    // 9. Imagini suplimentare (toate cele disponibile)
     imgs[2] ? `<div style="background:#f0f0f0">${imgTag(imgs[2], 'width:100%;display:block')}</div>` : '',
+    imgs[3] ? `<div style="background:#f8f8f8">${imgTag(imgs[3], 'width:100%;display:block')}</div>` : '',
+    imgs[4] ? `<div style="background:#f0f0f0">${imgTag(imgs[4], 'width:100%;display:block')}</div>` : '',
+
+    // 9b. Sectiune "De ce sa comanzi acum" — comparatie
+    `<div style="padding:32px 20px;background:#fff;border-top:1px solid #f0f0f0">`,
+    `<div style="text-align:center;font-size:17px;font-weight:900;color:#111;margin-bottom:20px">De ce să comanzi <span style="color:${primary}">acum</span>? &#128073;</div>`,
+    `<div style="display:flex;flex-direction:column;gap:10px">`,
+    `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:#f0fdf4;border-radius:10px;border-left:4px solid #16a34a">`,
+    `<span style="font-size:22px">&#10003;</span>`,
+    `<div><div style="font-size:14px;font-weight:700;color:#15803d">Plată DUPĂ ce primești produsul</div><div style="font-size:13px;color:#555;margin-top:2px">Risc zero — plătești doar dacă ești mulțumit</div></div>`,
+    `</div>`,
+    `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:#f0fdf4;border-radius:10px;border-left:4px solid #16a34a">`,
+    `<span style="font-size:22px">&#10003;</span>`,
+    `<div><div style="font-size:14px;font-weight:700;color:#15803d">Livrare rapidă în 2-4 zile</div><div style="font-size:13px;color:#555;margin-top:2px">Prin Fan Courier sau Sameday</div></div>`,
+    `</div>`,
+    `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:#f0fdf4;border-radius:10px;border-left:4px solid #16a34a">`,
+    `<span style="font-size:22px">&#10003;</span>`,
+    `<div><div style="font-size:14px;font-weight:700;color:#15803d">Garanție 24 luni + retur 30 zile</div><div style="font-size:13px;color:#555;margin-top:2px">Banii înapoi garantat dacă nu ești mulțumit</div></div>`,
+    `</div>`,
+    `<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff8f0;border-radius:10px;border-left:4px solid ${primary}">`,
+    `<span style="font-size:22px">&#128293;</span>`,
+    `<div><div style="font-size:14px;font-weight:700;color:${primary}">Reducere de -${disc}% valabilă acum</div><div style="font-size:13px;color:#555;margin-top:2px">Prețul poate reveni oricând la ${oldPrice} LEI</div></div>`,
+    `</div>`,
+    `</div></div>`,
 
     // 10. Statistics strip
     `<div style="padding:32px 20px;background:#111;color:#fff">`,
@@ -748,6 +772,47 @@ function buildHTML(data, codFormApp) {
     `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#127775;</div><div style="font-size:13px;font-weight:700;color:#222">Garanție 24 luni</div><div style="font-size:12px;color:#777;margin-top:3px">Produs 100% original</div></div>`,
     `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#8617;</div><div style="font-size:13px;font-weight:700;color:#222">Retur 30 zile</div><div style="font-size:12px;color:#777;margin-top:3px">Banii înapoi garantat</div></div>`,
     `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#128666;</div><div style="font-size:13px;font-weight:700;color:#222">Livrare rapidă</div><div style="font-size:12px;color:#777;margin-top:3px">2-4 zile lucrătoare</div></div>`,
+    `</div></div>`,
+
+    // 12b. Livrare & Retur — detalii
+    `<div style="padding:32px 20px;background:#f9fafb;border-top:1px solid #f0f0f0">`,
+    `<div style="text-align:center;font-size:17px;font-weight:900;color:#111;margin-bottom:20px">&#128666; Livrare & Returnare</div>`,
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">`,
+    `<div style="background:#fff;border-radius:12px;padding:18px;border:1px solid #e5e7eb">`,
+    `<div style="font-size:22px;margin-bottom:8px">&#128666;</div>`,
+    `<div style="font-size:13px;font-weight:800;color:#111;margin-bottom:6px">Livrare standard</div>`,
+    `<div style="font-size:12px;color:#666;line-height:1.6">2-4 zile lucrătoare<br>Fan Courier / Sameday<br>Gratuit la comenzi</div>`,
+    `</div>`,
+    `<div style="background:#fff;border-radius:12px;padding:18px;border:1px solid #e5e7eb">`,
+    `<div style="font-size:22px;margin-bottom:8px">&#9889;</div>`,
+    `<div style="font-size:13px;font-weight:800;color:#111;margin-bottom:6px">Livrare express</div>`,
+    `<div style="font-size:12px;color:#666;line-height:1.6">1-2 zile lucrătoare<br>Confirmare prin SMS<br>Tracking online inclus</div>`,
+    `</div>`,
+    `<div style="background:#fff;border-radius:12px;padding:18px;border:1px solid #e5e7eb">`,
+    `<div style="font-size:22px;margin-bottom:8px">&#8617;</div>`,
+    `<div style="font-size:13px;font-weight:800;color:#111;margin-bottom:6px">Retur 30 zile</div>`,
+    `<div style="font-size:12px;color:#666;line-height:1.6">Produs nefolosit sau defect<br>Procesare în 3-5 zile<br>Banii înapoi garantat</div>`,
+    `</div>`,
+    `<div style="background:#fff;border-radius:12px;padding:18px;border:1px solid #e5e7eb">`,
+    `<div style="font-size:22px;margin-bottom:8px">&#128222;</div>`,
+    `<div style="font-size:13px;font-weight:800;color:#111;margin-bottom:6px">Suport clienți</div>`,
+    `<div style="font-size:12px;color:#666;line-height:1.6">Luni–Vineri 9:00–18:00<br>Răspuns în max 24h<br>Telefon & Email</div>`,
+    `</div>`,
+    `</div></div>`,
+
+    // 12c. Garantie detaliata
+    `<div style="padding:28px 20px;background:#fff;border-top:1px solid #f0f0f0">`,
+    `<div style="background:linear-gradient(135deg,#111 0%,#222 100%);border-radius:16px;padding:28px 24px;text-align:center;color:#fff">`,
+    `<div style="font-size:32px;margin-bottom:12px">&#127775;</div>`,
+    `<div style="font-size:18px;font-weight:900;margin-bottom:8px">Garanție de satisfacție 100%</div>`,
+    `<div style="font-size:14px;color:rgba(255,255,255,0.75);line-height:1.7;max-width:320px;margin:0 auto 20px">Dacă produsul nu corespunde așteptărilor tale, returnează-l în 30 de zile și îți restituim banii integral. Fără întrebări.</div>`,
+    `<div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap">`,
+    `<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:${primary}">30</div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px">Zile retur</div></div>`,
+    `<div style="width:1px;background:rgba(255,255,255,0.15)"></div>`,
+    `<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:${primary}">24</div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px">Luni garanție</div></div>`,
+    `<div style="width:1px;background:rgba(255,255,255,0.15)"></div>`,
+    `<div style="text-align:center"><div style="font-size:22px;font-weight:900;color:${primary}">100%</div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px">Banii înapoi</div></div>`,
+    `</div>`,
     `</div></div>`,
 
     // 13. FAQ
