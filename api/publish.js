@@ -129,7 +129,11 @@ module.exports = async function handler(req, res) {
       if (result.product) {
         return res.status(200).json({ success: true, pageUrl: 'https://' + shop + '/products/' + result.product.handle, template_suffix: templateSuffix })
       }
-      throw new Error(JSON.stringify(result.errors || 'Update failed'))
+      const errStr = JSON.stringify(result.errors || 'Update failed')
+      if (errStr.includes('Invalid API key') || errStr.includes('access token')) {
+        return res.status(401).json({ error: 'invalid_token' })
+      }
+      throw new Error(errStr)
     }
 
     if (!html) return res.status(400).json({ error: 'Missing html' })
@@ -175,7 +179,13 @@ module.exports = async function handler(req, res) {
       }
     })
 
-    if (!result.product) throw new Error(JSON.stringify(result.errors || 'Product update failed'))
+    if (!result.product) {
+      const errStr = JSON.stringify(result.errors || 'Product update failed')
+      if (errStr.includes('Invalid API key') || errStr.includes('access token')) {
+        return res.status(401).json({ error: 'invalid_token' })
+      }
+      throw new Error(errStr)
+    }
     console.log('LP published:', result.product.id, result.product.handle, 'status:', result.product.status, 'template:', result.product.template_suffix)
 
     res.status(200).json({

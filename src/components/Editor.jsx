@@ -261,6 +261,10 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
+      if (res.status === 401) {
+        window.location.href = '/api/auth?shop=' + shop
+        return
+      }
       if (res.status === 402) {
         const d = await res.json()
         setPublishing(false)
@@ -656,11 +660,8 @@ function buildHTML(data, codFormApp) {
     `<p style="font-size:15px;color:#555;line-height:1.6;margin:0">${data.subheadline || 'Comandă acum cu livrare rapidă și plată la livrare!'}</p>`,
     `</div>`,
 
-    // 3. Galerie imagini
-    `<div style="background:#f8f8f8">`,
-    imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:460px;object-fit:contain;display:block;margin:0 auto') : '',
-    imgs.length > 1 ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#e0e0e0">${imgs.slice(1, 5).map(s => imgTag(s, 'width:100%;height:180px;object-fit:cover;display:block')).join('')}</div>` : '',
-    `</div>`,
+    // 3. Imagine principală
+    imgs[0] ? `<div style="background:#f8f8f8">${imgTag(imgs[0], 'width:100%;max-height:480px;object-fit:contain;display:block;margin:0 auto')}</div>` : '',
 
     // 4. Trust microstrip
     `<div style="background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 16px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap;text-align:center">`,
@@ -721,10 +722,11 @@ function buildHTML(data, codFormApp) {
       `</div>`
     ].join('') : '',
 
-    // 9. Imagini suplimentare (toate cele disponibile)
-    imgs[2] ? `<div style="background:#f0f0f0">${imgTag(imgs[2], 'width:100%;display:block')}</div>` : '',
-    imgs[3] ? `<div style="background:#f8f8f8">${imgTag(imgs[3], 'width:100%;display:block')}</div>` : '',
-    imgs[4] ? `<div style="background:#f0f0f0">${imgTag(imgs[4], 'width:100%;display:block')}</div>` : '',
+    // 9. Imagini suplimentare scattered prin pagina
+    imgs[1] ? `<div style="background:#f0f0f0">${imgTag(imgs[1], 'width:100%;display:block')}</div>` : '',
+    imgs[2] ? `<div style="background:#f8f8f8">${imgTag(imgs[2], 'width:100%;display:block')}</div>` : '',
+    imgs[3] ? `<div style="background:#f0f0f0">${imgTag(imgs[3], 'width:100%;display:block')}</div>` : '',
+    imgs[4] ? `<div style="background:#f8f8f8">${imgTag(imgs[4], 'width:100%;display:block')}</div>` : '',
 
     // 9b. Sectiune "De ce sa comanzi acum" — comparatie
     `<div style="padding:32px 20px;background:#fff;border-top:1px solid #f0f0f0">`,
