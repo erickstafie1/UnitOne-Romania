@@ -139,7 +139,12 @@ async function prepareShopifyAuth(req, res) {
     console.log('Token Exchange (initial) for', shop)
   }
 
-  if (!token) throw new Error('No token available')
+  if (!token) {
+    // No valid token from any source — user must re-authenticate via OAuth
+    const err = new Error('REAUTH_REQUIRED')
+    err.shop = shop
+    throw err
+  }
 
   // Serialize concurrent refreshes within this request
   let refreshPromise = null

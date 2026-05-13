@@ -118,18 +118,17 @@ export default function App() {
     const host = params.get('host')
     const chargeId = params.get('charge_id')
 
-    // Load App Bridge for embedded context
+    // Load App Bridge for embedded context.
+    // Set __shopifyHost immediately so getSessionToken() waits the full 2s for idToken.
     const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
     if (host && apiKey) {
+      window.__shopifyHost = true
       if (!document.getElementById('shopify-app-bridge')) {
         const script = document.createElement('script')
         script.id = 'shopify-app-bridge'
         script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
         script.setAttribute('data-api-key', apiKey)
-        script.onload = () => { window.__shopifyHost = true }
         document.head.appendChild(script)
-      } else {
-        window.__shopifyHost = true
       }
     }
 
