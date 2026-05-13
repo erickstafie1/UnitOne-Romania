@@ -6,7 +6,7 @@ function shopifyRequest(shop, token, path, method, body) {
     const data = body ? JSON.stringify(body) : null
     const req = https.request({
       hostname: shop,
-      path: '/admin/api/2024-01' + path,
+      path: '/admin/api/2025-01' + path,
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -175,10 +175,13 @@ module.exports = async function handler(req, res) {
     const digest = crypto.createHmac('sha256', clientSecret).update(params).digest('hex')
     if (digest !== hmac) return res.status(400).send('Invalid HMAC')
     try {
-      const { access_token } = await exchangeToken(shop, code)
-      // NOTE: nu mai rotam token-ul - rotation API da inapoi token-uri NON-expiring,
-      // pe care Shopify nu le mai accepta. Folosim token-ul fresh din OAuth direct.
-      console.log('OAuth complete for', shop, '- token prefix:', access_token?.substring(0, 12))
+      const tokenData = await exchangeToken(shop, code)
+      const { access_token } = tokenData
+      if (!access_token) {
+        console.error('OAuth token exchange failed for', shop, '- response:', JSON.stringify(tokenData).substring(0, 300))
+        return res.status(500).send('OAuth failed: no access token. Check SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET in Vercel env.')
+      }
+      console.log('OAuth complete for', shop, '- token prefix:', access_token.substring(0, 12))
       installTemplates(shop, access_token).catch(() => {})
       const sessKey = 'unitone_sess_' + shop.replace(/[^a-zA-Z0-9]/g, '_')
       res.setHeader('Set-Cookie', `${sessKey}=${encodeURIComponent(access_token)}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=7776000`)

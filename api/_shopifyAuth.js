@@ -10,7 +10,7 @@ function rawShopifyCall(shop, accessToken, path, method, body) {
     const data = body ? JSON.stringify(body) : null
     const req = https.request({
       hostname: shop,
-      path: '/admin/api/2024-01' + path,
+      path: '/admin/api/2025-01' + path,
       method,
       headers: {
         'Content-Type': 'application/json',

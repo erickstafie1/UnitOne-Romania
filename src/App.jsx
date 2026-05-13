@@ -175,9 +175,12 @@ export default function App() {
 
   async function initApp(s, t) {
     setShop(s); setToken(t)
-    apiFetch('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reinstall', shop: s, token: t }) }).catch(() => {})
+    // Use plain fetch (not apiFetch) for init calls — we never want OAuth redirect
+    // on page load. If auth fails here, app loads with free defaults. Real OAuth
+    // is triggered only when the user does a concrete action (publish, select product).
+    fetch('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reinstall', shop: s, token: t }) }).catch(() => {})
     try {
-      const r = await apiFetch('/api/billing', {
+      const r = await fetch('/api/billing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get_status', shop: s, token: t })
       })
