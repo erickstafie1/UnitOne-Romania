@@ -16,7 +16,6 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [productsError, setProductsError] = useState('')
-  const [needsReauth, setNeedsReauth] = useState(false)
   const [hideHeaderFooter, setHideHeaderFooter] = useState(data.template_suffix !== 'pagecodfull')
   const [pageTitle, setPageTitle] = useState(data.title || data.productName || 'Pagina COD')
   const [lastSaved, setLastSaved] = useState(null)
@@ -190,11 +189,6 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shop, token })
       })
-      if (res.status === 401) {
-        setNeedsReauth(true)
-        setLoadingProducts(false)
-        return
-      }
       const d = await res.json()
       console.log('get-products response:', d)
       if (!res.ok || d.error) throw new Error(d.error || 'Eroare server')
@@ -202,17 +196,6 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       else setProducts(d.products)
     } catch(e) { setProductsError('Eroare: ' + e.message) }
     setLoadingProducts(false)
-  }
-
-  function reauthShopify() {
-    const url = '/api/auth?shop=' + shop
-    try {
-      if (window.top && window.top !== window.self) {
-        window.top.location.href = url
-        return
-      }
-    } catch(_) {}
-    window.location.href = url
   }
 
   async function publish() {
@@ -279,8 +262,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         body: JSON.stringify(body)
       })
       if (res.status === 401) {
-        setNeedsReauth(true)
-        setError('Sesiunea Shopify a expirat. Reconectează-te ca să poți publica.')
+        setError('Sesiune Shopify invalidă. Reîncarcă pagina din admin-ul Shopify.')
         setPublishing(false)
         return
       }
@@ -424,9 +406,6 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
             {error.includes('limita') && onUpgrade && (
               <button onClick={onUpgrade} className="ue-tb-upgrade">Upgrade →</button>
             )}
-            {needsReauth && (
-              <button onClick={reauthShopify} className="ue-tb-upgrade">Reconectează →</button>
-            )}
           </div>
         )}
 
@@ -494,11 +473,6 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
                 <div className="ue-modal-empty">
                   <div className="ue-spinner" />
                   <span>Se încarcă produsele...</span>
-                </div>
-              ) : needsReauth ? (
-                <div className="ue-modal-empty">
-                  <div className="ue-modal-error">Sesiunea Shopify a expirat. Reconectează-te ca să încarci produsele.</div>
-                  <button onClick={reauthShopify} className="ue-cta-secondary">Reconectează la Shopify</button>
                 </div>
               ) : productsError ? (
                 <div className="ue-modal-empty">

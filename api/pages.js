@@ -1,35 +1,6 @@
 // api/pages.js
-const https = require('https')
-const { verifySessionToken, getStoredToken } = require('./_verify')
+const { prepareShopifyAuth } = require('./_shopifyAuth')
 const { getPlan, countLPs } = require('./_plan')
-
-function shopifyRequest(shop, token, path, method, body) {
-  return new Promise((resolve, reject) => {
-    const data = body ? JSON.stringify(body) : null
-    const req = https.request({
-      hostname: shop,
-      path: '/admin/api/2024-01' + path,
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': token,
-        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
-      },
-      timeout: 30000
-    }, (res) => {
-      const chunks = []
-      res.on('data', c => chunks.push(c))
-      res.on('end', () => {
-        try { resolve(JSON.parse(Buffer.concat(chunks).toString())) }
-        catch(e) { reject(new Error(Buffer.concat(chunks).toString().substring(0, 100))) }
-      })
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')) })
-    if (data) req.write(data)
-    req.end()
-  })
-}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -38,23 +9,13 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   try {
-    let { action, shop, token, pageId, published } = req.body || {}
-
-    const authHeader = req.headers['authorization'] || ''
-    if (authHeader.startsWith('Bearer ')) {
-      const verified = verifySessionToken(authHeader.slice(7))
-      if (verified) {
-        shop = verified.shop
-        token = getStoredToken(req.headers.cookie || '', shop) || token
-      }
-    }
-
-    if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
+    const { action, pageId, published } = req.body || {}
+    const auth = await prepareShopifyAuth(req, res)
 
     if (action === 'list') {
       const [active, draft] = await Promise.all([
-        shopifyRequest(shop, token, '/products.json?limit=250&status=active&fields=id,title,handle,status,created_at,updated_at,template_suffix,tags', 'GET', null),
-        shopifyRequest(shop, token, '/products.json?limit=250&status=draft&fields=id,title,handle,status,created_at,updated_at,template_suffix,tags', 'GET', null)
+        auth.call('/products.json?limit=250&status=active&fields=id,title,handle,status,created_at,updated_at,template_suffix,tags'),
+        auth.call('/products.json?limit=250&status=draft&fields=id,title,handle,status,created_at,updated_at,template_suffix,tags')
       ])
       const all = [...(active.products || []), ...(draft.products || [])]
       const pages = all
@@ -74,45 +35,43 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'shop_info') {
-      const data = await shopifyRequest(shop, token, '/shop.json', 'GET', null)
+      const data = await auth.call('/shop.json')
       const s = data.shop || {}
       return res.status(200).json({ success: true, shopOwner: s.shop_owner, name: s.name, email: s.email })
     }
 
     if (action === 'delete') {
-      await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'DELETE', null)
+      await auth.call('/products/' + pageId + '.json', 'DELETE')
       return res.status(200).json({ success: true })
     }
 
     if (action === 'unmark') {
-      // Scoate marcajele LP dar pastreaza produsul (utilizat pentru curatare produse contaminate de fluxul vechi)
-      const current = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'GET', null)
+      const current = await auth.call('/products/' + pageId + '.json')
       const currentTags = (current.product?.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== 'unitone-cod-page').join(', ')
-      await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
+      await auth.call('/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, template_suffix: null, tags: currentTags }
       })
       return res.status(200).json({ success: true })
     }
 
     if (action === 'toggle') {
-      // Enforce publish limit la activare (Free: max 1 active)
       if (published) {
-        const plan = await getPlan(shop, token)
+        const plan = await getPlan(auth.call)
         if (plan.publishLimit < 9999) {
-          const counts = await countLPs(shop, token)
+          const counts = await countLPs(auth.call)
           if (counts.active >= plan.publishLimit) {
             return res.status(402).json({ error: 'publish_limit_reached', plan: plan.plan, publishLimit: plan.publishLimit })
           }
         }
       }
-      const data = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'PUT', {
+      const data = await auth.call('/products/' + pageId + '.json', 'PUT', {
         product: { id: pageId, status: published ? 'active' : 'draft' }
       })
       return res.status(200).json({ success: true, page: data.product })
     }
 
     if (action === 'get') {
-      const data = await shopifyRequest(shop, token, '/products/' + pageId + '.json', 'GET', null)
+      const data = await auth.call('/products/' + pageId + '.json')
       const p = data.product
       return res.status(200).json({
         success: true,
@@ -126,7 +85,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'reinstall') {
-      const themes = await shopifyRequest(shop, token, '/themes.json', 'GET', null)
+      const themes = await auth.call('/themes.json')
       const active = (themes.themes || []).find(t => t.role === 'main')
       if (!active) return res.status(400).json({ error: 'No active theme' })
       const id = active.id
@@ -178,9 +137,8 @@ module.exports = async function handler(req, res) {
         'setTimeout(hide,100);setTimeout(hide,300);setTimeout(hide,800);setTimeout(hide,2000);',
         '})();','<\/script>','</body>','</html>'
       ]
-      shopifyRequest(shop, token, '/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE', null).catch(() => {})
+      auth.call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE').catch(() => {})
 
-      // Layout pentru modul "H/F vizibil"
       const fullLayout = [
         '<!DOCTYPE html>',
         '<html lang="{{ shop.locale }}">',
@@ -199,12 +157,12 @@ module.exports = async function handler(req, res) {
       ].join('\n')
 
       await Promise.all([
-        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') } }),
-        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecodfull.liquid', value: fullLayout } }),
-        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" } }),
-        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" } }),
-        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' } }),
-        shopifyRequest(shop, token, '/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) } })
+        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') } }),
+        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecodfull.liquid', value: fullLayout } }),
+        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" } }),
+        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" } }),
+        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' } }),
+        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) } })
       ])
       return res.status(200).json({ success: true })
     }
@@ -212,6 +170,7 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ error: 'Unknown action' })
   } catch(err) {
     console.error('Pages error:', err.message)
-    res.status(500).json({ success: false, error: err.message })
+    const code = /Missing shop|No token/i.test(err.message) ? 401 : 500
+    res.status(code).json({ success: false, error: err.message })
   }
 }

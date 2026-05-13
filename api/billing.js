@@ -1,37 +1,8 @@
-const https = require('https')
-const { verifySessionToken, getStoredToken } = require('./_verify')
+const { prepareShopifyAuth } = require('./_shopifyAuth')
 
 const PLANS = {
   basic: { name: 'UnitOne Basic', price: 50.00, limit: 9999, publishLimit: 9999 },
   pro: { name: 'UnitOne Pro', price: 150.00, limit: 9999, publishLimit: 9999 }
-}
-
-function shopifyRequest(shop, token, path, method, body) {
-  return new Promise((resolve, reject) => {
-    const data = body ? JSON.stringify(body) : null
-    const req = https.request({
-      hostname: shop,
-      path: '/admin/api/2024-01' + path,
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': token,
-        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
-      },
-      timeout: 30000
-    }, (res) => {
-      const chunks = []
-      res.on('data', c => chunks.push(c))
-      res.on('end', () => {
-        try { resolve(JSON.parse(Buffer.concat(chunks).toString())) }
-        catch(e) { reject(new Error(Buffer.concat(chunks).toString().substring(0, 200))) }
-      })
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')) })
-    if (data) req.write(data)
-    req.end()
-  })
 }
 
 module.exports = async function handler(req, res) {
@@ -50,21 +21,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    let { action, shop, token, plan, chargeId } = req.body || {}
-
-    const authHeader = req.headers['authorization'] || ''
-    if (authHeader.startsWith('Bearer ')) {
-      const verified = verifySessionToken(authHeader.slice(7))
-      if (verified) {
-        shop = verified.shop
-        token = getStoredToken(req.headers.cookie || '', shop) || token
-      }
-    }
-
-    if (!shop || !token) return res.status(400).json({ error: 'Missing shop or token' })
+    const { action, plan, chargeId } = req.body || {}
+    const auth = await prepareShopifyAuth(req, res)
 
     if (action === 'get_status') {
-      const data = await shopifyRequest(shop, token, '/recurring_application_charges.json', 'GET', null)
+      const data = await auth.call('/recurring_application_charges.json')
       const charges = data.recurring_application_charges || []
       const active = charges.find(c => c.status === 'active')
       if (!active) return res.status(200).json({ plan: 'free', limit: 3, publishLimit: 1 })
@@ -78,10 +39,10 @@ module.exports = async function handler(req, res) {
       if (!plan || !PLANS[plan]) return res.status(400).json({ error: 'Plan invalid' })
       const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
       const { name, price } = PLANS[plan]
-      const result = await shopifyRequest(shop, token, '/recurring_application_charges.json', 'POST', {
+      const result = await auth.call('/recurring_application_charges.json', 'POST', {
         recurring_application_charge: {
           name, price,
-          return_url: `${appUrl}/api/billing?shop=${shop}`,
+          return_url: `${appUrl}/api/billing?shop=${auth.shop}`,
           test: process.env.BILLING_TEST === 'true'
         }
       })
@@ -92,7 +53,7 @@ module.exports = async function handler(req, res) {
 
     if (action === 'activate_charge') {
       if (!chargeId) return res.status(400).json({ error: 'chargeId lipsa' })
-      const existing = await shopifyRequest(shop, token, `/recurring_application_charges/${chargeId}.json`, 'GET', null)
+      const existing = await auth.call(`/recurring_application_charges/${chargeId}.json`)
       const charge = existing.recurring_application_charge
       if (!charge) throw new Error('Charge negasit')
       if (charge.status === 'active') {
@@ -100,7 +61,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ success: true, plan: price === 50 ? 'basic' : 'pro', limit: 9999, publishLimit: 9999 })
       }
       if (charge.status !== 'pending') throw new Error(`Status charge: ${charge.status}`)
-      await shopifyRequest(shop, token, `/recurring_application_charges/${chargeId}/activate.json`, 'POST', {
+      await auth.call(`/recurring_application_charges/${chargeId}/activate.json`, 'POST', {
         recurring_application_charge: { id: chargeId }
       })
       const price = parseFloat(charge.price)
@@ -110,6 +71,7 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ error: 'Actiune necunoscuta' })
   } catch(err) {
     console.error('Billing error:', err.message)
-    res.status(500).json({ error: err.message })
+    const code = /Missing shop|No token/i.test(err.message) ? 401 : 500
+    res.status(code).json({ error: err.message })
   }
 }

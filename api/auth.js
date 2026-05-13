@@ -182,10 +182,7 @@ module.exports = async function handler(req, res) {
       const appUrl = process.env.APP_URL || 'https://unit-one-romania.vercel.app'
       const host = Buffer.from('admin.shopify.com/store/' + shop.replace('.myshopify.com', '')).toString('base64')
       const sessKey = 'unitone_sess_' + shop.replace(/[^a-zA-Z0-9]/g, '_')
-      res.setHeader('Set-Cookie', [
-        `unitone_token=${access_token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=120`,
-        `${sessKey}=${encodeURIComponent(access_token)}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=7776000`
-      ])
+      res.setHeader('Set-Cookie', `${sessKey}=${encodeURIComponent(access_token)}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=7776000`)
       return res.redirect(appUrl + '?shop=' + shop + '&host=' + host)
     } catch(e) { return res.status(500).send('OAuth error: ' + e.message) }
   }
