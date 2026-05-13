@@ -74,6 +74,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         // Sterge scripturile si div-ul GemPages adaugate de publish
         raw = raw.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
         raw = raw.replace(/<div[^>]+class="[^"]*_rsi-cod-form-is-gempage[^"]*"[^>]*><\/div>/gi, '')
+        raw = raw.replace(/<style[^>]*>[\s\S]*?unitone-placeholder-text[\s\S]*?<\/style>/gi, '')
         // Extrage CSS din primul style tag (LP-ul generat de GrapesJS)
         const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
         const savedCss = styleMatch ? styleMatch[1] : ''

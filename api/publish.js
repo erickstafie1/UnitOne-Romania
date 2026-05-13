@@ -69,7 +69,13 @@ function buildHideScript() {
 
 // Releasit GemPages mode: triggerul face Releasit sa randeze butonul direct in .rsi-cod-form-gempages-button
 function buildReleasitGemPages(variantId) {
-  return '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>'
+  return [
+    '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>',
+    '<style>',
+    '.unitone-placeholder-text{display:none!important}',
+    '.unitone-releasit-btn{border:none!important;padding:0!important;min-height:0!important;background:transparent!important;text-align:unset!important;display:block!important}',
+    '</style>'
+  ].join('')
 }
 
 module.exports = async function handler(req, res) {
