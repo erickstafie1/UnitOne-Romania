@@ -73,7 +73,7 @@ function buildReleasitGemPages(variantId) {
     '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>',
     '<style>',
     '.unitone-placeholder-text{display:none!important}',
-    '.unitone-releasit-btn{border:none!important;padding:0!important;min-height:0!important;background:transparent!important;text-align:unset!important;display:block!important}',
+    '.unitone-releasit-btn{border:none!important;background:transparent!important}',
     '</style>'
   ].join('')
 }
@@ -109,7 +109,9 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      if (codFormApp === 'releasit') finalHtml = buildReleasitGemPages(variantId) + finalHtml
+      if (codFormApp === 'releasit' || finalHtml.includes('rsi-cod-form-gempages-button')) {
+        finalHtml = buildReleasitGemPages(variantId) + finalHtml
+      }
 
       let templateSuffix
       if (hideHeaderFooter === false) {
@@ -143,9 +145,9 @@ module.exports = async function handler(req, res) {
 
     let finalHtml = html
 
-    if (codFormApp === 'releasit') {
+    if (codFormApp === 'releasit' || finalHtml.includes('rsi-cod-form-gempages-button')) {
       finalHtml = buildReleasitGemPages(variantId) + finalHtml
-      console.log('Releasit mover added, variantId:', variantId)
+      console.log('Releasit GemPages activated, variantId:', variantId)
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
