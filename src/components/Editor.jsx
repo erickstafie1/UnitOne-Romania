@@ -189,6 +189,10 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shop, token })
       })
+      if (res.status === 401) {
+        window.location.href = '/api/auth?shop=' + shop
+        return
+      }
       const d = await res.json()
       console.log('get-products response:', d)
       if (!res.ok || d.error) throw new Error(d.error || 'Eroare server')
