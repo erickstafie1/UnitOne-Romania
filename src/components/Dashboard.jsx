@@ -23,7 +23,8 @@ export default function Dashboard({
 
   async function loadShopInfo() {
     try {
-      const r = await apiFetch('/api/pages', {
+      // Plain fetch: shop info is cosmetic, never redirect to OAuth for it
+      const r = await fetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'shop_info', shop, token })
       })
@@ -35,7 +36,10 @@ export default function Dashboard({
   async function loadPages() {
     setLoading(true)
     try {
-      const res = await apiFetch('/api/pages', {
+      // Plain fetch: loading the page list should never trigger an OAuth redirect.
+      // If auth fails, show empty list — user can retry or perform an action that
+      // will trigger OAuth naturally (publish, select product, etc.)
+      const res = await fetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'list', shop, token })
       })
