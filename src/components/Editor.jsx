@@ -589,6 +589,10 @@ function buildCSS(data) {
       #unitone-lp [style*="display:flex"], #unitone-lp [style*="display: flex"] { flex-direction: column !important; gap: 12px !important; }
       /* Override inline width fix > 100% */
       #unitone-lp [style*="width:"] { max-width: 100% !important; }
+      /* Volume tiers — 1 coloana pe mobile */
+      #unitone-lp .unitone-vol-grid { grid-template-columns: 1fr !important; }
+      /* Stats — font mai mic pe mobile */
+      #unitone-lp .unitone-stats-grid > div > div:first-child { font-size: 28px !important; }
     }
   `
 }
@@ -600,118 +604,188 @@ function buildHTML(data, codFormApp) {
   const disc = Math.round((1 - price / oldPrice) * 100)
   const imgs = data.images || []
   const primary = data.style?.primaryColor || '#e8000d'
+  const reviewCount = data.reviewCount || 1247
   const JUDETE = ['Alba','Arad','Arges','Bacau','Bihor','Bistrita-Nasaud','Botosani','Braila','Brasov','Bucuresti','Buzau','Calarasi','Caras-Severin','Cluj','Constanta','Covasna','Dambovita','Dolj','Galati','Giurgiu','Gorj','Harghita','Hunedoara','Ialomita','Iasi','Ilfov','Maramures','Mehedinti','Mures','Neamt','Olt','Prahova','Salaj','Satu Mare','Sibiu','Suceava','Teleorman','Timis','Tulcea','Valcea','Vaslui','Vrancea']
   const jOpts = JUDETE.map(j => `<option value="${j}">${j}</option>`).join('')
   const imgTag = (src, style) => src ? `<img src="${src}" style="${style || 'width:100%;display:block'}" />` : ''
   const benefits = (data.benefits || []).slice(0, 5)
+  const testimonials = data.testimonials || []
 
-  // Placeholder vizibil pentru butonul Releasit (rsi-cod-form-gempages-button = clasa recunoscuta de Releasit in GemPages mode)
-  const relBtn = `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${primary};border-radius:6px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
+  const relBtn = `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
 
-  const tCards = (data.testimonials || []).map((t, i) => [
-    `<div style="margin-bottom:32px">`,
-    imgs[i] ? `<div style="margin-bottom:12px">${imgTag(imgs[i], 'width:100%;max-width:400px;display:block;margin:0 auto;border-radius:8px')}</div>` : '',
-    `<p style="font-size:13px;color:#555;margin-bottom:6px">Recenzie de la ${t.name}: ${'⭐'.repeat(t.stars || 5)}</p>`,
-    `<p style="font-size:15px;color:#222;line-height:1.6;font-style:italic">"${t.text}"</p>`,
+  const tCards = testimonials.slice(0, 3).map(t => [
+    `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #f0f0f0;margin-bottom:14px">`,
+    `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">`,
+    `<span style="color:#f59e0b;font-size:17px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
+    `<span style="font-size:11px;background:#f0fdf4;color:#16a34a;border-radius:20px;padding:3px 10px;font-weight:700">&#10003; Cumpărător verificat</span>`,
+    `</div>`,
+    `<p style="font-size:14px;color:#333;line-height:1.65;margin:0 0 12px;font-style:italic">"${t.text}"</p>`,
+    `<strong style="font-size:13px;color:#555">— ${t.name}</strong>`,
     `</div>`
   ].join('')).join('')
 
   const faqHtml = (data.faq || []).map(f => [
-    `<details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">`,
-    `<summary style="padding:14px 16px;font-size:15px;font-weight:600;cursor:pointer;background:#f9fafb">${f.q}</summary>`,
-    `<div style="padding:12px 16px;font-size:14px;color:#555;line-height:1.7">${f.a}</div>`,
+    `<details style="margin-bottom:8px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">`,
+    `<summary style="padding:15px 18px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">${f.q}</summary>`,
+    `<div style="padding:14px 18px;font-size:14px;color:#555;line-height:1.7;background:#fff">${f.a}</div>`,
     `</details>`
   ].join('')).join('')
 
   const howItWorksHtml = (data.howItWorks || []).map((s, i) => [
-    `<div style="display:flex;gap:14px;margin-bottom:16px;align-items:flex-start">`,
-    `<div style="width:32px;height:32px;background:${primary};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0">${i + 1}</div>`,
-    `<div><strong style="font-size:15px;display:block;margin-bottom:3px">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>`,
+    `<div style="display:flex;gap:14px;margin-bottom:18px;align-items:flex-start">`,
+    `<div style="width:36px;height:36px;background:${primary};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0">${i + 1}</div>`,
+    `<div style="padding-top:4px"><strong style="font-size:15px;display:block;margin-bottom:4px;color:#111">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>`,
     `</div>`
   ].join('')).join('')
 
+  const price2 = Math.round(price * 0.95)
+  const price3 = Math.round(price * 0.90)
+
   return [
     `<div id="unitone-lp">`,
-    `<div class="_rsi-cod-form-is-gempage" style="display:none"></div>`,
     `<div style="font-family:Arial,sans-serif;width:100%;background:#fff;color:#111">`,
 
-    `<div style="background:#111;color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600">`,
-    `&#128222; 0700 000 000 &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDA IN TOATA ROMANIA`,
+    // 1. Topbar
+    `<div style="background:#111;color:#fff;text-align:center;padding:9px 16px;font-size:13px;font-weight:600">`,
+    `&#128222; 0700 000 000 &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDĂ ÎN TOATĂ ROMÂNIA`,
     `</div>`,
 
-    `<div style="padding:24px 20px 16px;text-align:center;border-bottom:2px solid ${primary}">`,
-    `<h1 style="font-size:22px;font-weight:900;line-height:1.3;margin:0;color:#111">${data.headline || data.productName}</h1>`,
+    // 2. Hero — headline + subheadline
+    `<div style="padding:28px 20px 20px;text-align:center;border-bottom:3px solid ${primary}">`,
+    `<h1 style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 10px;color:#111">${data.headline || data.productName}</h1>`,
+    `<p style="font-size:15px;color:#555;line-height:1.6;margin:0">${data.subheadline || 'Comandă acum cu livrare rapidă și plată la livrare!'}</p>`,
     `</div>`,
 
-    `<div style="padding:0">`,
-    imgs[0] ? `<div style="background:#f8f8f8">${imgTag(imgs[0], 'width:100%;max-height:420px;object-fit:contain;display:block;margin:0 auto')}</div>` : '',
-    imgs.length > 1 ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#e5e7eb">${imgs.slice(1, 5).map(s => imgTag(s, 'width:100%;height:200px;object-fit:cover;display:block')).join('')}</div>` : '',
+    // 3. Galerie imagini
+    `<div style="background:#f8f8f8">`,
+    imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:460px;object-fit:contain;display:block;margin:0 auto') : '',
+    imgs.length > 1 ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#e0e0e0">${imgs.slice(1, 5).map(s => imgTag(s, 'width:100%;height:180px;object-fit:cover;display:block')).join('')}</div>` : '',
     `</div>`,
 
-    `<div style="padding:16px 20px;text-align:center;background:#fff8f0;border-bottom:1px solid #ffe0b2">`,
-    `<span style="font-size:18px">&#11088;&#11088;&#11088;&#11088;&#11088;</span>`,
-    `<span style="font-size:14px;font-weight:700;color:#e65c00;margin-left:8px">${(data.reviewCount || 1247).toLocaleString()}+ Clienti Multumiti!</span>`,
+    // 4. Trust microstrip
+    `<div style="background:#fff;border-bottom:1px solid #f0f0f0;padding:12px 16px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap;text-align:center">`,
+    `<span style="font-size:13px;color:#555;font-weight:600">&#11088; ${reviewCount.toLocaleString()}+ recenzii</span>`,
+    `<span style="font-size:13px;color:#555;font-weight:600">&#128666; Livrare rapidă</span>`,
+    `<span style="font-size:13px;color:#555;font-weight:600">&#8617; Retur 30 zile</span>`,
+    `<span style="font-size:13px;color:#555;font-weight:600">&#10003; Garanție 24 luni</span>`,
     `</div>`,
 
-    `<div style="padding:24px 20px;background:#fff">`,
-    `<div style="background:${primary};color:#fff;text-align:center;padding:8px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:16px">TOP ${benefits.length} MOTIVE SA COMANZI ACUM:</div>`,
-    `<ul style="margin:0;padding:0;list-style:none">`,
-    benefits.map(b => `<li style="margin-bottom:10px;font-size:15px;line-height:1.5;color:#222;display:flex;gap:10px;align-items:flex-start"><span style="color:${primary};font-weight:900;flex-shrink:0">&#10003;</span><span>${b}</span></li>`).join(''),
-    `</ul></div>`,
+    // 5. Beneficii
+    benefits.length ? [
+      `<div style="padding:28px 20px;background:#fff">`,
+      `<div style="background:${primary};color:#fff;text-align:center;padding:10px;border-radius:8px;font-size:13px;font-weight:800;letter-spacing:1px;margin-bottom:20px">TOP ${benefits.length} MOTIVE SĂ COMANZI ACUM</div>`,
+      `<div style="display:flex;flex-direction:column;gap:12px">`,
+      benefits.map(b => `<div style="display:flex;gap:12px;align-items:flex-start"><span style="width:24px;height:24px;background:${primary};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:15px;color:#222;line-height:1.55">${b}</span></div>`).join(''),
+      `</div></div>`
+    ].join('') : '',
 
-    `<div style="padding:20px;background:#fff;border-top:1px solid #f3f4f6;border-bottom:3px solid ${primary};text-align:center">`,
-    `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px">`,
-    `<span style="font-size:20px;color:#999;text-decoration:line-through">${oldPrice} LEI</span>`,
-    `<span style="font-size:42px;font-weight:900;color:${primary}">${price} LEI</span>`,
-    `<span style="background:${primary};color:#fff;padding:4px 10px;border-radius:4px;font-size:14px;font-weight:700">-${disc}%</span>`,
+    // 6. Preț + CTA principal
+    `<div style="padding:24px 20px;background:#fff8f0;border-top:1px solid #ffe0b2;border-bottom:3px solid ${primary};text-align:center">`,
+    `<div style="display:inline-flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap;justify-content:center">`,
+    `<span style="font-size:18px;color:#999;text-decoration:line-through">${oldPrice} LEI</span>`,
+    `<span style="font-size:46px;font-weight:900;color:${primary};line-height:1">${price} LEI</span>`,
+    `<span style="background:${primary};color:#fff;padding:5px 12px;border-radius:6px;font-size:15px;font-weight:800">-${disc}%</span>`,
     `</div>`,
     relBtn,
-    `<p style="font-size:13px;color:#666;margin:8px 0 0">&#10003; Plata la livrare &nbsp;&middot;&nbsp; &#128666; Livrare 2-4 zile &nbsp;&middot;&nbsp; &#8617; Retur 30 zile</p>`,
+    `<p style="font-size:13px;color:#666;margin:10px 0 0">&#10003; Plată la livrare &nbsp;&middot;&nbsp; &#128666; Livrare 2-4 zile &nbsp;&middot;&nbsp; &#8617; Retur 30 zile gratuit</p>`,
     `</div>`,
 
-    `<div style="padding:28px 20px;background:#f9fafb">`,
-    `<div style="text-align:center;background:${primary};color:#fff;padding:6px;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:16px">${data.subheadline || 'DE CE SA COMANZI DE LA NOI?'}</div>`,
-    imgs[1] ? `<div style="margin-bottom:20px">${imgTag(imgs[1], 'width:100%;border-radius:8px;display:block')}</div>` : '',
-    howItWorksHtml,
-    relBtn,
+    // 7. Volume discount tiers
+    `<div style="padding:28px 20px;background:#fff;border-bottom:1px solid #f0f0f0">`,
+    `<div style="text-align:center;font-size:14px;font-weight:700;color:#111;margin-bottom:16px">&#128293; Economisești mai mult când comanzi mai mult:</div>`,
+    `<div class="unitone-vol-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">`,
+    `<div style="border:2px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;background:#fff">`,
+    `<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">1 bucată</div>`,
+    `<div style="font-size:22px;font-weight:900;color:#111;margin-bottom:4px">${price} LEI</div>`,
+    `<div style="font-size:11px;color:#bbb;text-decoration:line-through">${oldPrice} LEI</div>`,
+    `</div>`,
+    `<div style="border:2px solid ${primary};border-radius:12px;padding:16px;text-align:center;background:#fff;position:relative;overflow:hidden">`,
+    `<div style="position:absolute;top:0;left:0;right:0;background:${primary};color:#fff;font-size:10px;font-weight:800;padding:4px;text-align:center;letter-spacing:1px">&#9733; CEL MAI POPULAR</div>`,
+    `<div style="margin-top:20px;font-size:11px;font-weight:700;color:${primary};margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">2 bucăți</div>`,
+    `<div style="font-size:22px;font-weight:900;color:${primary};margin-bottom:4px">${price2 * 2} LEI</div>`,
+    `<div style="font-size:11px;color:#888">${price2} LEI/buc</div>`,
+    `</div>`,
+    `<div style="border:2px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;background:#fff">`,
+    `<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">3 bucăți</div>`,
+    `<div style="font-size:22px;font-weight:900;color:#111;margin-bottom:4px">${price3 * 3} LEI</div>`,
+    `<div style="font-size:11px;color:#888">${price3} LEI/buc</div>`,
+    `</div>`,
+    `</div></div>`,
+
+    // 8. How it works (dacă există date)
+    howItWorksHtml ? [
+      `<div style="padding:28px 20px;background:#f9fafb">`,
+      `<div style="text-align:center;background:${primary};color:#fff;padding:10px;border-radius:8px;font-size:13px;font-weight:800;letter-spacing:1px;margin-bottom:20px">DE CE SĂ COMANZI DE LA NOI?</div>`,
+      howItWorksHtml,
+      relBtn,
+      `</div>`
+    ].join('') : '',
+
+    // 9. Imagine suplimentară
+    imgs[2] ? `<div style="background:#f0f0f0">${imgTag(imgs[2], 'width:100%;display:block')}</div>` : '',
+
+    // 10. Statistics strip
+    `<div style="padding:32px 20px;background:#111;color:#fff">`,
+    `<div style="text-align:center;font-size:12px;font-weight:700;letter-spacing:2px;margin-bottom:24px;opacity:0.6">DE CE NE ALEG CLIENȚII</div>`,
+    `<div class="unitone-stats-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center">`,
+    `<div><div style="font-size:36px;font-weight:900;color:${primary};line-height:1">98%</div><div style="font-size:12px;color:#ccc;margin-top:6px;line-height:1.4">Clienți<br>satisfăcuți</div></div>`,
+    `<div><div style="font-size:36px;font-weight:900;color:${primary};line-height:1">2-4</div><div style="font-size:12px;color:#ccc;margin-top:6px;line-height:1.4">Zile<br>livrare</div></div>`,
+    `<div><div style="font-size:36px;font-weight:900;color:${primary};line-height:1">30</div><div style="font-size:12px;color:#ccc;margin-top:6px;line-height:1.4">Zile<br>garanție retur</div></div>`,
+    `</div></div>`,
+
+    // 11. Testimoniale
+    testimonials.length ? [
+      `<div style="padding:28px 20px;background:#f9fafb">`,
+      `<div style="text-align:center;font-size:17px;font-weight:900;color:#111;margin-bottom:20px">Ce spun clienții noștri &#128172;</div>`,
+      tCards,
+      `</div>`
+    ].join('') : '',
+
+    // 12. Trust badges — grid 2x2
+    `<div style="padding:24px 20px;background:#fff;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0">`,
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">`,
+    `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#128179;</div><div style="font-size:13px;font-weight:700;color:#222">Plată ramburs</div><div style="font-size:12px;color:#777;margin-top:3px">Plătești la livrare</div></div>`,
+    `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#127775;</div><div style="font-size:13px;font-weight:700;color:#222">Garanție 24 luni</div><div style="font-size:12px;color:#777;margin-top:3px">Produs 100% original</div></div>`,
+    `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#8617;</div><div style="font-size:13px;font-weight:700;color:#222">Retur 30 zile</div><div style="font-size:12px;color:#777;margin-top:3px">Banii înapoi garantat</div></div>`,
+    `<div style="text-align:center;padding:18px 12px;background:#f9fafb;border-radius:12px"><div style="font-size:28px;margin-bottom:6px">&#128666;</div><div style="font-size:13px;font-weight:700;color:#222">Livrare rapidă</div><div style="font-size:12px;color:#777;margin-top:3px">2-4 zile lucrătoare</div></div>`,
+    `</div></div>`,
+
+    // 13. FAQ
+    (data.faq || []).length ? [
+      `<div style="padding:28px 20px;background:#fff;border-top:1px solid #f0f0f0">`,
+      `<h3 style="font-size:18px;font-weight:900;margin:0 0 18px;text-align:center;color:#111">Întrebări frecvente &#128172;</h3>`,
+      faqHtml,
+      `</div>`
+    ].join('') : '',
+
+    // 14. Final CTA
+    `<div style="padding:28px 20px;background:${primary};text-align:center">`,
+    `<div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:6px;opacity:0.9">&#9889; OFERTĂ LIMITATĂ — COMANDĂ ACUM!</div>`,
+    `<div style="color:#fff;font-size:30px;font-weight:900;margin-bottom:18px">${price} LEI <span style="font-size:16px;text-decoration:line-through;opacity:0.55">${oldPrice} LEI</span></div>`,
+    `<div style="background:#fff;border-radius:12px;padding:12px">${relBtn}</div>`,
+    `<p style="color:rgba(255,255,255,0.85);font-size:13px;margin:12px 0 0">&#10003; Plată la livrare &nbsp;&middot;&nbsp; &#128666; Livrare rapidă &nbsp;&middot;&nbsp; &#8617; Retur 30 zile</p>`,
     `</div>`,
 
-    imgs[2] ? `<div style="background:#fff">${imgTag(imgs[2], 'width:100%;display:block')}</div>` : '',
-
-    `<div style="padding:20px;background:#fff;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;border-top:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;text-align:center">`,
-    `<div style="font-size:13px;color:#444"><div style="font-size:28px">&#128179;</div>Plata ramburs</div>`,
-    `<div style="font-size:13px;color:#444"><div style="font-size:28px">&#10003;</div>Satisfactie garantata</div>`,
-    `<div style="font-size:13px;color:#444"><div style="font-size:28px">&#8617;</div>Banii inapoi 30 zile</div>`,
-    `</div>`,
-
-    `<div style="padding:28px 20px;background:#f9fafb">`,
-    `<div style="text-align:center;background:#111;color:#fff;padding:8px;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:24px">PARERILE CLIENTILOR NOSTRI:</div>`,
-    tCards,
-    `</div>`,
-
-    `<div style="padding:24px 20px;background:#fff">`,
-    `<h3 style="font-size:18px;font-weight:800;margin:0 0 16px;text-align:center">Intrebari frecvente</h3>`,
-    faqHtml,
-    `</div>`,
-
+    // 15. Form propriu (dacă nu e Releasit)
     codFormApp && codFormApp !== 'none' ? '' : [
       `<div id="formular" style="padding:28px 20px;background:#fff3f3;border-top:4px solid ${primary}">`,
-      `<h2 style="font-size:22px;font-weight:900;text-align:center;margin:0 0 24px">COMANDA ACUM CU ${disc}% REDUCERE</h2>`,
+      `<h2 style="font-size:22px;font-weight:900;text-align:center;margin:0 0 24px;color:#111">COMANDĂ ACUM CU ${disc}% REDUCERE</h2>`,
       `<div id="form-fields" style="display:flex;flex-direction:column;gap:12px">`,
-      `<input id="f-name" placeholder="Nume si Prenume" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<input id="f-phone" placeholder="Numar de telefon" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<input id="f-address" placeholder="Adresa completa" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<input id="f-city" placeholder="Localitate" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<select id="f-county" style="padding:13px 14px;border:1px solid #ddd;border-radius:6px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif;color:#555;background:#fff"><option value="">Judet</option>${jOpts}</select>`,
-      `<button onclick="submitOrder()" style="background:${primary};color:#fff;border:none;padding:18px;border-radius:6px;font-size:18px;font-weight:900;cursor:pointer;width:100%;font-family:Arial,sans-serif">FINALIZEAZA COMANDA - PLATA LA LIVRARE</button>`,
+      `<input id="f-name" placeholder="Nume și Prenume" style="padding:13px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
+      `<input id="f-phone" placeholder="Număr de telefon" style="padding:13px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
+      `<input id="f-address" placeholder="Adresă completă" style="padding:13px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
+      `<input id="f-city" placeholder="Localitate" style="padding:13px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
+      `<select id="f-county" style="padding:13px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif;color:#555;background:#fff"><option value="">Județ</option>${jOpts}</select>`,
+      `<button onclick="submitOrder()" style="background:${primary};color:#fff;border:none;padding:18px;border-radius:10px;font-size:18px;font-weight:900;cursor:pointer;width:100%;font-family:Arial,sans-serif">FINALIZEAZĂ COMANDA — PLATĂ LA LIVRARE</button>`,
       `</div>`,
-      `<div id="form-success" style="display:none;text-align:center;padding:40px 20px"><div style="font-size:56px;margin-bottom:12px">&#10003;</div><h3 style="font-size:22px;font-weight:800;color:#16a34a">Comanda plasata cu succes!</h3></div>`,
+      `<div id="form-success" style="display:none;text-align:center;padding:40px 20px"><div style="font-size:56px;margin-bottom:12px">&#10003;</div><h3 style="font-size:22px;font-weight:800;color:#16a34a">Comandă plasată cu succes!</h3><p style="font-size:15px;color:#555;margin-top:8px">Te vom contacta în curând pentru confirmare.</p></div>`,
       `</div>`
     ].join(''),
 
-    `<div style="background:#111;color:#888;padding:20px;text-align:center;font-size:12px">`,
-    `<p style="margin:0 0 4px;color:#ccc;font-weight:600">&copy; 2025 ${data.productName}</p>`,
-    `<p style="margin:0">Termeni si Conditii &middot; Politica de Confidentialitate &middot; ANPC</p>`,
+    // 16. Footer
+    `<div style="background:#111;color:#888;padding:24px 20px;text-align:center;font-size:12px">`,
+    `<p style="margin:0 0 6px;color:#ccc;font-weight:700;font-size:14px">&copy; 2025 ${data.productName}</p>`,
+    `<p style="margin:0;line-height:1.8">Termeni și Condiții &middot; Politica de Confidențialitate &middot; ANPC</p>`,
     `</div>`,
 
     `<script>`,
@@ -721,7 +795,7 @@ function buildHTML(data, codFormApp) {
     `a=document.getElementById('f-address').value.trim(),`,
     `c=document.getElementById('f-city').value.trim(),`,
     `j=document.getElementById('f-county').value;`,
-    `if(!n||!p||!a||!c||!j){alert('Completeaza toate campurile!');return;}`,
+    `if(!n||!p||!a||!c||!j){alert('Completează toate câmpurile!');return;}`,
     `document.getElementById('form-fields').style.display='none';`,
     `document.getElementById('form-success').style.display='block';`,
     `}`,
