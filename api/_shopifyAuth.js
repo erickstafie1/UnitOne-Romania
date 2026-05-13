@@ -86,6 +86,10 @@ function setTokenCookie(res, shop, token) {
   res.setHeader('Set-Cookie', cookieKey(shop) + '=' + encodeURIComponent(token) + '; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=7776000')
 }
 
+function clearTokenCookie(res, shop) {
+  res.setHeader('Set-Cookie', cookieKey(shop) + '=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0')
+}
+
 function isInvalidTokenError(result) {
   if (result.status === 401) return true
   const errStr = JSON.stringify(result.data?.errors || '')
@@ -136,9 +140,26 @@ async function prepareShopifyAuth(req, res) {
 
   async function call(path, method = 'GET', body = null) {
     let result = await rawShopifyCall(shop, token, path, method, body)
-    if (isInvalidTokenError(result) && session?.sessionToken) {
-      await refreshToken()
-      result = await rawShopifyCall(shop, token, path, method, body)
+    if (isInvalidTokenError(result)) {
+      if (session?.sessionToken) {
+        try {
+          await refreshToken()
+          result = await rawShopifyCall(shop, token, path, method, body)
+        } catch (e) {
+          console.log('Token Exchange failed:', e.message)
+          clearTokenCookie(res, shop)
+          const err = new Error('REAUTH_REQUIRED')
+          err.shop = shop
+          throw err
+        }
+      } else {
+        // No session token to do Token Exchange — old cookie token is dead
+        console.log('No session token, old access token rejected. Forcing reauth for', shop)
+        clearTokenCookie(res, shop)
+        const err = new Error('REAUTH_REQUIRED')
+        err.shop = shop
+        throw err
+      }
     }
     return result.data
   }
@@ -146,11 +167,18 @@ async function prepareShopifyAuth(req, res) {
   return { shop, getToken: () => token, call, hasSession: !!session?.sessionToken }
 }
 
+function reauthErrorResponse(err, shop) {
+  const s = err.shop || shop || ''
+  return { status: 401, body: { error: 'reauth_required', shop: s, authUrl: '/api/auth?shop=' + s } }
+}
+
 module.exports = {
   prepareShopifyAuth,
   tokenExchange,
   setTokenCookie,
+  clearTokenCookie,
   getSessionInfo,
   rawShopifyCall,
-  isInvalidTokenError
+  isInvalidTokenError,
+  reauthErrorResponse
 }

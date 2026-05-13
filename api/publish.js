@@ -147,6 +147,10 @@ module.exports = async function handler(req, res) {
 
   } catch(err) {
     console.error('Publish error:', err.message)
+    if (err.message === 'REAUTH_REQUIRED') {
+      const shop = err.shop || ''
+      return res.status(401).json({ success: false, error: 'reauth_required', shop, authUrl: '/api/auth?shop=' + shop })
+    }
     const code = /Missing shop|No token/i.test(err.message) ? 401 : 500
     res.status(code).json({ success: false, error: err.message })
   }

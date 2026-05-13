@@ -71,6 +71,10 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ error: 'Actiune necunoscuta' })
   } catch(err) {
     console.error('Billing error:', err.message)
+    if (err.message === 'REAUTH_REQUIRED') {
+      const shop = err.shop || ''
+      return res.status(401).json({ error: 'reauth_required', shop, authUrl: '/api/auth?shop=' + shop })
+    }
     const code = /Missing shop|No token/i.test(err.message) ? 401 : 500
     res.status(code).json({ error: err.message })
   }

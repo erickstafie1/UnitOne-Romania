@@ -17,6 +17,10 @@ module.exports = async function handler(req, res) {
     console.log('get-products shop:', auth.shop, 'active:', active.products?.length, 'draft:', draft.products?.length)
     res.status(200).json({ success: true, products })
   } catch(e) {
+    if (e.message === 'REAUTH_REQUIRED') {
+      const shop = e.shop || ''
+      return res.status(401).json({ success: false, error: 'reauth_required', shop, authUrl: '/api/auth?shop=' + shop })
+    }
     const code = /Missing shop|No token/i.test(e.message) ? 401 : 500
     res.status(code).json({ success: false, error: e.message })
   }
