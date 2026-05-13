@@ -115,10 +115,10 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const s = params.get('shop')
-    const t = params.get('token')
     const host = params.get('host')
     const chargeId = params.get('charge_id')
 
+    // Load App Bridge for embedded context
     const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
     if (host && apiKey) {
       if (!document.getElementById('shopify-app-bridge')) {
@@ -133,60 +133,42 @@ export default function App() {
       }
     }
 
-    if (s && chargeId) {
-      fetch('/api/get-token?shop=' + encodeURIComponent(s)).then(r => r.json()).then(async d => {
-        const tok = d.token || localStorage.getItem('unitone_token_' + s)
-        if (!tok) { (window.top || window).location.href = '/api/auth?shop=' + s; return }
-        if (d.token) { localStorage.setItem('unitone_shop', s); localStorage.setItem('unitone_token_' + s, tok) }
-        try {
-          const br = await apiFetch('/api/billing', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'activate_charge', shop: s, token: tok, chargeId })
-          })
-          const bd = await br.json()
+    if (s && host) {
+      // Embedded mode: App Bridge + Token Exchange handles auth transparently.
+      // Never redirect to OAuth from here — apiFetch handles 401 with loop prevention.
+      if (chargeId) {
+        apiFetch('/api/billing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'activate_charge', shop: s, chargeId })
+        }).then(r => r.json()).then(bd => {
           if (bd.plan) { setPlan(bd.plan); setPlanLimit(bd.limit); setPublishLimit(bd.publishLimit ?? 1) }
-        } catch(e) { console.log('Activate charge error:', e.message) }
-        initApp(s, tok)
-      }).catch(() => { (window.top || window).location.href = '/api/auth?shop=' + s })
-      return
-    }
-
-    if (s && t) {
-      localStorage.setItem('unitone_shop', s)
-      localStorage.setItem('unitone_token_' + s, t)
-      initApp(s, t)
+        }).catch(e => console.log('Activate charge error:', e.message))
+      }
+      initApp(s, '')
       return
     }
 
     if (s) {
+      // Non-embedded with shop: try stored token, fall back to OAuth
       fetch('/api/get-token?shop=' + encodeURIComponent(s))
         .then(r => r.json())
         .then(data => {
-          if (data.token) {
-            localStorage.setItem('unitone_shop', s)
-            localStorage.setItem('unitone_token_' + s, data.token)
-            initApp(s, data.token)
+          const tok = data.token || localStorage.getItem('unitone_token_' + s)
+          if (tok) {
+            if (data.token) localStorage.setItem('unitone_token_' + s, data.token)
+            initApp(s, tok)
           } else {
-            const saved = localStorage.getItem('unitone_token_' + s)
-            if (saved) { initApp(s, saved); return }
-            const authUrl = '/api/auth?shop=' + s
-            try { window.top.location.href = authUrl } catch(e) { window.location.href = authUrl }
+            window.location.href = '/api/auth?shop=' + s
           }
         })
-        .catch(() => {
-          const authUrl = '/api/auth?shop=' + s
-          try { window.top.location.href = authUrl } catch(e) { window.location.href = authUrl }
-        })
+        .catch(() => { window.location.href = '/api/auth?shop=' + s })
       return
     }
 
     const savedShop = localStorage.getItem('unitone_shop')
     if (savedShop) {
       const savedToken = localStorage.getItem('unitone_token_' + savedShop)
-      if (savedToken) {
-        initApp(savedShop, savedToken)
-        return
-      }
+      if (savedToken) { initApp(savedShop, savedToken); return }
     }
 
     setScreen('login')
