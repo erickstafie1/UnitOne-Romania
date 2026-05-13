@@ -615,7 +615,8 @@ function buildHTML(data, codFormApp) {
   const benefits = (data.benefits || []).slice(0, 5)
   const testimonials = data.testimonials || []
 
-  const relBtn = `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
+  const relBtn = `<div id="_rsi-cod-form-gempages-button-hook" class="unitone-rel-hook" style="min-height:54px;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
+  const scrollBtn = `<a href="#_rsi-cod-form-gempages-button-hook" style="display:inline-block;background:${primary};color:#fff;padding:16px 36px;border-radius:8px;font-size:17px;font-weight:900;text-decoration:none;letter-spacing:0.5px">&#128722; COMANDĂ ACUM</a>`
 
   const tCards = testimonials.map(t => [
     `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #f0f0f0;margin-bottom:14px">`,
@@ -721,7 +722,7 @@ function buildHTML(data, codFormApp) {
     `<div style="background:#111;padding:20px;text-align:center">`,
     `<div style="color:#fff;font-size:13px;font-weight:700;margin-bottom:4px">&#9889; STOC LIMITAT — Nu rata oferta!</div>`,
     `<div style="color:${primary};font-size:28px;font-weight:900;margin-bottom:12px">${price} LEI <span style="font-size:14px;color:#888;text-decoration:line-through">${oldPrice} LEI</span></div>`,
-    `<div style="background:#fff;border-radius:8px;padding:10px">${relBtn}</div>`,
+    scrollBtn,
     `</div>`,
 
     imgs[3] ? `<div style="background:#f0f0f0">${imgTag(imgs[3], 'width:100%;display:block')}</div>` : '',
@@ -768,7 +769,7 @@ function buildHTML(data, codFormApp) {
     `<div style="color:rgba(255,255,255,0.85);font-size:13px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">&#9889; Comandă acum și primești în 2-4 zile</div>`,
     `<div style="color:#fff;font-size:34px;font-weight:900;margin-bottom:4px">${price} LEI</div>`,
     `<div style="color:rgba(255,255,255,0.6);font-size:14px;text-decoration:line-through;margin-bottom:20px">${oldPrice} LEI</div>`,
-    `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:14px">${relBtn}</div>`,
+    `<div style="margin-bottom:14px">${scrollBtn}</div>`,
     `<div style="font-size:12px;color:rgba(255,255,255,0.75)">&#10003; Plată la livrare &nbsp;&middot;&nbsp; &#128666; Livrare rapidă &nbsp;&middot;&nbsp; &#8617; Retur 30 zile gratuit</div>`,
     `</div>`,
 
@@ -822,9 +823,10 @@ function buildHTML(data, codFormApp) {
 function addBlocks(editor, data) {
   const p = data?.style?.primaryColor || '#e8000d'
 
-  // Helper - placeholder vizibil cu border rosu dashed (rsi-cod-form-gempages-button = clasa recunoscuta de Releasit)
+  // Helper - placeholder vizibil cu border dashed. ID-ul _rsi-cod-form-gempages-button-hook = hook oficial Releasit GemPages.
+  // ID trebuie sa fie unic pe pagina - daca user trage mai multe blocuri, doar primul va fi populat de Releasit.
   function relBtn(extra) {
-    return `<div class="unitone-releasit-btn rsi-cod-form-gempages-button" style="min-height:54px;display:block;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD - trage-ma unde vrei</span></div>`
+    return `<div id="_rsi-cod-form-gempages-button-hook" class="unitone-rel-hook" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD - trage-ma unde vrei</span></div>`
   }
 
   const blocks = [

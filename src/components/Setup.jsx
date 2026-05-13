@@ -36,7 +36,7 @@ export default function Setup({ shop, onComplete, isReconfigure }) {
     releasit: {
       steps: [
         { n: 1, title: 'Instalează Releasit', desc: 'Dacă nu ai instalat deja, mergi la link-ul de mai jos și instalează aplicația în magazinul tău Shopify.', link: 'https://apps.shopify.com/releasit-cod-order-form', linkText: 'Instalează Releasit →' },
-        { n: 2, title: 'Activează pe toate paginile', desc: 'În Releasit → Settings → General → asigură-te că aplicația este activată pentru magazinul tău.' },
+        { n: 2, title: 'Activează GemPages integration', desc: 'În Releasit → Settings → Where to display → activează "GemPages integration" sau "Show on all pages". Aplicația va detecta automat hook-ul din LP-ul tău.' },
         { n: 3, title: 'Gata!', desc: 'Butonul din LP-ul tău va deschide automat formularul Releasit când clientul apasă "Comandă acum". Nu trebuie să faci nimic altceva.' }
       ]
     },

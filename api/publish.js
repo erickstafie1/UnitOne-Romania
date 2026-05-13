@@ -67,13 +67,13 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit GemPages mode: triggerul face Releasit sa randeze butonul direct in .rsi-cod-form-gempages-button
+// Releasit GemPages mode: triggerul + hook id #_rsi-cod-form-gempages-button-hook fac Releasit sa injecteze butonul real
 function buildReleasitGemPages(variantId) {
   return [
     '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>',
     '<style>',
     '.unitone-placeholder-text{display:none!important}',
-    '.unitone-releasit-btn{border:none!important;background:transparent!important}',
+    '#_rsi-cod-form-gempages-button-hook,.unitone-rel-hook,.unitone-releasit-btn{border:none!important;background:transparent!important;padding:0!important;min-height:0!important}',
     '</style>'
   ].join('')
 }
@@ -109,7 +109,7 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      if (codFormApp === 'releasit' || finalHtml.includes('rsi-cod-form-gempages-button')) {
+      if (codFormApp === 'releasit' || finalHtml.includes('_rsi-cod-form-gempages-button-hook') || finalHtml.includes('rsi-cod-form-gempages-button')) {
         finalHtml = buildReleasitGemPages(variantId) + finalHtml
       }
 
@@ -149,7 +149,7 @@ module.exports = async function handler(req, res) {
 
     let finalHtml = html
 
-    if (codFormApp === 'releasit' || finalHtml.includes('rsi-cod-form-gempages-button')) {
+    if (codFormApp === 'releasit' || finalHtml.includes('_rsi-cod-form-gempages-button-hook') || finalHtml.includes('rsi-cod-form-gempages-button')) {
       finalHtml = buildReleasitGemPages(variantId) + finalHtml
       console.log('Releasit GemPages activated, variantId:', variantId)
     } else if (variantId) {
