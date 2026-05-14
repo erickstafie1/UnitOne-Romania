@@ -5,19 +5,9 @@ import '@shopify/polaris/build/esm/styles.css'
 import './styles/global.css'
 import { initThemeOnce } from './theme.js'
 
-// Inject App Bridge CDN script BEFORE React renders so window.shopify is
-// available as early as possible. App Bridge React 4.x relies on this global.
-const params = new URLSearchParams(window.location.search)
-const host = params.get('host')
-const apiKey = import.meta.env.VITE_SHOPIFY_CLIENT_ID
-if (host && apiKey && !document.getElementById('shopify-app-bridge')) {
-  const script = document.createElement('script')
-  script.id = 'shopify-app-bridge'
-  script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
-  script.setAttribute('data-api-key', apiKey)
-  document.head.appendChild(script)
-}
-
+// App Bridge CDN script is loaded directly in index.html (synchronously, before
+// this module runs) so the <ui-nav-menu> web component is defined by the time
+// React mounts. That's what lets NavMenu render in Shopify Admin's left rail.
 initThemeOnce()
 
 ReactDOM.createRoot(document.getElementById('root')).render(

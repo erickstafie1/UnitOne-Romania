@@ -7,6 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&display=swap" rel="stylesheet">
+  <!-- App Bridge MUST load before React mounts so <ui-nav-menu> web component
+       is defined and Shopify Admin renders the nav links in the native sidebar -->
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-api-key="%VITE_SHOPIFY_CLIENT_ID%"></script>
   <script src="https://cdn.logr-in.com/LogRocket.min.js" crossorigin="anonymous"></script>
   <script>window.LogRocket && window.LogRocket.init('mc7jbj/unitone');</script>
 </head>
