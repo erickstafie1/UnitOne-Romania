@@ -1,4 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  Page, Card, Button, TextField, ButtonGroup, Banner, Badge, Modal,
+  ResourceList, ResourceItem, BlockStack, InlineStack, Text, Box, Spinner,
+  Icon, Thumbnail, EmptyState, Toast
+} from '@shopify/polaris'
+import {
+  ArrowLeftIcon, DesktopIcon, MobileIcon, SaveIcon, ExternalIcon,
+  CheckIcon, ImageIcon, ViewIcon, RefreshIcon, UndoIcon, RedoIcon, SendIcon
+} from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
 export default function Editor({ data, shop, token, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
@@ -302,146 +311,136 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
   }
 
   if (published) return (
-    <div className="ue-published-shell">
+    <Page narrowWidth>
       <EditorStyles />
-      <div className="ue-hero-gradient" />
-      <div className="ue-mesh" />
-      <div className="ue-published-card fade-up">
-        <div className={`ue-published-orb ${publishedDemoted ? 'draft' : ''}`}>
-          {publishedDemoted ? (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-            </svg>
-          ) : (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          )}
-          <div className="ue-orb-glow" />
-        </div>
-        <div className="ue-eyebrow">{publishedDemoted ? 'Salvată ca draft' : 'Publicată cu succes'}</div>
-        <h2 className="ue-h1">
-          {publishedDemoted ? (
-            <>Pagină <span className="ue-h1-italic">salvată</span></>
-          ) : (
-            <>Pagina ta e <span className="ue-h1-italic">live</span></>
-          )}
-        </h2>
-        <p className="ue-published-text">
-          {publishedDemoted
-            ? 'Planul Free permite o singură pagină publicată simultan. Pagina nouă a fost creată ca draft — o poți activa din Dashboard schimbând pagina activă curentă, sau fă upgrade pentru pagini nelimitate.'
-            : 'Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.'}
-        </p>
-        <div className="ue-published-actions">
-          {!publishedDemoted && (
-            <a href={publishedUrl} target="_blank" rel="noreferrer" className="ue-cta-primary">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              <span>Vezi pagina live</span>
-            </a>
-          )}
-          <button onClick={() => { setPublished(false); setPublishedDemoted(false); if(onPublished) onPublished(); else if(onBack) onBack() }} className={publishedDemoted ? 'ue-cta-primary' : 'ue-cta-secondary'}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            <span>Înapoi la dashboard</span>
-          </button>
-        </div>
-      </div>
-    </div>
+      <Card>
+        <BlockStack gap="500" inlineAlign="center">
+          <Box
+            background={publishedDemoted ? 'bg-fill-warning' : 'bg-fill-success'}
+            padding="500"
+            borderRadius="400"
+            minWidth="80px"
+            minHeight="80px"
+          >
+            <InlineStack align="center" blockAlign="center">
+              <Icon source={publishedDemoted ? SaveIcon : CheckIcon} tone="text-inverse" />
+            </InlineStack>
+          </Box>
+
+          <BlockStack gap="200" inlineAlign="center">
+            <Badge tone={publishedDemoted ? 'warning' : 'success'}>
+              {publishedDemoted ? 'Salvată ca draft' : 'Publicată cu succes'}
+            </Badge>
+            <Text as="h2" variant="headingXl" alignment="center">
+              {publishedDemoted ? 'Pagină salvată' : 'Pagina ta e live'}
+            </Text>
+            <Text as="p" alignment="center" tone="subdued">
+              {publishedDemoted
+                ? 'Planul Free permite o singură pagină publicată simultan. Pagina nouă a fost creată ca draft — o poți activa din Dashboard, sau fă upgrade pentru pagini nelimitate.'
+                : 'Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.'}
+            </Text>
+          </BlockStack>
+
+          <ButtonGroup>
+            {!publishedDemoted && (
+              <Button variant="primary" url={publishedUrl} external icon={ExternalIcon}>
+                Vezi pagina live
+              </Button>
+            )}
+            <Button
+              variant={publishedDemoted ? 'primary' : 'secondary'}
+              icon={ArrowLeftIcon}
+              onClick={() => { setPublished(false); setPublishedDemoted(false); if(onPublished) onPublished(); else if(onBack) onBack() }}
+            >
+              Înapoi la dashboard
+            </Button>
+          </ButtonGroup>
+        </BlockStack>
+      </Card>
+    </Page>
   )
 
   return (
     <div className="ue-shell">
       <EditorStyles />
-      {/* TOOLBAR */}
+      {/* TOOLBAR — Polaris-styled custom flex layout */}
       <div className="ue-toolbar">
-        <button onClick={onBack} className="ue-tb-back" title="Înapoi la dashboard">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          <span>Înapoi</span>
-        </button>
+        <Button icon={ArrowLeftIcon} onClick={onBack} variant="tertiary">Înapoi</Button>
 
-        <div className="ue-tb-divider" />
-
-        <input
-          value={pageTitle}
-          onChange={e => setPageTitle(e.target.value)}
-          className="ue-tb-title"
-          placeholder="Numele paginii..."
-        />
-
-        <div className="ue-tb-device">
-          {[
-            ['desktop','Desktop', <svg key="d" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>],
-            ['tablet','Tablet', <svg key="t" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>],
-            ['mobile','Mobil', <svg key="m" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>]
-          ].map(([d,lbl,ic]) => (
-            <button key={d} onClick={() => switchDevice(d)} title={lbl}
-              className={`ue-tb-device-btn ${device===d ? 'active' : ''}`}>
-              {ic}
-            </button>
-          ))}
+        <div className="ue-tb-title">
+          <TextField
+            label=""
+            labelHidden
+            value={pageTitle}
+            onChange={setPageTitle}
+            placeholder="Numele paginii..."
+            autoComplete="off"
+          />
         </div>
 
-        {device !== 'desktop' && (
-          <div className="ue-tb-device-hint">
-            Editezi pentru <strong>{device === 'mobile' ? 'Mobile' : 'Tablet'}</strong>
-          </div>
-        )}
+        <ButtonGroup variant="segmented">
+          <Button pressed={device === 'desktop'} onClick={() => switchDevice('desktop')} icon={DesktopIcon} accessibilityLabel="Desktop" />
+          <Button pressed={device === 'tablet'} onClick={() => switchDevice('tablet')} icon={ViewIcon} accessibilityLabel="Tablet" />
+          <Button pressed={device === 'mobile'} onClick={() => switchDevice('mobile')} icon={MobileIcon} accessibilityLabel="Mobil" />
+        </ButtonGroup>
 
-        <button onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
-          title={hideHeaderFooter ? 'Header/footer Shopify ascuns' : 'Header/footer Shopify afișat'}
-          className={`ue-tb-toggle ${hideHeaderFooter ? 'on' : 'off'}`}>
-          <span className="ue-tb-toggle-dot" />
-          <span>{hideHeaderFooter ? 'H/F ascuns' : 'H/F vizibil'}</span>
-        </button>
+        <Button
+          pressed={hideHeaderFooter}
+          onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
+        >
+          {hideHeaderFooter ? 'H/F ascuns' : 'H/F vizibil'}
+        </Button>
 
         {(saving || lastSaved) && (
           <div className="ue-tb-save">
-            <span className={`ue-tb-save-dot ${saving ? 'saving' : 'saved'}`} />
-            <span>{saving ? 'Se salvează...' : `Salvat ${lastSaved.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' })}`}</span>
-          </div>
-        )}
-
-        <div className="ue-tb-undo">
-          <button onClick={() => gjsRef.current?.UndoManager.undo()} className="ue-tb-icon-btn" title="Undo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-          </button>
-          <button onClick={() => gjsRef.current?.UndoManager.redo()} className="ue-tb-icon-btn" title="Redo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-          </button>
-        </div>
-
-        {error && (
-          <div className="ue-tb-error">
-            <span>{error}</span>
-            {error.includes('limita') && onUpgrade && (
-              <button onClick={onUpgrade} className="ue-tb-upgrade">Upgrade →</button>
+            {saving ? (
+              <InlineStack gap="100" blockAlign="center">
+                <Spinner size="small" />
+                <Text as="span" variant="bodySm" tone="subdued">Se salvează...</Text>
+              </InlineStack>
+            ) : (
+              <Text as="span" variant="bodySm" tone="subdued">
+                Salvat {lastSaved.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' })}
+              </Text>
             )}
           </div>
         )}
 
-        <button onClick={() => {
-          if (isEditing) {
-            publish()
-          } else {
-            setSelectedProduct(null)
-            setShowProductModal(true)
-            if (products.length === 0) loadProducts()
-          }
-        }} disabled={publishing} className="ue-tb-publish">
-          {publishing ? (
-            <><span className="ue-spinner-sm" /> Se procesează...</>
-          ) : isEditing ? (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Salvează</span>
-            </>
-          ) : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              <span>Publică</span>
-            </>
-          )}
-        </button>
+        <ButtonGroup>
+          <Button icon={UndoIcon} onClick={() => gjsRef.current?.UndoManager.undo()} accessibilityLabel="Undo" />
+          <Button icon={RedoIcon} onClick={() => gjsRef.current?.UndoManager.redo()} accessibilityLabel="Redo" />
+        </ButtonGroup>
+
+        <Button
+          variant="primary"
+          icon={isEditing ? SaveIcon : SendIcon}
+          loading={publishing}
+          disabled={publishing}
+          onClick={() => {
+            if (isEditing) {
+              publish()
+            } else {
+              setSelectedProduct(null)
+              setShowProductModal(true)
+              if (products.length === 0) loadProducts()
+            }
+          }}
+        >
+          {publishing ? 'Se procesează...' : isEditing ? 'Salvează' : 'Publică'}
+        </Button>
       </div>
+
+      {error && (
+        <div className="ue-tb-error">
+          <Banner
+            tone="critical"
+            onDismiss={() => setError('')}
+            action={error.includes('limita') && onUpgrade ? { content: 'Upgrade', onAction: onUpgrade } : undefined}
+          >
+            {error}
+          </Banner>
+        </div>
+      )}
 
       {/* EDITOR LAYOUT */}
       <div className="ue-layout">
@@ -462,78 +461,79 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
         </div>
       </div>
 
-      {/* Modal selectare produs */}
-      {showProductModal && (
-        <div className="ue-modal-backdrop" onClick={() => setShowProductModal(false)}>
-          <div className="ue-modal" onClick={e => e.stopPropagation()}>
-            <div className="ue-modal-header">
-              <div>
-                <div className="ue-eyebrow">Pas final</div>
-                <h3 className="ue-modal-title">Asociază produsul</h3>
-              </div>
-              <button onClick={() => setShowProductModal(false)} className="ue-modal-close" title="Închide">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <p className="ue-modal-lede">Selectează produsul din magazin căruia îi atașezi acest landing page.</p>
+      {/* Modal Polaris pentru selectare produs */}
+      <Modal
+        open={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        title="Asociază produsul"
+        primaryAction={{
+          content: selectedProduct ? `Publică pe "${selectedProduct.title.substring(0, 24)}${selectedProduct.title.length > 24 ? '...' : ''}"` : 'Selectează un produs',
+          disabled: !selectedProduct,
+          onAction: () => { setShowProductModal(false); publish() }
+        }}
+        secondaryActions={[{ content: 'Anulează', onAction: () => setShowProductModal(false) }]}
+      >
+        <Modal.Section>
+          <Text as="p" tone="subdued">Selectează produsul din magazin căruia îi atașezi acest landing page.</Text>
+        </Modal.Section>
 
-            <div className="ue-modal-list">
-              {loadingProducts ? (
-                <div className="ue-modal-empty">
-                  <div className="ue-spinner" />
-                  <span>Se încarcă produsele...</span>
-                </div>
-              ) : productsError === 'REAUTH' ? (
-                <div className="ue-modal-empty">
-                  <div className="ue-modal-error">Sesiunea Shopify a expirat.</div>
-                  <button onClick={() => {
-                    try { (window.top || window).location.href = '/api/auth?shop=' + shop }
-                    catch { window.location.href = '/api/auth?shop=' + shop }
-                  }} className="ue-cta-primary" style={{marginTop:8}}>Reconectează Shopify</button>
-                </div>
-              ) : productsError ? (
-                <div className="ue-modal-empty">
-                  <div className="ue-modal-error">{productsError}</div>
-                  <button onClick={loadProducts} className="ue-cta-secondary">Încearcă din nou</button>
-                </div>
-              ) : products.length === 0 ? (
-                <div className="ue-modal-empty">
-                  <span>Niciun produs găsit în magazin.</span>
-                </div>
-              ) : products.map(p => (
-                <button key={p.id} onClick={() => setSelectedProduct(p)}
-                  className={`ue-product ${selectedProduct?.id === p.id ? 'active' : ''}`}>
-                  {p.images?.[0] ? (
-                    <img src={p.images[0].src} alt={p.title} className="ue-product-img" />
-                  ) : (
-                    <div className="ue-product-img-fallback">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    </div>
-                  )}
-                  <div className="ue-product-meta">
-                    <div className="ue-product-title">{p.title}</div>
-                    <div className="ue-product-handle">/{p.handle}</div>
-                  </div>
-                  <div className="ue-product-check">
-                    {selectedProduct?.id === p.id && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="ue-modal-actions">
-              <button onClick={() => setShowProductModal(false)} className="ue-cta-secondary">Anulează</button>
-              <button onClick={() => { setShowProductModal(false); publish() }} disabled={!selectedProduct}
-                className="ue-cta-primary ue-cta-block">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                <span>{selectedProduct ? `Publică pe "${selectedProduct.title.substring(0,18)}${selectedProduct.title.length > 18 ? '...' : ''}"` : 'Selectează un produs'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        {loadingProducts ? (
+          <Modal.Section>
+            <BlockStack gap="300" inlineAlign="center">
+              <Spinner />
+              <Text as="p" tone="subdued">Se încarcă produsele...</Text>
+            </BlockStack>
+          </Modal.Section>
+        ) : productsError === 'REAUTH' ? (
+          <Modal.Section>
+            <Banner tone="critical" title="Sesiunea Shopify a expirat" action={{
+              content: 'Reconectează Shopify',
+              onAction: () => {
+                try { (window.top || window).location.href = '/api/auth?shop=' + shop }
+                catch { window.location.href = '/api/auth?shop=' + shop }
+              }
+            }}>
+              Trebuie să te autentifici din nou pentru a vedea produsele din magazin.
+            </Banner>
+          </Modal.Section>
+        ) : productsError ? (
+          <Modal.Section>
+            <Banner tone="warning" action={{ content: 'Încearcă din nou', onAction: loadProducts }}>
+              {productsError}
+            </Banner>
+          </Modal.Section>
+        ) : products.length === 0 ? (
+          <Modal.Section>
+            <Text as="p" alignment="center" tone="subdued">Niciun produs găsit în magazin.</Text>
+          </Modal.Section>
+        ) : (
+          <ResourceList
+            resourceName={{ singular: 'produs', plural: 'produse' }}
+            items={products}
+            selectedItems={selectedProduct ? [String(selectedProduct.id)] : []}
+            onSelectionChange={(selected) => {
+              const id = selected[0]
+              setSelectedProduct(products.find(p => String(p.id) === id) || null)
+            }}
+            selectable
+            renderItem={(p) => (
+              <ResourceItem
+                id={String(p.id)}
+                accessibilityLabel={`Selectează ${p.title}`}
+                media={
+                  p.images?.[0]
+                    ? <Thumbnail source={p.images[0].src} alt={p.title} size="small" />
+                    : <Thumbnail source={ImageIcon} alt="" size="small" />
+                }
+                onClick={() => setSelectedProduct(p)}
+              >
+                <Text as="h4" variant="bodyMd" fontWeight="semibold">{p.title}</Text>
+                <Text as="p" variant="bodySm" tone="subdued">/{p.handle}</Text>
+              </ResourceItem>
+            )}
+          />
+        )}
+      </Modal>
     </div>
   )
 }
@@ -955,626 +955,81 @@ function EditorStyles() {
     <style>{`
       .ue-shell {
         height: 100vh; display: flex; flex-direction: column;
-        background: var(--bg); color: var(--text);
-        font-family: var(--font-sans);
+        background: var(--p-color-bg, #f6f6f7);
       }
-
-      /* ── Toolbar ── */
       .ue-toolbar {
-        height: 60px; flex-shrink: 0; z-index: 100;
-        padding: 0 16px; gap: 10px;
+        height: 56px; flex-shrink: 0;
+        padding: 8px 16px; gap: 12px;
         display: flex; align-items: center;
-        background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
-        backdrop-filter: blur(16px) saturate(120%);
-        -webkit-backdrop-filter: blur(16px) saturate(120%);
-        border-bottom: 1px solid var(--divider);
+        background: var(--p-color-bg-surface, #fff);
+        border-bottom: 1px solid var(--p-color-border, #e1e3e5);
       }
-      .ue-tb-back {
-        display: inline-flex; align-items: center; gap: 7px;
-        padding: 7px 11px; border-radius: 9px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: 13px; font-weight: 600; font-family: inherit;
-        cursor: pointer; letter-spacing: -0.01em;
-        transition: all 0.15s ease;
-      }
-      .ue-tb-back:hover {
-        background: var(--bg-3); color: var(--text);
-        border-color: var(--border-strong);
-      }
-      .ue-tb-divider {
-        width: 1px; height: 22px;
-        background: var(--divider);
-      }
-      .ue-tb-title {
-        flex: 1; min-width: 0;
-        padding: 7px 11px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        border-radius: 9px;
-        color: var(--text);
-        font-size: 14px; font-weight: 600;
-        font-family: inherit; outline: none;
-        letter-spacing: -0.01em;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
-      }
-      .ue-tb-title:focus {
-        border-color: var(--brand);
-        box-shadow: 0 0 0 3px var(--brand-soft);
-      }
-      .ue-tb-device {
-        display: flex; gap: 2px; padding: 3px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-      }
-      .ue-tb-device-btn {
-        padding: 6px 10px; border-radius: 7px;
-        background: transparent; border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: all 0.15s ease;
-      }
-      .ue-tb-device-btn:hover { color: var(--text); }
-      .ue-tb-device-btn.active {
-        background: var(--bg-elev);
-        color: var(--text);
-        box-shadow: var(--shadow-sm);
-      }
-      .ue-tb-device-hint {
-        display: inline-flex; align-items: center;
-        padding: 6px 11px; border-radius: 9px;
-        background: var(--brand-soft);
-        border: 1px solid var(--brand-border);
-        color: var(--brand);
-        font-size: 11.5px; font-weight: 500;
-        white-space: nowrap; letter-spacing: -0.005em;
-        animation: fadeIn 0.2s ease;
-      }
-      .ue-tb-device-hint strong { font-weight: 700; margin-left: 4px; }
-      @media (max-width: 1100px) { .ue-tb-device-hint { display: none; } }
-      .ue-tb-toggle {
-        display: inline-flex; align-items: center; gap: 7px;
-        padding: 7px 11px; border-radius: 9px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: 12px; font-weight: 600; font-family: inherit;
-        cursor: pointer; white-space: nowrap;
-        letter-spacing: -0.01em;
-        transition: all 0.15s ease;
-      }
-      .ue-tb-toggle.on {
-        background: var(--success-soft);
-        border-color: color-mix(in srgb, var(--success) 25%, transparent);
-        color: var(--success);
-      }
-      .ue-tb-toggle.off {
-        background: var(--warning-soft);
-        border-color: color-mix(in srgb, var(--warning) 25%, transparent);
-        color: var(--warning);
-      }
-      .ue-tb-toggle-dot {
-        width: 7px; height: 7px; border-radius: 50%;
-        background: currentColor;
-        box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
-      }
-      .ue-tb-save {
-        display: flex; align-items: center; gap: 7px;
-        padding: 6px 11px; border-radius: 9px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        font-size: 11.5px; color: var(--text-muted);
-        white-space: nowrap; letter-spacing: -0.005em;
-      }
-      .ue-tb-save-dot {
-        width: 6px; height: 6px; border-radius: 50%;
-      }
-      .ue-tb-save-dot.saving {
-        background: var(--warning);
-        animation: pulse 1.2s ease-in-out infinite;
-      }
-      .ue-tb-save-dot.saved {
-        background: var(--success);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
-      }
-      .ue-tb-undo { display: flex; gap: 3px; }
-      .ue-tb-icon-btn {
-        padding: 7px 9px; border-radius: 8px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        cursor: pointer;
-        display: inline-flex; align-items: center; justify-content: center;
-        transition: all 0.15s ease;
-      }
-      .ue-tb-icon-btn:hover {
-        background: var(--bg-3); color: var(--text);
-        border-color: var(--border-strong);
-      }
+      .ue-tb-title { flex: 1; min-width: 200px; max-width: 480px; }
+      .ue-tb-save { margin-left: auto; padding-right: 12px; white-space: nowrap; }
       .ue-tb-error {
-        display: flex; align-items: center; gap: 8px;
-        padding: 6px 11px; border-radius: 8px;
-        background: var(--danger-soft);
-        border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
-        color: var(--danger);
-        font-size: 12px;
-        max-width: 280px;
+        padding: 12px 16px;
+        background: var(--p-color-bg-surface, #fff);
+        border-bottom: 1px solid var(--p-color-border, #e1e3e5);
       }
-      .ue-tb-upgrade {
-        font-size: 11px; font-weight: 700;
-        color: var(--brand);
-        background: var(--brand-soft);
-        border: 1px solid var(--brand-border);
-        border-radius: 6px;
-        padding: 3px 8px;
-        cursor: pointer; font-family: inherit;
-        white-space: nowrap;
-      }
-      .ue-tb-publish {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 8px 18px; border-radius: 10px;
-        background: var(--accent); color: var(--accent-fg);
-        border: 1px solid var(--accent);
-        font-size: 13.5px; font-weight: 600; font-family: inherit;
-        cursor: pointer; letter-spacing: -0.01em;
-        white-space: nowrap;
-        box-shadow: var(--shadow-sm);
-        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .ue-tb-publish:hover:not(:disabled) {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow);
-      }
-      .ue-tb-publish:disabled {
-        opacity: 0.6; cursor: not-allowed;
-        box-shadow: none;
-      }
-      .ue-spinner-sm {
-        width: 12px; height: 12px;
-        border: 2px solid color-mix(in srgb, var(--accent-fg) 25%, transparent);
-        border-top-color: var(--accent-fg);
-        border-radius: 50%;
-        animation: spin 0.7s linear infinite;
-      }
-
-      @media (max-width: 1100px) {
-        .ue-tb-save { display: none; }
-      }
-      @media (max-width: 900px) {
-        .ue-tb-toggle { display: none; }
-        .ue-tb-back span, .ue-tb-publish span { display: inline; }
-      }
-      @media (max-width: 720px) {
-        .ue-tb-undo { display: none; }
-      }
-
-      /* ── Layout ── */
       .ue-layout {
-        flex: 1; display: flex; overflow: hidden;
+        flex: 1; display: grid;
+        grid-template-columns: 240px 1fr 280px;
+        min-height: 0; overflow: hidden;
       }
       .ue-panel {
-        width: 244px; flex-shrink: 0;
-        background: var(--bg-2);
-        overflow: auto;
-        padding: 14px 12px;
+        background: var(--p-color-bg-surface, #fff);
+        border-right: 1px solid var(--p-color-border, #e1e3e5);
+        overflow-y: auto; padding: 16px;
       }
-      .ue-panel-left { border-right: 1px solid var(--divider); }
-      .ue-panel-right { border-left: 1px solid var(--divider); width: 272px; }
+      .ue-panel-right {
+        border-right: none;
+        border-left: 1px solid var(--p-color-border, #e1e3e5);
+      }
       .ue-panel-title {
-        padding: 6px 4px 12px;
-        font-size: 10.5px; font-weight: 700;
-        color: var(--text-subtle);
-        text-transform: uppercase; letter-spacing: 0.12em;
+        font-size: 12px; font-weight: 600;
+        color: var(--p-color-text-secondary, #6d7175);
+        text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 4px 0 12px;
       }
       .ue-canvas {
-        flex: 1; overflow: hidden; position: relative;
-        background: var(--bg-3);
+        background: var(--p-color-bg-surface-secondary, #f6f6f7);
+        overflow: auto;
       }
 
-      /* ── GrapesJS Blocks overrides ── */
-      #blocks-panel .gjs-blocks-c {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 0;
-      }
+      /* GrapesJS Polaris-friendly overrides */
       .gjs-block {
-        background: var(--bg-elev) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 10px !important;
-        color: var(--text) !important;
-        padding: 14px 8px !important;
-        min-height: auto !important;
-        width: auto !important;
-        margin: 0 !important;
-        font-family: var(--font-sans) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 6px !important;
-        cursor: grab;
-        transition: all 0.15s ease;
-        box-shadow: var(--shadow-sm);
-      }
-      .gjs-block:hover {
-        border-color: var(--brand-border) !important;
-        background: var(--brand-soft) !important;
-        transform: translateY(-1px);
-      }
-      .gjs-block-label, .gjs-block .gjs-block-label {
-        font-size: 11px !important;
-        font-weight: 500 !important;
-        color: var(--text) !important;
-        text-align: center;
-        letter-spacing: -0.005em;
-        line-height: 1.3;
-      }
-      .gjs-block svg, .gjs-block .fa {
-        color: var(--text-muted);
-        font-size: 18px;
-      }
-      .gjs-block-category {
-        border: none !important;
-        margin-bottom: 14px;
-        background: transparent !important;
-      }
-      .gjs-category-title, .gjs-block-category > .gjs-title {
-        background: transparent !important;
-        color: var(--text-subtle) !important;
-        font-weight: 700 !important;
-        font-size: 10.5px !important;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        padding: 6px 4px 10px !important;
-        border: none !important;
-        font-family: var(--font-sans) !important;
-      }
-      .gjs-category-title:hover { color: var(--text) !important; }
-      .gjs-category-open .gjs-category-title { color: var(--text) !important; }
-
-      /* ── GrapesJS Style Manager overrides ── */
-      .gjs-sm-sectors { padding: 0; background: transparent; }
-      .gjs-sm-sector {
-        border-bottom: 1px solid var(--divider) !important;
-        background: transparent !important;
-      }
-      .gjs-sm-sector:last-child { border-bottom: none !important; }
-      .gjs-sm-sector .gjs-sm-title, .gjs-sm-sector-title, .gjs-sm-sector__head {
-        background: transparent !important;
-        color: var(--text) !important;
-        font-weight: 700 !important;
-        font-size: 11px !important;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        padding: 12px 4px !important;
-        border: none !important;
-        font-family: var(--font-sans) !important;
-      }
-      .gjs-sm-properties {
-        padding: 0 0 12px;
-        background: transparent !important;
-      }
-      .gjs-sm-property {
-        padding: 6px 4px !important;
-        background: transparent !important;
-      }
-      .gjs-sm-label, .gjs-sm-property .gjs-sm-label {
-        color: var(--text-muted) !important;
-        font-size: 10.5px !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 4px;
-        font-family: var(--font-sans) !important;
-      }
-      .gjs-field, .gjs-sm-field, .gjs-clm-tags-c .gjs-field {
-        background: var(--bg-elev) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 7px !important;
-        color: var(--text) !important;
-        font-family: var(--font-sans) !important;
-        font-size: 12.5px !important;
-        padding: 5px 8px !important;
-        min-height: 28px;
-      }
-      .gjs-field:focus-within, .gjs-sm-field:focus-within {
-        border-color: var(--brand) !important;
-        box-shadow: 0 0 0 2px var(--brand-soft) !important;
-      }
-      .gjs-input-holder, .gjs-field input, .gjs-field select, .gjs-field textarea {
-        background: transparent !important;
-        color: var(--text) !important;
-      }
-      .gjs-clm-tag, .gjs-clm-tags-c {
-        background: transparent !important;
-        border-color: var(--border) !important;
-        color: var(--text-muted) !important;
-      }
-      .gjs-radio-item-label, .gjs-sm-btn {
-        background: var(--bg-2) !important;
-        color: var(--text-muted) !important;
-        border-color: var(--border) !important;
-        font-family: var(--font-sans) !important;
-      }
-      .gjs-radio-item input:checked + .gjs-radio-item-label,
-      .gjs-sm-btn.gjs-four-color {
-        background: var(--accent) !important;
-        color: var(--accent-fg) !important;
-        border-color: var(--accent) !important;
-      }
-      .gjs-sm-colorp-c .gjs-field-color-picker {
-        border: 1px solid var(--border) !important;
-      }
-      .gjs-sm-slider-h, .gjs-sm-input-numb {
-        background: var(--bg-elev) !important;
-      }
-
-      /* ── GrapesJS Traits overrides ── */
-      .gjs-trt-traits { padding: 0; background: transparent !important; }
-      .gjs-trt-trait {
-        padding: 6px 4px !important;
-        border: none !important;
-        background: transparent !important;
-      }
-      .gjs-trt-label, .gjs-trt-trait .gjs-trt-label {
-        color: var(--text-muted) !important;
-        font-size: 10.5px !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-family: var(--font-sans) !important;
-      }
-
-      /* ── GrapesJS dropdown / panel general ── */
-      .gjs-pn-panel, .gjs-cv-canvas { background: var(--bg-3) !important; }
-      .gjs-color-picker { background: var(--bg-elev) !important; }
-
-      /* ── Published screen ── */
-      .ue-published-shell {
-        min-height: 100vh; position: relative;
-        background: var(--bg); color: var(--text);
-        font-family: var(--font-sans);
-        display: flex; align-items: center; justify-content: center;
-        padding: 32px;
-      }
-      .ue-hero-gradient {
-        position: absolute; top: 0; left: 0; right: 0; height: 520px;
-        background: var(--hero-gradient);
-        pointer-events: none; z-index: 0;
-      }
-      .ue-mesh {
-        position: absolute; inset: 0;
-        background: var(--mesh); opacity: 0.6;
-        pointer-events: none; z-index: 0;
-      }
-      .ue-published-card {
-        position: relative; z-index: 1;
-        max-width: 480px; width: 100%;
-        text-align: center;
-      }
-      .ue-published-orb {
-        width: 78px; height: 78px; border-radius: 22px;
-        background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 70%, var(--brand)) 100%);
-        color: #fff;
-        display: flex; align-items: center; justify-content: center;
-        margin: 0 auto 28px;
-        position: relative;
-        box-shadow: 0 12px 32px color-mix(in srgb, var(--success) 40%, transparent);
-      }
-      .ue-published-orb.draft {
-        background: linear-gradient(135deg, var(--warning) 0%, color-mix(in srgb, var(--warning) 70%, var(--brand)) 100%);
-        box-shadow: 0 12px 32px color-mix(in srgb, var(--warning) 40%, transparent);
-      }
-      .ue-orb-glow {
-        position: absolute; inset: -3px; border-radius: 22px;
-        background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 60%, var(--brand)));
-        opacity: 0.4; filter: blur(14px);
-        animation: orbPulse 2.5s ease-in-out infinite;
-        z-index: -1;
-      }
-      .ue-published-orb.draft .ue-orb-glow {
-        background: linear-gradient(135deg, var(--warning), color-mix(in srgb, var(--warning) 60%, var(--brand)));
-      }
-      @keyframes orbPulse {
-        0%, 100% { opacity: 0.4; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.05); }
-      }
-      .ue-eyebrow {
-        font-size: 11.5px; font-weight: 700;
-        color: var(--brand);
-        text-transform: uppercase; letter-spacing: 0.16em;
-        margin-bottom: 12px;
-      }
-      .ue-h1 {
-        font-family: var(--font-display);
-        font-size: clamp(32px, 5vw, 44px);
-        font-weight: 400; letter-spacing: -0.035em;
-        line-height: 1.1; color: var(--text);
-      }
-      .ue-h1-italic { font-style: italic; color: var(--text-muted); }
-      .ue-published-text {
-        margin-top: 14px;
-        font-size: 15px; line-height: 1.55;
-        color: var(--text-muted);
-      }
-      .ue-published-actions {
-        margin-top: 28px;
-        display: flex; gap: 10px; justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .ue-cta-primary {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 12px 20px; border-radius: 11px;
-        background: var(--accent); color: var(--accent-fg);
-        border: 1px solid var(--accent);
-        font-size: 14px; font-weight: 600; font-family: inherit;
-        cursor: pointer; letter-spacing: -0.01em;
-        text-decoration: none;
-        box-shadow: var(--shadow-sm);
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .ue-cta-primary:hover:not(:disabled) {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow);
-      }
-      .ue-cta-primary:disabled {
-        opacity: 0.5; cursor: not-allowed;
-        box-shadow: none;
-      }
-      .ue-cta-block { flex: 1; justify-content: center; }
-      .ue-cta-secondary {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 12px 20px; border-radius: 11px;
-        background: var(--bg-elev); color: var(--text);
-        border: 1px solid var(--border-strong);
-        font-size: 14px; font-weight: 600; font-family: inherit;
-        cursor: pointer; letter-spacing: -0.01em;
-        text-decoration: none;
-        transition: all 0.15s ease;
-      }
-      .ue-cta-secondary:hover { background: var(--bg-3); }
-
-      /* ── Modal ── */
-      .ue-modal-backdrop {
-        position: fixed; inset: 0;
-        z-index: 1000;
-        background: color-mix(in srgb, var(--text) 35%, transparent);
-        backdrop-filter: blur(8px) saturate(80%);
-        -webkit-backdrop-filter: blur(8px) saturate(80%);
-        display: flex; align-items: center; justify-content: center;
-        padding: 24px;
-        animation: fadeIn 0.2s ease;
-      }
-      .ue-modal {
-        background: var(--bg-elev);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 26px;
-        width: 480px; max-width: 100%; max-height: 82vh;
-        display: flex; flex-direction: column;
-        box-shadow: var(--shadow-lg);
-        animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .ue-modal-header {
-        display: flex; justify-content: space-between; align-items: flex-start;
+        border: 1px solid var(--p-color-border, #e1e3e5);
+        border-radius: 8px;
+        background: var(--p-color-bg-surface, #fff);
+        font-size: 12px;
         margin-bottom: 6px;
+        padding: 10px;
       }
-      .ue-modal-title {
-        font-family: var(--font-display);
-        font-size: 24px; font-weight: 400;
-        letter-spacing: -0.025em;
-        color: var(--text);
-        margin: 4px 0 0;
+      .gjs-block:hover { border-color: var(--p-color-border-emphasis, #898f94); }
+      .gjs-block-category .gjs-title {
+        font-size: 11px; font-weight: 700;
+        color: var(--p-color-text-secondary, #6d7175);
+        padding: 12px 0 8px; letter-spacing: 0.05em;
       }
-      .ue-modal-close {
-        width: 30px; height: 30px; border-radius: 8px;
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: all 0.15s ease;
-        flex-shrink: 0;
+      .gjs-sm-sector {
+        border: none; border-bottom: 1px solid var(--p-color-border, #e1e3e5);
+        padding: 8px 0;
       }
-      .ue-modal-close:hover {
-        background: var(--bg-3); color: var(--text);
+      .gjs-sm-sector .gjs-sm-title {
+        font-size: 12px; font-weight: 600;
+        color: var(--p-color-text, #202223);
+        padding: 4px 0;
       }
-      .ue-modal-lede {
-        font-size: 13.5px; color: var(--text-muted);
-        line-height: 1.55; margin: 14px 0 18px;
+      .gjs-field {
+        background: var(--p-color-bg-surface, #fff);
+        border: 1px solid var(--p-color-border, #e1e3e5);
+        border-radius: 6px;
       }
-      .ue-modal-list {
-        flex: 1; overflow-y: auto;
-        display: flex; flex-direction: column; gap: 6px;
-        margin-bottom: 18px;
-        min-height: 100px;
-        max-height: 380px;
-      }
-      .ue-modal-empty {
-        text-align: center; padding: 40px 16px;
-        color: var(--text-muted);
-        font-size: 13px;
-        display: flex; flex-direction: column; align-items: center; gap: 14px;
-      }
-      .ue-modal-error {
-        color: var(--danger);
-        font-size: 13px;
-        padding: 10px 14px;
-        background: var(--danger-soft);
-        border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
-        border-radius: 9px;
-      }
-      .ue-spinner {
-        width: 28px; height: 28px;
-        border: 2.5px solid var(--bg-3);
-        border-top-color: var(--brand);
-        border-radius: 50%;
-        animation: spin 0.7s linear infinite;
-      }
-      .ue-product {
-        display: flex; align-items: center; gap: 12px;
-        padding: 10px 12px; border-radius: 11px;
-        background: var(--bg-2);
-        border: 1.5px solid var(--border);
-        cursor: pointer; font-family: inherit; text-align: left;
-        transition: all 0.15s ease;
-        width: 100%;
-      }
-      .ue-product:hover {
-        background: var(--bg-3);
-        border-color: var(--border-strong);
-      }
-      .ue-product.active {
-        background: var(--brand-soft);
-        border-color: var(--brand);
-      }
-      .ue-product-img {
-        width: 44px; height: 44px; border-radius: 9px;
-        object-fit: cover; flex-shrink: 0;
-        border: 1px solid var(--border);
-      }
-      .ue-product-img-fallback {
-        width: 44px; height: 44px; border-radius: 9px;
-        background: var(--bg-3);
-        border: 1px solid var(--border);
-        display: flex; align-items: center; justify-content: center;
-        color: var(--text-subtle);
-        flex-shrink: 0;
-      }
-      .ue-product-meta { flex: 1; min-width: 0; }
-      .ue-product-title {
-        font-size: 13.5px; font-weight: 600;
-        color: var(--text); letter-spacing: -0.01em;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      }
-      .ue-product-handle {
-        font-size: 11.5px;
-        color: var(--text-subtle);
-        font-family: var(--font-mono);
-        margin-top: 2px;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      }
-      .ue-product-check {
-        width: 22px; height: 22px; border-radius: 50%;
-        background: transparent;
-        border: 1.5px solid var(--border-strong);
-        flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center;
-        color: transparent;
-      }
-      .ue-product.active .ue-product-check {
-        background: var(--brand);
-        border-color: var(--brand);
-        color: #fff;
-      }
-      .ue-modal-actions {
-        display: flex; gap: 10px;
+      .gjs-trt-trait { padding: 8px 0; }
+
+      @media (max-width: 900px) {
+        .ue-layout { grid-template-columns: 1fr; }
+        .ue-panel { display: none; }
       }
     `}</style>
   )
