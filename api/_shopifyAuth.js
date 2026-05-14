@@ -103,9 +103,17 @@ function clearTokenCookie(res, shop) {
 }
 
 function isInvalidTokenError(result) {
-  if (result.status === 401) return true
-  const errStr = JSON.stringify(result.data?.errors || '')
-  return errStr.includes('Invalid API key') || errStr.includes('access token') || errStr.includes('Unrecognized')
+  if (result.status === 401 || result.status === 403) return true
+  // Check both `errors` (plural) and `error` (singular). Lowercase for safety.
+  const blob = JSON.stringify({
+    e1: result.data?.errors || null,
+    e2: result.data?.error || null
+  }).toLowerCase()
+  return blob.includes('access token')
+      || blob.includes('invalid api key')
+      || blob.includes('unrecognized')
+      || blob.includes('non-expiring')
+      || blob.includes('expiring offline')
 }
 
 // Returns { shop, call(path, method, body) } where call() auto-refreshes on stale token.
@@ -144,10 +152,20 @@ async function prepareShopifyAuth(req, res) {
   async function call(path, method = 'GET', body = null) {
     let result = await rawShopifyCall(shop, token, path, method, body)
     if (isInvalidTokenError(result)) {
+      console.log('[shopifyAuth] Token rejected by Shopify (status', result.status + '). Refreshing via Token Exchange. Errors:', JSON.stringify(result.data?.errors || result.data?.error || '').substring(0, 200))
       try {
         await refreshToken()
-        result = await rawShopifyCall(shop, token, path, method, body)
       } catch (e) {
+        console.error('[shopifyAuth] Token Exchange failed during refresh:', e.message)
+        clearTokenCookie(res, shop)
+        const err = new Error('REAUTH_REQUIRED')
+        err.shop = shop
+        throw err
+      }
+      result = await rawShopifyCall(shop, token, path, method, body)
+      if (isInvalidTokenError(result)) {
+        // Even the freshly-exchanged token is rejected — something deeper is wrong.
+        console.error('[shopifyAuth] Refreshed token still rejected by Shopify. Forcing reauth. Errors:', JSON.stringify(result.data?.errors || result.data?.error || '').substring(0, 200))
         clearTokenCookie(res, shop)
         const err = new Error('REAUTH_REQUIRED')
         err.shop = shop
