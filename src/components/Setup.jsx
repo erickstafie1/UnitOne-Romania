@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Page, Card, Button, BlockStack, InlineStack, Text, Banner, RadioButton, Link, Icon, Box } from '@shopify/polaris'
+import { Page, Card, Button, BlockStack, InlineStack, Text, Banner, RadioButton, Box } from '@shopify/polaris'
 import { CheckIcon, ChevronRightIcon } from '@shopify/polaris-icons'
 
 export default function Setup({ shop, onComplete, isReconfigure }) {

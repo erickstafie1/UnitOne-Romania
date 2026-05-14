@@ -63,14 +63,13 @@ function tokenExchange(shop, sessionToken) {
         try {
           const j = JSON.parse(text)
           if (j.access_token) {
-            console.log('Token Exchange OK for', shop, '- expires_in:', j.expires_in, 'scope:', j.scope)
+            console.log('Token Exchange OK for', shop, '- expires_in:', j.expires_in)
             resolve(j.access_token)
           } else {
             console.error('Token Exchange rejected for', shop, '- status:', res.statusCode, 'body:', text.substring(0, 300))
             reject(new Error('Token exchange failed (' + res.statusCode + '): ' + text.substring(0, 200)))
           }
         } catch (e) {
-          console.error('Token Exchange parse error for', shop, '- raw:', text.substring(0, 300))
           reject(new Error('Token exchange parse error: ' + text.substring(0, 200)))
         }
       })
@@ -84,16 +83,10 @@ function tokenExchange(shop, sessionToken) {
 
 function getSessionInfo(req) {
   const authHeader = req.headers['authorization'] || ''
-  if (!authHeader.startsWith('Bearer ')) {
-    console.log('No session token in Authorization header (Bearer missing)')
-    return null
-  }
+  if (!authHeader.startsWith('Bearer ')) return null
   const sessionToken = authHeader.slice(7)
   const verified = verifySessionToken(sessionToken)
-  if (!verified) {
-    console.log('Session token JWT failed verification (signature/exp/aud)')
-    return null
-  }
+  if (!verified) return null
   return { shop: verified.shop, sessionToken }
 }
 
@@ -115,46 +108,32 @@ function isInvalidTokenError(result) {
   return errStr.includes('Invalid API key') || errStr.includes('access token') || errStr.includes('Unrecognized')
 }
 
-// Returns { shop, getToken(), call(path, method, body) } where call() auto-refreshes on stale token.
-// Throws if no auth source available (no session token, no cookie, no body token).
+// Returns { shop, call(path, method, body) } where call() auto-refreshes on stale token.
+// Throws REAUTH_REQUIRED if no session token (frontend handles via OAuth redirect).
 async function prepareShopifyAuth(req, res) {
   const session = getSessionInfo(req)
-  let shop = session?.shop
-  let token = null
-
-  // Legacy fallback: shop from body (LoginScreen path or pre-session-token clients)
-  if (!shop && req.body?.shop) shop = req.body.shop
-  if (!shop) throw new Error('Missing shop')
-
-  // Get cached token from cookie first (fastest path)
-  token = getStoredToken(req.headers.cookie || '', shop)
-
-  // Legacy fallback: token from body
-  if (!token && req.body?.token) token = req.body.token
-
-  // No cached/body token, but we have session: do Token Exchange now
-  if (!token && session?.sessionToken) {
-    token = await tokenExchange(shop, session.sessionToken)
-    setTokenCookie(res, shop, token)
-    console.log('Token Exchange (initial) for', shop)
-  }
-
-  if (!token) {
-    // No valid token from any source — user must re-authenticate via OAuth
+  if (!session) {
     const err = new Error('REAUTH_REQUIRED')
-    err.shop = shop
     throw err
+  }
+  const { shop, sessionToken } = session
+
+  // Try cached cookie token first (avoids round-trip to Shopify)
+  let token = getStoredToken(req.headers.cookie || '', shop)
+
+  // No cookie? Mint a fresh one via Token Exchange
+  if (!token) {
+    token = await tokenExchange(shop, sessionToken)
+    setTokenCookie(res, shop, token)
   }
 
   // Serialize concurrent refreshes within this request
   let refreshPromise = null
   async function refreshToken() {
-    if (!session?.sessionToken) throw new Error('Cannot refresh: no session token')
     if (!refreshPromise) {
-      refreshPromise = tokenExchange(shop, session.sessionToken).then(t => {
+      refreshPromise = tokenExchange(shop, sessionToken).then(t => {
         token = t
         setTokenCookie(res, shop, t)
-        console.log('Token Exchange (refresh) for', shop)
         refreshPromise = null
         return t
       }).catch(e => { refreshPromise = null; throw e })
@@ -165,20 +144,10 @@ async function prepareShopifyAuth(req, res) {
   async function call(path, method = 'GET', body = null) {
     let result = await rawShopifyCall(shop, token, path, method, body)
     if (isInvalidTokenError(result)) {
-      if (session?.sessionToken) {
-        try {
-          await refreshToken()
-          result = await rawShopifyCall(shop, token, path, method, body)
-        } catch (e) {
-          console.log('Token Exchange failed:', e.message)
-          clearTokenCookie(res, shop)
-          const err = new Error('REAUTH_REQUIRED')
-          err.shop = shop
-          throw err
-        }
-      } else {
-        // No session token to do Token Exchange — old cookie token is dead
-        console.log('No session token, old access token rejected. Forcing reauth for', shop)
+      try {
+        await refreshToken()
+        result = await rawShopifyCall(shop, token, path, method, body)
+      } catch (e) {
         clearTokenCookie(res, shop)
         const err = new Error('REAUTH_REQUIRED')
         err.shop = shop
@@ -188,21 +157,7 @@ async function prepareShopifyAuth(req, res) {
     return result.data
   }
 
-  return { shop, getToken: () => token, call, hasSession: !!session?.sessionToken }
+  return { shop, call }
 }
 
-function reauthErrorResponse(err, shop) {
-  const s = err.shop || shop || ''
-  return { status: 401, body: { error: 'reauth_required', shop: s, authUrl: '/api/auth?shop=' + s } }
-}
-
-module.exports = {
-  prepareShopifyAuth,
-  tokenExchange,
-  setTokenCookie,
-  clearTokenCookie,
-  getSessionInfo,
-  rawShopifyCall,
-  isInvalidTokenError,
-  reauthErrorResponse
-}
+module.exports = { prepareShopifyAuth }

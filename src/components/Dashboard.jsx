@@ -14,7 +14,7 @@ import { apiFetch } from '../apiFetch.js'
 const CONTACT_EMAIL = 'bellatorixx@gmail.com'
 
 export default function Dashboard({
-  shop, token, plan, planLimit, publishLimit = 1,
+  shop, plan, planLimit, publishLimit = 1,
   onNew, onEdit, onReconfigure, onUseTemplate,
   section = 'home',
   onSectionChange,
@@ -40,7 +40,7 @@ export default function Dashboard({
     try {
       const r = await fetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'shop_info', shop, token })
+        body: JSON.stringify({ action: 'shop_info', shop })
       })
       const d = await r.json()
       if (d.shopOwner) setShopOwner(d.shopOwner.trim().split(/\s+/)[0])
@@ -52,7 +52,7 @@ export default function Dashboard({
     try {
       const res = await fetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list', shop, token })
+        body: JSON.stringify({ action: 'list', shop })
       })
       const data = await res.json()
       setPages(data.pages || [])
@@ -66,7 +66,7 @@ export default function Dashboard({
     try {
       await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', shop, token, pageId })
+        body: JSON.stringify({ action: 'delete', shop, pageId })
       })
       setPages(pages.filter(p => p.id !== pageId))
       setToast('Pagină ștearsă')
@@ -78,7 +78,7 @@ export default function Dashboard({
     try {
       const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'toggle', shop, token, pageId, published: !published })
+        body: JSON.stringify({ action: 'toggle', shop, pageId, published: !published })
       })
       if (res.status === 402) {
         const d = await res.json()
@@ -95,7 +95,7 @@ export default function Dashboard({
     try {
       await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'unmark', shop, token, pageId })
+        body: JSON.stringify({ action: 'unmark', shop, pageId })
       })
       setPages(pages.filter(p => p.id !== pageId))
       setToast('Produs detașat')
@@ -106,7 +106,7 @@ export default function Dashboard({
     try {
       const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get', shop, token, pageId: page.id })
+        body: JSON.stringify({ action: 'get', shop, pageId: page.id })
       })
       const d = await res.json()
       onEdit({ ...d.page, fromDashboard: true })
@@ -130,7 +130,7 @@ export default function Dashboard({
         <TemplatesView onUse={onUseTemplate || onNew} />
       )}
       {section === 'pricing' && (
-        <PricingView currentPlan={plan} shop={shop} token={token} onPlanChange={onPlanChange} />
+        <PricingView currentPlan={plan} shop={shop} onPlanChange={onPlanChange} />
       )}
       {section === 'contact' && (
         <ContactView shop={shop} />
@@ -548,7 +548,7 @@ const PLANS = [
   }
 ]
 
-function PricingView({ currentPlan, shop, token, onPlanChange }) {
+function PricingView({ currentPlan, shop, onPlanChange }) {
   const [loading, setLoading] = useState(null)
   const [error, setError] = useState('')
 
@@ -558,7 +558,7 @@ function PricingView({ currentPlan, shop, token, onPlanChange }) {
     try {
       const r = await apiFetch('/api/billing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_charge', shop, token, plan: planId })
+        body: JSON.stringify({ action: 'create_charge', shop, plan: planId })
       })
       const data = await r.json()
       if (data.error) throw new Error(data.error)

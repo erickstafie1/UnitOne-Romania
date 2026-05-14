@@ -1,21 +1,10 @@
-/* ───────────────────────────────────────────────────────────────────
-   UnitOne — Global styles
-   Polaris (loaded in main.jsx) provides the bulk of design tokens
-   and component styles. This file only contains:
-   - Box-sizing reset
-   - Font families used by App Bridge initial loading screen
-   - Animations referenced by remaining custom UI (orbs, fades)
-─────────────────────────────────────────────────────────────────── */
+/* Polaris (loaded in main.jsx) provides design tokens + component styles.
+   This file only contains: minimal reset and the spin keyframe used by
+   the Generator loading orb (inline animation). */
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 
 #root { min-height: 100vh; }
 
-/* Animation keyframes used by the editor loading orb and Generator progress */
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-.fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.fade-in { animation: fadeIn 0.3s ease both; }

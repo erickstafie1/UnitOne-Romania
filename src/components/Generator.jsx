@@ -13,7 +13,7 @@ const STEPS = [
   { pct: 97, msg: 'Finalizare pagină', delay: 14000 },
 ]
 
-export default function Generator({ shop, token, onGenerated, onBack }) {
+export default function Generator({ onGenerated, onBack }) {
   const [aliUrl, setAliUrl] = useState('')
   const [styleDesc, setStyleDesc] = useState('')
   const [loading, setLoading] = useState(false)

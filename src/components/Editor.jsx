@@ -10,7 +10,7 @@ import {
 } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
-export default function Editor({ data, shop, token, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
+export default function Editor({ data, shop, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
   const codFormApp = codFormAppProp || (typeof window !== 'undefined' ? localStorage.getItem('codform_' + shop) : null) || null
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
@@ -138,7 +138,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
     if (isEditing || pageIdRef.current) return pageTitle  // editare aceeași pagina = OK
     const r = await apiFetch('/api/pages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list', shop, token })
+      body: JSON.stringify({ action: 'list', shop })
     })
     const d = await r.json()
     const existing = (d.pages || []).map(p => (p.title || '').trim().toLowerCase())
@@ -172,7 +172,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
       const pid = pageIdRef.current || data.id
       const body = {
-        action: 'update', shop, token, pageId: pid,
+        action: 'update', shop, pageId: pid,
         title: pageTitle, html: fullHtml, hideHeaderFooter,
         codFormApp: finalCodFormApp, variantId
       }
@@ -198,7 +198,7 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
       const res = await fetch('/api/get-products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shop, token })
+        body: JSON.stringify({ shop })
       })
       const d = await res.json()
       if (d.error === 'reauth_required') {
@@ -271,8 +271,8 @@ export default function Editor({ data, shop, token, codFormApp: codFormAppProp, 
 
       const pid = pageIdRef.current || data.id
       const body = pid
-        ? { action: 'update', shop, token, pageId: pid, title: finalTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
-        : { shop, token, title: finalTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
+        ? { action: 'update', shop, pageId: pid, title: finalTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
+        : { shop, title: finalTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
 
       const res = await apiFetch('/api/publish', {
         method: 'POST',

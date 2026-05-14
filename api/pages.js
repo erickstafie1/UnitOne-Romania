@@ -1,6 +1,7 @@
 // api/pages.js
 const { prepareShopifyAuth } = require('./_shopifyAuth')
 const { getPlan, countLPs } = require('./_plan')
+const { installTemplates } = require('./_templates')
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -85,85 +86,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'reinstall') {
-      const themes = await auth.call('/themes.json')
-      const active = (themes.themes || []).find(t => t.role === 'main')
-      if (!active) return res.status(400).json({ error: 'No active theme' })
-      const id = active.id
-      const layoutLines = [
-        '<!DOCTYPE html>','<html lang="ro">','<head>',
-        '<meta charset="utf-8">',
-        '<meta name="viewport" content="width=device-width,initial-scale=1">',
-        '<title>{{ product.title }}</title>',
-        '{{ content_for_header }}',
-        '{%- if product -%}<script type="application/json" id="unitone-product-json">{{ product | json }}</script>{%- endif -%}',
-        '<style>',
-        'header,footer,nav,.header,.footer,.site-header,.site-footer,',
-        '#shopify-section-header,#shopify-section-footer,',
-        '.announcement-bar,.sticky-header,',
-        '.product__title,.product__media-wrapper,',
-        '.product-form__quantity,.price--listing,.price__container,',
-        '.price-item,.price__regular,.price__sale,',
-        '.product__info-container h1,.product__info-container h2,',
-        '.product-single__title,.product_title,',
-        '._rsi-buy-now-button,',
-        '[class*="product-form__button"]:not(.rsi-cod-form-gempages-button-overwrite),',
-        '.shopify-payment-button,',
-        '.you-may-also-like,.complementary-products,',
-        '.product__view-details,.product__pickup-availabilities',
-        '{display:none!important}',
-        'body{padding-top:0!important}',
-        'main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}',
-        '.page-width{max-width:100%!important;padding:0!important}',
-        '</style>','</head>','<body>',
-        '{{ content_for_layout }}',
-        '{%- if product -%}',
-        '<form action="/cart/add" id="product-form-product-template" class="product-form" method="post" enctype="multipart/form-data" style="display:none" novalidate>',
-        '<input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">',
-        '<button type="submit" name="add">Add</button>',
-        '</form>','{%- endif -%}',
-        '<script>','(function(){',
-        'var H=["header","footer","nav",".header",".footer",".site-header",".site-footer",',
-        '"#shopify-section-header","#shopify-section-footer",".announcement-bar",".sticky-header",',
-        '".product__title",".product__media-wrapper",".product-form__quantity",',
-        '".price--listing",".price__container",".price-item",".price__regular",".price__sale",',
-        '"._rsi-buy-now-button",".shopify-payment-button",',
-        '".you-may-also-like",".complementary-products",',
-        '".product__pickup-availabilities",".product__view-details"];',
-        'function hide(){H.forEach(function(s){try{document.querySelectorAll(s).forEach(function(el){el.style.setProperty("display","none","important");});}catch(e){}});',
-        'document.querySelectorAll(".product__info-container h1,.product-single__title,.product_title").forEach(function(el){el.style.setProperty("display","none","important");});',
-        'document.body.style.paddingTop="0";',
-        'var m=document.querySelector("main,#MainContent,.main-content");if(m){m.style.paddingTop="0";m.style.marginTop="0";}}',
-        'hide();document.addEventListener("DOMContentLoaded",hide);',
-        'setTimeout(hide,100);setTimeout(hide,300);setTimeout(hide,800);setTimeout(hide,2000);',
-        '})();','<\/script>','</body>','</html>'
-      ]
-      auth.call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE').catch(() => {})
-
-      const fullLayout = [
-        '<!DOCTYPE html>',
-        '<html lang="{{ shop.locale }}">',
-        '<head>',
-        '<meta charset="utf-8">',
-        '<meta name="viewport" content="width=device-width,initial-scale=1">',
-        '<title>{{ product.title }}</title>',
-        '{{ content_for_header }}',
-        '</head>',
-        '<body style="margin:0;padding:0">',
-        "{% section 'header' %}",
-        '<main>{{ content_for_layout }}</main>',
-        "{% section 'footer' %}",
-        '</body>',
-        '</html>'
-      ].join('\n')
-
-      await Promise.all([
-        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecod.liquid', value: layoutLines.join('\n') } }),
-        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecodfull.liquid', value: fullLayout } }),
-        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" } }),
-        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" } }),
-        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' } }),
-        auth.call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) } })
-      ])
+      await installTemplates(auth.call)
       return res.status(200).json({ success: true })
     }
 
