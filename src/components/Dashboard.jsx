@@ -26,10 +26,12 @@ export default function Dashboard({
   const [deleting, setDeleting] = useState(null)
   const [toast, setToast] = useState('')
 
-  // Navigate via URL hash so the Shopify Admin NavMenu stays in sync.
+  // Navigate via URL pathname so Shopify Admin NavMenu highlights the right link.
   const goToSection = (s) => {
+    const path = s === 'home' ? '/' : '/' + s
+    window.history.pushState({}, '', path + window.location.search)
+    window.dispatchEvent(new PopStateEvent('popstate'))
     if (onSectionChange) onSectionChange(s)
-    window.location.hash = '#/' + s
   }
 
   useEffect(() => { loadPages(); loadShopInfo() }, [])

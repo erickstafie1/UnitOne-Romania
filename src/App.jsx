@@ -87,14 +87,30 @@ function LoginScreen({ onLogin }) {
   )
 }
 
-const VALID_SECTIONS = ['home', 'pages', 'templates', 'pricing', 'contact', 'bug']
+const PATH_TO_SECTION = {
+  '/': 'home',
+  '/pages': 'pages',
+  '/templates': 'templates',
+  '/pricing': 'pricing',
+  '/contact': 'contact',
+  '/bug': 'bug'
+}
 
-function readHashSection() {
-  const h = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase()
-  if (VALID_SECTIONS.includes(h)) return { kind: 'section', value: h }
-  if (h === 'setup') return { kind: 'screen', value: 'setup' }
-  if (h === 'new') return { kind: 'screen', value: 'generator' }
+function readPathRoute() {
+  const path = window.location.pathname.replace(/\/$/, '') || '/'
+  if (PATH_TO_SECTION[path]) return { kind: 'section', value: PATH_TO_SECTION[path] }
+  if (path === '/setup') return { kind: 'screen', value: 'setup' }
+  if (path === '/new') return { kind: 'screen', value: 'generator' }
   return null
+}
+
+// Navigate the iframe URL while preserving Shopify session params (shop, host).
+// Shopify Admin's NavMenu reads window.location to highlight the active link.
+export function navigateTo(path) {
+  const url = path + window.location.search
+  window.history.pushState({}, '', url)
+  // Manually fire popstate so app's listener picks it up (pushState doesn't auto-fire it)
+  window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
 function AppShell() {
@@ -115,8 +131,8 @@ function AppShell() {
     const host = params.get('host')
     const chargeId = params.get('charge_id')
 
-    // Honor initial hash so deep-linking works (e.g. #/pages on first load)
-    const initial = readHashSection()
+    // Honor initial path so deep-linking works (e.g. /pages on first load)
+    const initial = readPathRoute()
     if (initial?.kind === 'section') setDashboardSection(initial.value)
 
     if (s && host) {
@@ -159,10 +175,10 @@ function AppShell() {
     setScreen('login')
   }, [])
 
-  // Hash router: NavMenu links update URL hash; we listen and switch screens/sections.
+  // Path router: NavMenu links change URL path; popstate fires on Admin nav + pushState.
   useEffect(() => {
-    function handleHash() {
-      const r = readHashSection()
+    function handleNav() {
+      const r = readPathRoute()
       if (!r) return
       if (r.kind === 'section') {
         setScreen('dashboard')
@@ -173,8 +189,8 @@ function AppShell() {
         setScreen(r.value)
       }
     }
-    window.addEventListener('hashchange', handleHash)
-    return () => window.removeEventListener('hashchange', handleHash)
+    window.addEventListener('popstate', handleNav)
+    return () => window.removeEventListener('popstate', handleNav)
   }, [])
 
   async function initApp(s, t) {
@@ -196,6 +212,8 @@ function AppShell() {
   }
 
   function gotoSection(section) {
+    const path = section === 'home' ? '/' : '/' + section
+    window.history.pushState({}, '', path + window.location.search)
     setDashboardSection(section)
     setGeneratedData(null); setEditingPage(null)
     setScreen('dashboard')
@@ -251,13 +269,13 @@ function AppShell() {
     <>
       {showNav && (
         <NavMenu>
-          <a href="#/" rel="home">Acasă</a>
-          <a href="#/pages">Pagini</a>
-          <a href="#/templates">Template-uri</a>
-          <a href="#/pricing">Prețuri</a>
-          <a href="#/contact">Contact</a>
-          <a href="#/bug">Raportează bug</a>
-          {codFormApp && <a href="#/setup">Setări COD</a>}
+          <a href="/" rel="home">Acasă</a>
+          <a href="/pages">Pagini</a>
+          <a href="/templates">Template-uri</a>
+          <a href="/pricing">Prețuri</a>
+          <a href="/contact">Contact</a>
+          <a href="/bug">Raportează bug</a>
+          {codFormApp && <a href="/setup">Setări COD</a>}
         </NavMenu>
       )}
       {renderScreen()}
