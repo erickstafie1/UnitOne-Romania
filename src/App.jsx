@@ -98,12 +98,14 @@ function AppShell() {
 
   async function initApp(s) {
     setShop(s)
-    fetch('/api/pages', {
+    // Both calls hit Shopify Admin API — must use apiFetch so the backend
+    // gets the App Bridge session JWT to perform Token Exchange.
+    apiFetch('/api/pages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reinstall', shop: s })
     }).catch(() => {})
     try {
-      const r = await fetch('/api/billing', {
+      const r = await apiFetch('/api/billing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get_status', shop: s })
       })

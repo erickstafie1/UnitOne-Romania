@@ -38,7 +38,7 @@ export default function Dashboard({
 
   async function loadShopInfo() {
     try {
-      const r = await fetch('/api/pages', {
+      const r = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'shop_info', shop })
       })
@@ -50,7 +50,7 @@ export default function Dashboard({
   async function loadPages() {
     setLoading(true)
     try {
-      const res = await fetch('/api/pages', {
+      const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'list', shop })
       })

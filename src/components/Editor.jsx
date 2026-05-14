@@ -193,9 +193,9 @@ export default function Editor({ data, shop, codFormApp: codFormAppProp, planLim
     setLoadingProducts(true)
     setProductsError('')
     try {
-      // Plain fetch — never redirect to OAuth from here (user would lose editor state).
-      // Auth errors surface as a reconnect prompt instead.
-      const res = await fetch('/api/get-products', {
+      // apiFetch attaches the App Bridge session JWT so the backend can refresh
+      // a stale cookie token via Token Exchange before failing.
+      const res = await apiFetch('/api/get-products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shop })
