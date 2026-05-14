@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  Frame, Navigation, Page, Card, Button, TextField, Banner, Badge, Spinner,
+  Frame, Page, Card, Button, TextField, Banner, Badge, Spinner,
   EmptyState, BlockStack, InlineStack, Text, Box, Divider, ButtonGroup,
-  ResourceList, ResourceItem, Modal, ProgressBar, List, Link, Icon, Toast
+  ResourceList, ResourceItem, ProgressBar, List, Icon, Toast
 } from '@shopify/polaris'
 import {
-  HomeIcon, PageIcon, CollectionIcon, NotificationIcon, EmailIcon, AlertCircleIcon,
-  PlusIcon, EditIcon, DeleteIcon, ViewIcon, PauseCircleIcon, PlayCircleIcon,
+  PlusIcon, DeleteIcon, ViewIcon, PauseCircleIcon, PlayCircleIcon,
   XSmallIcon, SearchIcon, CheckIcon, ClipboardIcon, StoreIcon, ClockIcon,
-  QuestionCircleIcon, SendIcon, ChevronRightIcon, MagicIcon
+  QuestionCircleIcon, SendIcon, ChevronRightIcon, MagicIcon, EmailIcon
 } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
@@ -17,19 +16,23 @@ const CONTACT_EMAIL = 'bellatorixx@gmail.com'
 export default function Dashboard({
   shop, token, plan, planLimit, publishLimit = 1,
   onNew, onEdit, onReconfigure, onUseTemplate,
-  initialSection = 'home',
+  section = 'home',
+  onSectionChange,
   onPlanChange
 }) {
-  const [section, setSection] = useState(initialSection)
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
   const [shopOwner, setShopOwner] = useState('')
   const [deleting, setDeleting] = useState(null)
   const [toast, setToast] = useState('')
-  const codFormApp = typeof window !== 'undefined' ? localStorage.getItem(`codform_${shop}`) : null
+
+  // Navigate via URL hash so the Shopify Admin NavMenu stays in sync.
+  const goToSection = (s) => {
+    if (onSectionChange) onSectionChange(s)
+    window.location.hash = '#/' + s
+  }
 
   useEffect(() => { loadPages(); loadShopInfo() }, [])
-  useEffect(() => { setSection(initialSection) }, [initialSection])
 
   async function loadShopInfo() {
     try {
@@ -108,45 +111,15 @@ export default function Dashboard({
     } catch { onEdit({ ...page, fromDashboard: true }) }
   }
 
-  const navigation = (
-    <Navigation location={section}>
-      <Navigation.Section
-        items={[
-          { url: '#home', label: 'Acasă', icon: HomeIcon, selected: section === 'home', onClick: () => setSection('home') },
-          { url: '#pages', label: 'Pagini', icon: PageIcon, badge: pages.length ? String(pages.length) : undefined, selected: section === 'pages', onClick: () => setSection('pages') },
-          { url: '#templates', label: 'Template-uri', icon: CollectionIcon, selected: section === 'templates', onClick: () => setSection('templates') },
-        ]}
-        action={{
-          accessibilityLabel: 'Pagină nouă',
-          icon: PlusIcon,
-          onClick: () => {
-            if (planLimit < 9999 && pages.length >= planLimit) { setSection('pricing'); return }
-            onNew()
-          }
-        }}
-      />
-      <Navigation.Section
-        title="Cont"
-        separator
-        items={[
-          { url: '#pricing', label: 'Prețuri', icon: NotificationIcon, selected: section === 'pricing', onClick: () => setSection('pricing') },
-          { url: '#contact', label: 'Contact', icon: EmailIcon, selected: section === 'contact', onClick: () => setSection('contact') },
-          { url: '#bug', label: 'Raportează bug', icon: AlertCircleIcon, selected: section === 'bug', onClick: () => setSection('bug') },
-          ...(codFormApp ? [{ url: '#setup', label: 'Setări COD', icon: EditIcon, onClick: onReconfigure }] : [])
-        ]}
-      />
-    </Navigation>
-  )
-
   return (
-    <Frame navigation={navigation}>
+    <Frame>
       {section === 'home' && (
-        <HomeView shopOwner={shopOwner} shop={shop} onNew={onNew} pagesCount={pages.length} plan={plan} planLimit={planLimit} publishLimit={publishLimit} pages={pages} onUpgrade={() => setSection('pricing')} />
+        <HomeView shopOwner={shopOwner} shop={shop} onNew={onNew} pagesCount={pages.length} plan={plan} planLimit={planLimit} publishLimit={publishLimit} pages={pages} onUpgrade={() => goToSection('pricing')} />
       )}
       {section === 'pages' && (
         <PagesView pages={pages} loading={loading} shop={shop}
           onNew={() => {
-            if (planLimit < 9999 && pages.length >= planLimit) { setSection('pricing'); return }
+            if (planLimit < 9999 && pages.length >= planLimit) { goToSection('pricing'); return }
             onNew()
           }}
           onEdit={openEdit} onToggle={togglePage} onDelete={deletePage} onUnmark={unmarkPage} deleting={deleting} />

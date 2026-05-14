@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { AppProvider, Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, List, Spinner } from '@shopify/polaris'
+import { AppProvider, Page, Card, TextField, Button, Banner, BlockStack, Text, List, Spinner } from '@shopify/polaris'
+import { NavMenu } from '@shopify/app-bridge-react'
 import enTranslations from '@shopify/polaris/locales/en.json'
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
@@ -86,6 +87,16 @@ function LoginScreen({ onLogin }) {
   )
 }
 
+const VALID_SECTIONS = ['home', 'pages', 'templates', 'pricing', 'contact', 'bug']
+
+function readHashSection() {
+  const h = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase()
+  if (VALID_SECTIONS.includes(h)) return { kind: 'section', value: h }
+  if (h === 'setup') return { kind: 'screen', value: 'setup' }
+  if (h === 'new') return { kind: 'screen', value: 'generator' }
+  return null
+}
+
 function AppShell() {
   const [screen, setScreen] = useState('loading')
   const [codFormApp, setCodFormApp] = useState(null)
@@ -103,6 +114,10 @@ function AppShell() {
     const s = params.get('shop')
     const host = params.get('host')
     const chargeId = params.get('charge_id')
+
+    // Honor initial hash so deep-linking works (e.g. #/pages on first load)
+    const initial = readHashSection()
+    if (initial?.kind === 'section') setDashboardSection(initial.value)
 
     if (s && host) {
       // Embedded mode: App Bridge handles auth via session tokens (loaded in main.jsx).
@@ -144,6 +159,24 @@ function AppShell() {
     setScreen('login')
   }, [])
 
+  // Hash router: NavMenu links update URL hash; we listen and switch screens/sections.
+  useEffect(() => {
+    function handleHash() {
+      const r = readHashSection()
+      if (!r) return
+      if (r.kind === 'section') {
+        setScreen('dashboard')
+        setDashboardSection(r.value)
+        setGeneratedData(null)
+        setEditingPage(null)
+      } else if (r.kind === 'screen') {
+        setScreen(r.value)
+      }
+    }
+    window.addEventListener('hashchange', handleHash)
+    return () => window.removeEventListener('hashchange', handleHash)
+  }, [])
+
   async function initApp(s, t) {
     setShop(s); setToken(t)
     fetch('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reinstall', shop: s, token: t }) }).catch(() => {})
@@ -162,57 +195,74 @@ function AppShell() {
     setScreen(saved ? 'dashboard' : 'setup')
   }
 
-  function gotoPricing() {
-    setDashboardSection('pricing')
+  function gotoSection(section) {
+    setDashboardSection(section)
     setGeneratedData(null); setEditingPage(null)
     setScreen('dashboard')
   }
 
-  if (screen === 'loading') return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <Spinner accessibilityLabel="Se încarcă" size="large" />
-    </div>
+  const isEmbedded = !!new URLSearchParams(window.location.search).get('host')
+  const showNav = isEmbedded && screen !== 'login' && screen !== 'loading'
+
+  function renderScreen() {
+    if (screen === 'loading') return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <Spinner accessibilityLabel="Se încarcă" size="large" />
+      </div>
+    )
+    if (screen === 'login') return <LoginScreen onLogin={(s, t) => initApp(s, t)} />
+    if (screen === 'setup') return (
+      <Setup shop={shop} onComplete={(app) => { setCodFormApp(app); setScreen('dashboard') }} isReconfigure={codFormApp !== null} />
+    )
+    if (screen === 'dashboard') return (
+      <Dashboard shop={shop} token={token}
+        plan={plan} planLimit={planLimit} publishLimit={publishLimit}
+        section={dashboardSection}
+        onSectionChange={(s) => setDashboardSection(s)}
+        onPlanChange={(p, l, pl) => { setPlan(p); setPlanLimit(l); if (pl !== undefined) setPublishLimit(pl) }}
+        onNew={() => setScreen('generator')}
+        onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
+        onReconfigure={() => setScreen('setup')}
+        onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
+      />
+    )
+    if (screen === 'generator') return (
+      <Generator shop={shop} token={token}
+        onGenerated={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
+        onBack={() => setScreen('dashboard')}
+      />
+    )
+    if (screen === 'editor' && (generatedData || editingPage)) return (
+      <Editor
+        data={editingPage || generatedData}
+        shop={shop}
+        token={token}
+        codFormApp={codFormApp}
+        planLimit={planLimit}
+        onBack={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
+        onPublished={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
+        onUpgrade={() => gotoSection('pricing')}
+      />
+    )
+    return null
+  }
+
+  return (
+    <>
+      {showNav && (
+        <NavMenu>
+          <a href="#/" rel="home">Acasă</a>
+          <a href="#/pages">Pagini</a>
+          <a href="#/templates">Template-uri</a>
+          <a href="#/pricing">Prețuri</a>
+          <a href="#/contact">Contact</a>
+          <a href="#/bug">Raportează bug</a>
+          {codFormApp && <a href="#/setup">Setări COD</a>}
+        </NavMenu>
+      )}
+      {renderScreen()}
+    </>
   )
-
-  if (screen === 'login') return <LoginScreen onLogin={(s, t) => initApp(s, t)} />
-
-  if (screen === 'setup') return (
-    <Setup shop={shop} onComplete={(app) => { setCodFormApp(app); setScreen('dashboard') }} isReconfigure={codFormApp !== null} />
-  )
-
-  if (screen === 'dashboard') return (
-    <Dashboard shop={shop} token={token}
-      plan={plan} planLimit={planLimit} publishLimit={publishLimit}
-      initialSection={dashboardSection}
-      onPlanChange={(p, l, pl) => { setPlan(p); setPlanLimit(l); if (pl !== undefined) setPublishLimit(pl) }}
-      onNew={() => setScreen('generator')}
-      onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
-      onReconfigure={() => setScreen('setup')}
-      onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
-    />
-  )
-
-  if (screen === 'generator') return (
-    <Generator shop={shop} token={token}
-      onGenerated={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
-      onBack={() => setScreen('dashboard')}
-    />
-  )
-
-  if (screen === 'editor' && (generatedData || editingPage)) return (
-    <Editor
-      data={editingPage || generatedData}
-      shop={shop}
-      token={token}
-      codFormApp={codFormApp}
-      planLimit={planLimit}
-      onBack={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
-      onPublished={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
-      onUpgrade={gotoPricing}
-    />
-  )
-
-  return null
 }
 
 export default function App() {
