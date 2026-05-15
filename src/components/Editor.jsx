@@ -365,7 +365,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   return (
     <div className="ue-shell">
       <EditorStyles />
-      {/* TOOLBAR — Polaris-styled custom flex layout */}
+      {/* TOOLBAR — left: back + title; right: device, H/F, save status, undo/redo, publish */}
       <div className="ue-toolbar">
         <Button icon={ArrowLeftIcon} onClick={onBack} variant="tertiary">Înapoi</Button>
 
@@ -380,18 +380,8 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           />
         </div>
 
-        <ButtonGroup variant="segmented">
-          <Button pressed={device === 'desktop'} onClick={() => switchDevice('desktop')} icon={DesktopIcon} accessibilityLabel="Desktop" />
-          <Button pressed={device === 'tablet'} onClick={() => switchDevice('tablet')} icon={ViewIcon} accessibilityLabel="Tablet" />
-          <Button pressed={device === 'mobile'} onClick={() => switchDevice('mobile')} icon={MobileIcon} accessibilityLabel="Mobil" />
-        </ButtonGroup>
-
-        <Button
-          pressed={hideHeaderFooter}
-          onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
-        >
-          {hideHeaderFooter ? 'H/F ascuns' : 'H/F vizibil'}
-        </Button>
+        {/* spacer pushes everything below to the right edge */}
+        <div style={{ flex: 1 }} />
 
         {(saving || lastSaved) && (
           <div className="ue-tb-save">
@@ -407,6 +397,19 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
             )}
           </div>
         )}
+
+        <ButtonGroup variant="segmented">
+          <Button pressed={device === 'desktop'} onClick={() => switchDevice('desktop')} icon={DesktopIcon} accessibilityLabel="Desktop" />
+          <Button pressed={device === 'tablet'} onClick={() => switchDevice('tablet')} icon={ViewIcon} accessibilityLabel="Tablet" />
+          <Button pressed={device === 'mobile'} onClick={() => switchDevice('mobile')} icon={MobileIcon} accessibilityLabel="Mobil" />
+        </ButtonGroup>
+
+        <Button
+          pressed={hideHeaderFooter}
+          onClick={() => setHideHeaderFooter(!hideHeaderFooter)}
+        >
+          {hideHeaderFooter ? 'H/F ascuns' : 'H/F vizibil'}
+        </Button>
 
         <ButtonGroup>
           <Button icon={UndoIcon} onClick={() => gjsRef.current?.UndoManager.undo()} accessibilityLabel="Undo" />
@@ -969,8 +972,11 @@ function EditorStyles() {
         background: #ffffff;
         border-bottom: 1px solid #e1e3e5;
       }
-      .ue-tb-title { flex: 1; min-width: 200px; max-width: 480px; }
-      .ue-tb-save { margin-left: auto; padding-right: 12px; white-space: nowrap; }
+      .ue-tb-title { width: 280px; flex-shrink: 0; }
+      .ue-tb-save { padding-right: 8px; white-space: nowrap; }
+      @media (max-width: 1100px) {
+        .ue-tb-title { width: 200px; }
+      }
       .ue-tb-error {
         padding: 12px 16px;
         background: #ffffff;
