@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  Frame, Page, Card, Button, TextField, Banner, Badge, Spinner,
+  Frame, Page, Layout, Card, Button, TextField, Banner, Badge, Spinner,
   EmptyState, BlockStack, InlineStack, Text, Box, Divider, ButtonGroup,
   ResourceList, ResourceItem, ProgressBar, List, Icon, Toast
 } from '@shopify/polaris'
 import {
-  PlusIcon, DeleteIcon, ViewIcon, PauseCircleIcon, PlayCircleIcon,
-  XSmallIcon, SearchIcon, CheckIcon, ClipboardIcon, StoreIcon, ClockIcon,
+  PlusIcon, DeleteIcon, EditIcon, ViewIcon, PauseCircleIcon, PlayCircleIcon,
+  SearchIcon, CheckIcon, ClipboardIcon, StoreIcon, ClockIcon,
   QuestionCircleIcon, SendIcon, ChevronRightIcon, MagicIcon, EmailIcon
 } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
@@ -15,7 +15,7 @@ const CONTACT_EMAIL = 'bellatorixx@gmail.com'
 
 export default function Dashboard({
   shop, plan, planLimit, publishLimit = 1,
-  onNew, onEdit, onReconfigure, onUseTemplate,
+  onNew, onEdit, onUseTemplate,
   section = 'home',
   onSectionChange,
   onPlanChange
@@ -90,18 +90,6 @@ export default function Dashboard({
     } catch { setToast('Eroare') }
   }
 
-  async function unmarkPage(pageId) {
-    if (!confirm('Detaseaza acest produs din lista LP?')) return
-    try {
-      await apiFetch('/api/pages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'unmark', shop, pageId })
-      })
-      setPages(pages.filter(p => p.id !== pageId))
-      setToast('Produs detașat')
-    } catch { setToast('Eroare la detașare') }
-  }
-
   async function openEdit(page) {
     try {
       const res = await apiFetch('/api/pages', {
@@ -124,7 +112,7 @@ export default function Dashboard({
             if (planLimit < 9999 && pages.length >= planLimit) { goToSection('pricing'); return }
             onNew()
           }}
-          onEdit={openEdit} onToggle={togglePage} onDelete={deletePage} onUnmark={unmarkPage} deleting={deleting} />
+          onEdit={openEdit} onToggle={togglePage} onDelete={deletePage} deleting={deleting} />
       )}
       {section === 'templates' && (
         <TemplatesView onUse={onUseTemplate || onNew} />
@@ -300,7 +288,7 @@ function ChatBubble({ role, content }) {
 }
 
 /* ─── PAGES ─────────────────────────────────────────────────────────── */
-function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, onUnmark, deleting }) {
+function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, deleting }) {
   const [query, setQuery] = useState('')
   const filtered = pages.filter(p => p.title.toLowerCase().includes(query.toLowerCase()))
 
@@ -378,8 +366,15 @@ function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, on
 
                 <ButtonGroup>
                   <Button
+                    icon={EditIcon}
+                    accessibilityLabel="Editează"
+                    onClick={(e) => { e?.stopPropagation?.(); onEdit(page) }}
+                  >
+                    Editează
+                  </Button>
+                  <Button
                     icon={ViewIcon}
-                    accessibilityLabel="Vezi pagina"
+                    accessibilityLabel="Vezi pagina live"
                     url={`https://${shop}/products/${page.handle}`}
                     external
                   />
@@ -388,13 +383,6 @@ function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, on
                     accessibilityLabel={page.published ? 'Dezactivează' : 'Activează'}
                     onClick={(e) => { e?.stopPropagation?.(); onToggle(page.id, page.published) }}
                   />
-                  {onUnmark && (
-                    <Button
-                      icon={XSmallIcon}
-                      accessibilityLabel="Detașează"
-                      onClick={(e) => { e?.stopPropagation?.(); onUnmark(page.id) }}
-                    />
-                  )}
                   <Button
                     icon={DeleteIcon}
                     accessibilityLabel="Șterge"
@@ -490,30 +478,35 @@ function TemplatesView({ onUse }) {
       title="Template-uri"
       subtitle="Alege un template optimizat pe nișa ta — editorul se deschide cu conținutul pre-completat."
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, alignItems: 'stretch' }}>
         {TEMPLATES.map((t) => (
-          <Card key={t.id}>
-            <BlockStack gap="300">
-              <Box
-                background="bg-surface-secondary"
-                padding="800"
-                borderRadius="200"
-                minHeight="120px"
-              >
-                <InlineStack align="center" blockAlign="center">
-                  <Text as="span" variant="heading3xl" tone="subdued">{t.emoji}</Text>
-                </InlineStack>
-              </Box>
-              <BlockStack gap="100">
-                <Text as="span" variant="bodySm" tone="subdued">{t.name}</Text>
-                <Text as="h3" variant="headingMd">{t.data.headline}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">{t.description}</Text>
-              </BlockStack>
-              <Button onClick={() => onUse?.(t.data)} variant="primary" fullWidth icon={ChevronRightIcon}>
-                Folosește template
-              </Button>
-            </BlockStack>
-          </Card>
+          <div key={t.id} style={{ display: 'flex', height: '100%' }}>
+            <div style={{ width: '100%', display: 'flex' }}>
+              <Card>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}>
+                  <Box
+                    background="bg-surface-secondary"
+                    padding="800"
+                    borderRadius="200"
+                    minHeight="120px"
+                  >
+                    <InlineStack align="center" blockAlign="center">
+                      <Text as="span" variant="heading3xl" tone="subdued">{t.emoji}</Text>
+                    </InlineStack>
+                  </Box>
+                  <BlockStack gap="100">
+                    <Text as="span" variant="bodySm" tone="subdued">{t.name}</Text>
+                    <Text as="h3" variant="headingMd">{t.data.headline}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{t.description}</Text>
+                  </BlockStack>
+                  <div style={{ flex: 1 }} />
+                  <Button onClick={() => onUse?.(t.data)} variant="primary" fullWidth icon={ChevronRightIcon}>
+                    Folosește template
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          </div>
         ))}
       </div>
     </Page>
@@ -577,54 +570,60 @@ function PricingView({ currentPlan, shop, onPlanChange }) {
       <BlockStack gap="400">
         {error && <Banner tone="critical">{error}</Banner>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, alignItems: 'stretch' }}>
           {PLANS.map((p) => {
             const isCurrent = p.id === currentPlan
             const isLoading = loading === p.id
             return (
-              <Card key={p.id}>
-                <BlockStack gap="400">
-                  <BlockStack gap="100">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Text as="h3" variant="headingLg">{p.name}</Text>
-                      {p.highlight && !isCurrent && <Badge tone="info">Popular</Badge>}
-                      {isCurrent && <Badge tone="success">Planul tău</Badge>}
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">{p.tagline}</Text>
-                  </BlockStack>
+              <div key={p.id} style={{ display: 'flex', height: '100%' }}>
+                <div style={{ width: '100%', display: 'flex' }}>
+                  <Card>
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 16 }}>
+                      <BlockStack gap="100">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text as="h3" variant="headingLg">{p.name}</Text>
+                          {p.highlight && !isCurrent && <Badge tone="info">Popular</Badge>}
+                          {isCurrent && <Badge tone="success">Planul tău</Badge>}
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">{p.tagline}</Text>
+                      </BlockStack>
 
-                  <BlockStack gap="100">
-                    <Text as="p" variant="heading2xl">
-                      {p.price === 0 ? 'Gratuit' : `$${p.price}`}
-                      {p.price > 0 && <Text as="span" variant="bodyMd" tone="subdued"> / lună</Text>}
-                    </Text>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">{p.headline}</Text>
-                    {p.sub && <Text as="p" variant="bodySm" tone="subdued">{p.sub}</Text>}
-                  </BlockStack>
+                      <BlockStack gap="100">
+                        <Text as="p" variant="heading2xl">
+                          {p.price === 0 ? 'Gratuit' : `$${p.price}`}
+                          {p.price > 0 && <Text as="span" variant="bodyMd" tone="subdued"> / lună</Text>}
+                        </Text>
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">{p.headline}</Text>
+                        {p.sub && <Text as="p" variant="bodySm" tone="subdued">{p.sub}</Text>}
+                      </BlockStack>
 
-                  <Divider />
+                      <Divider />
 
-                  <List type="bullet">
-                    {p.features.map((f, i) => (
-                      <List.Item key={i}>{f}</List.Item>
-                    ))}
-                  </List>
+                      <List type="bullet">
+                        {p.features.map((f, i) => (
+                          <List.Item key={i}>{f}</List.Item>
+                        ))}
+                      </List>
 
-                  {p.cta ? (
-                    <Button
-                      variant={p.highlight ? 'primary' : 'secondary'}
-                      onClick={() => selectPlan(p.id)}
-                      disabled={isCurrent || isLoading}
-                      loading={isLoading}
-                      fullWidth
-                    >
-                      {isCurrent ? 'Plan activ' : p.cta}
-                    </Button>
-                  ) : (
-                    <Button disabled fullWidth>{isCurrent ? 'Plan activ' : 'Gratuit întotdeauna'}</Button>
-                  )}
-                </BlockStack>
-              </Card>
+                      <div style={{ flex: 1 }} />
+
+                      {p.cta ? (
+                        <Button
+                          variant={p.highlight ? 'primary' : 'secondary'}
+                          onClick={() => selectPlan(p.id)}
+                          disabled={isCurrent || isLoading}
+                          loading={isLoading}
+                          fullWidth
+                        >
+                          {isCurrent ? 'Plan activ' : p.cta}
+                        </Button>
+                      ) : (
+                        <Button disabled fullWidth>{isCurrent ? 'Plan activ' : 'Gratuit întotdeauna'}</Button>
+                      )}
+                    </div>
+                  </Card>
+                </div>
+              </div>
             )
           })}
         </div>
@@ -639,7 +638,11 @@ function PricingView({ currentPlan, shop, onPlanChange }) {
 
 /* ─── CONTACT ───────────────────────────────────────────────────────── */
 function ContactView({ shop }) {
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [replyTo, setReplyTo] = useState('')
   const [copied, setCopied] = useState(false)
+  const [sent, setSent] = useState(false)
   const handle = shop?.replace('.myshopify.com', '') || ''
 
   function copyEmail() {
@@ -648,32 +651,78 @@ function ContactView({ shop }) {
     })
   }
 
+  function send() {
+    if (!subject.trim() || !message.trim()) {
+      alert('Completează subiectul și mesajul')
+      return
+    }
+    const fullSubject = `[UnitOne · ${handle}] ${subject.trim()}`
+    const body = [
+      message.trim(),
+      '',
+      '───────────────',
+      `Magazin: ${shop}`,
+      replyTo.trim() ? `Reply-to: ${replyTo.trim()}` : '',
+      `Trimis: ${new Date().toLocaleString('ro-RO')}`
+    ].filter(Boolean).join('\n')
+    const url = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(fullSubject)}&body=${encodeURIComponent(body)}`
+    window.location.href = url
+    setSent(true); setTimeout(() => setSent(false), 4000)
+  }
+
   return (
     <Page title="Contact și asistență" subtitle="Ai întrebări sau ai nevoie de ajutor? Suntem aici.">
       <BlockStack gap="400">
         <Card>
           <BlockStack gap="400">
-            <InlineStack gap="300" blockAlign="center">
-              <Icon source={EmailIcon} tone="info" />
-              <BlockStack gap="100">
-                <Text as="p" variant="bodySm" tone="subdued">Email direct</Text>
-                <Text as="p" variant="bodyLg" fontWeight="semibold">{CONTACT_EMAIL}</Text>
-              </BlockStack>
-            </InlineStack>
-            <Text as="p" tone="subdued">
-              Răspundem în maxim 24 de ore în zilele lucrătoare. Pentru probleme urgente, menționează magazinul tău în subiect.
-            </Text>
+            <BlockStack gap="200">
+              <Text as="h3" variant="headingMd">Trimite-ne un mesaj</Text>
+              <Text as="p" tone="subdued" variant="bodySm">
+                Mesajul tău va fi trimis la <strong>{CONTACT_EMAIL}</strong> prin clientul tău de email.
+                Răspundem în maxim 24h în zilele lucrătoare.
+              </Text>
+            </BlockStack>
+
+            <TextField
+              label="Subiect"
+              value={subject}
+              onChange={setSubject}
+              placeholder="Ex: Problemă la publicarea unei pagini"
+              autoComplete="off"
+              requiredIndicator
+            />
+
+            <TextField
+              label="Mesaj"
+              value={message}
+              onChange={setMessage}
+              placeholder="Descrie pe larg întrebarea / problema. Include URL-ul paginii și screenshot-uri dacă ai."
+              multiline={6}
+              autoComplete="off"
+              requiredIndicator
+            />
+
+            <TextField
+              label="Email pentru răspuns (opțional)"
+              type="email"
+              value={replyTo}
+              onChange={setReplyTo}
+              placeholder="adresa@email.com"
+              autoComplete="email"
+              helpText="Implicit primești răspuns pe emailul cu care deschizi clientul de mail."
+            />
+
             <ButtonGroup>
               <Button
                 variant="primary"
-                icon={EmailIcon}
-                url={`mailto:${CONTACT_EMAIL}?subject=UnitOne%20-%20${encodeURIComponent(handle)}`}
-                external
+                icon={sent ? CheckIcon : SendIcon}
+                onClick={send}
+                size="large"
               >
-                Trimite email
+                {sent ? 'Email pregătit' : 'Trimite mesaj'}
               </Button>
               <Button onClick={copyEmail} icon={copied ? CheckIcon : ClipboardIcon}>
-                {copied ? 'Copiat' : 'Copiază adresa'}
+                {copied ? 'Copiat' : `Copiază ${CONTACT_EMAIL}`}
               </Button>
             </ButtonGroup>
           </BlockStack>
@@ -695,12 +744,12 @@ function ContactView({ shop }) {
 
 function InfoRow({ icon, label, value, mono }) {
   return (
-    <InlineStack gap="300" blockAlign="center">
-      <Icon source={icon} tone="subdued" />
-      <BlockStack gap="100">
+    <InlineStack gap="300" blockAlign="center" wrap={false}>
+      <Box minWidth="20px"><Icon source={icon} tone="subdued" /></Box>
+      <BlockStack gap="050">
         <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
         <Text as="p" variant="bodyMd" fontWeight={mono ? undefined : 'medium'}>
-          {mono ? <code>{value}</code> : value}
+          {mono ? <code style={{ fontSize: 13 }}>{value}</code> : value}
         </Text>
       </BlockStack>
     </InlineStack>

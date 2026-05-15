@@ -5,7 +5,6 @@ import enTranslations from '@shopify/polaris/locales/en.json'
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
-import Setup from './components/Setup.jsx'
 import { apiFetch } from './apiFetch.js'
 
 const PATH_TO_SECTION = {
@@ -20,7 +19,6 @@ const PATH_TO_SECTION = {
 function readPathRoute() {
   const path = window.location.pathname.replace(/\/$/, '') || '/'
   if (PATH_TO_SECTION[path]) return { kind: 'section', value: PATH_TO_SECTION[path] }
-  if (path === '/setup') return { kind: 'screen', value: 'setup' }
   if (path === '/new') return { kind: 'screen', value: 'generator' }
   return null
 }
@@ -43,7 +41,6 @@ function NotEmbeddedScreen() {
 
 function AppShell() {
   const [screen, setScreen] = useState('loading')
-  const [codFormApp, setCodFormApp] = useState(null)
   const [generatedData, setGeneratedData] = useState(null)
   const [editingPage, setEditingPage] = useState(null)
   const [shop, setShop] = useState('')
@@ -63,7 +60,6 @@ function AppShell() {
       return
     }
 
-    // Honor initial path so deep-linking works (e.g. /pages on first load)
     const initial = readPathRoute()
     if (initial?.kind === 'section') setDashboardSection(initial.value)
 
@@ -78,7 +74,6 @@ function AppShell() {
     initApp(s)
   }, [])
 
-  // Path router: NavMenu links change URL path; popstate fires on Admin nav + pushState.
   useEffect(() => {
     function handleNav() {
       const r = readPathRoute()
@@ -98,8 +93,6 @@ function AppShell() {
 
   async function initApp(s) {
     setShop(s)
-    // Both calls hit Shopify Admin API — must use apiFetch so the backend
-    // gets the App Bridge session JWT to perform Token Exchange.
     apiFetch('/api/pages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reinstall', shop: s })
@@ -114,9 +107,7 @@ function AppShell() {
       setPlanLimit(bd.limit || 3)
       setPublishLimit(bd.publishLimit ?? 1)
     } catch { setPlan('free'); setPlanLimit(3); setPublishLimit(1) }
-    const saved = localStorage.getItem('codform_' + s)
-    setCodFormApp(saved || null)
-    setScreen(saved ? 'dashboard' : 'setup')
+    setScreen('dashboard')
   }
 
   function gotoSection(section) {
@@ -136,9 +127,6 @@ function AppShell() {
       </div>
     )
     if (screen === 'not-embedded') return <NotEmbeddedScreen />
-    if (screen === 'setup') return (
-      <Setup shop={shop} onComplete={(app) => { setCodFormApp(app); setScreen('dashboard') }} isReconfigure={codFormApp !== null} />
-    )
     if (screen === 'dashboard') return (
       <Dashboard shop={shop}
         plan={plan} planLimit={planLimit} publishLimit={publishLimit}
@@ -147,7 +135,6 @@ function AppShell() {
         onPlanChange={(p, l, pl) => { setPlan(p); setPlanLimit(l); if (pl !== undefined) setPublishLimit(pl) }}
         onNew={() => setScreen('generator')}
         onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
-        onReconfigure={() => setScreen('setup')}
         onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
       />
     )
@@ -161,7 +148,6 @@ function AppShell() {
       <Editor
         data={editingPage || generatedData}
         shop={shop}
-        codFormApp={codFormApp}
         planLimit={planLimit}
         onBack={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
         onPublished={() => { setGeneratedData(null); setEditingPage(null); setScreen('dashboard') }}
@@ -181,7 +167,6 @@ function AppShell() {
           <a href="/pricing">Prețuri</a>
           <a href="/contact">Contact</a>
           <a href="/bug">Raportează bug</a>
-          {codFormApp && <a href="/setup">Setări COD</a>}
         </NavMenu>
       )}
       {renderScreen()}

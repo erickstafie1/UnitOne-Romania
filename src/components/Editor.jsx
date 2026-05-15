@@ -10,8 +10,10 @@ import {
 } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
-export default function Editor({ data, shop, codFormApp: codFormAppProp, planLimit, onBack, onPublished, onUpgrade }) {
-  const codFormApp = codFormAppProp || (typeof window !== 'undefined' ? localStorage.getItem('codform_' + shop) : null) || null
+export default function Editor({ data, shop, planLimit, onBack, onPublished, onUpgrade }) {
+  // COD form is always handled by external Releasit hooks dropped from the
+  // editor's block panel. No built-in form rendered.
+  const codFormApp = 'releasit'
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
   const [device, setDevice] = useState('desktop')
@@ -94,7 +96,7 @@ export default function Editor({ data, shop, codFormApp: codFormAppProp, planLim
         const baseCss = buildCSS(data)
         editor.setStyle(savedCss ? baseCss + '\n' + savedCss : baseCss)
       } else {
-        const html = buildHTML(data, codFormApp)
+        const html = buildHTML(data)
         const css = buildCSS(data)
         editor.setComponents(html)
         editor.setStyle(css)
@@ -169,7 +171,7 @@ export default function Editor({ data, shop, codFormApp: codFormAppProp, planLim
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
-      const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
+      const finalCodFormApp = 'releasit'
       const pid = pageIdRef.current || data.id
       const body = {
         action: 'update', shop, pageId: pid,
@@ -267,7 +269,7 @@ export default function Editor({ data, shop, codFormApp: codFormAppProp, planLim
       }
 
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
-      const finalCodFormApp = localStorage.getItem('codform_' + shop) || codFormApp || null
+      const finalCodFormApp = 'releasit'
 
       const pid = pageIdRef.current || data.id
       const body = pid
@@ -620,15 +622,13 @@ function buildCSS(data) {
 }
 
 // ─── buildHTML ────────────────────────────────────────────────────────────────
-function buildHTML(data, codFormApp) {
+function buildHTML(data) {
   const price = data.price || 149
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
   const disc = Math.round((1 - price / oldPrice) * 100)
   const imgs = data.images || []
   const primary = data.style?.primaryColor || '#e8000d'
   const reviewCount = data.reviewCount || 1247
-  const JUDETE = ['Alba','Arad','Arges','Bacau','Bihor','Bistrita-Nasaud','Botosani','Braila','Brasov','Bucuresti','Buzau','Calarasi','Caras-Severin','Cluj','Constanta','Covasna','Dambovita','Dolj','Galati','Giurgiu','Gorj','Harghita','Hunedoara','Ialomita','Iasi','Ilfov','Maramures','Mehedinti','Mures','Neamt','Olt','Prahova','Salaj','Satu Mare','Sibiu','Suceava','Teleorman','Timis','Tulcea','Valcea','Vaslui','Vrancea']
-  const jOpts = JUDETE.map(j => `<option value="${j}">${j}</option>`).join('')
   const imgTag = (src, style) => src ? `<img src="${src}" style="${style || 'width:100%;display:block'}" />` : ''
   const benefits = (data.benefits || []).slice(0, 5)
   const testimonials = data.testimonials || []
@@ -791,46 +791,13 @@ function buildHTML(data, codFormApp) {
     `<div style="font-size:12px;color:rgba(255,255,255,0.75)">&#10003; Plată la livrare &nbsp;&middot;&nbsp; &#128666; Livrare rapidă &nbsp;&middot;&nbsp; &#8617; Retur 30 zile gratuit</div>`,
     `</div>`,
 
-    // 14. Form propriu (dacă nu e Releasit)
-    codFormApp && codFormApp !== 'none' ? '' : [
-      `<div id="formular" style="padding:28px 20px;background:#fff3f3;border-top:4px solid ${primary}">`,
-      `<h2 style="font-size:20px;font-weight:900;text-align:center;margin:0 0 6px;color:#111">COMANDĂ ACUM CU ${disc}% REDUCERE</h2>`,
-      `<p style="text-align:center;font-size:13px;color:#777;margin:0 0 20px">Completează datele de livrare — plătești la primire</p>`,
-      `<div id="form-fields" style="display:flex;flex-direction:column;gap:10px">`,
-      `<input id="f-name" placeholder="Nume și Prenume *" style="padding:14px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<input id="f-phone" placeholder="Număr de telefon *" type="tel" style="padding:14px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<input id="f-address" placeholder="Adresă completă *" style="padding:14px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<input id="f-city" placeholder="Localitate *" style="padding:14px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif"/>`,
-      `<select id="f-county" style="padding:14px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;outline:none;width:100%;box-sizing:border-box;font-family:Arial,sans-serif;color:#555;background:#fff"><option value="">Selectează județul *</option>${jOpts}</select>`,
-      `<button onclick="submitOrder()" style="background:${primary};color:#fff;border:none;padding:18px;border-radius:8px;font-size:18px;font-weight:900;cursor:pointer;width:100%;font-family:Arial,sans-serif;letter-spacing:0.5px">&#128722; COMANDĂ ACUM — PLATĂ LA LIVRARE</button>`,
-      `<p style="text-align:center;font-size:12px;color:#aaa;margin:4px 0 0">Prin apăsarea butonului ești de acord cu termenii și condițiile</p>`,
-      `</div>`,
-      `<div id="form-success" style="display:none;text-align:center;padding:40px 20px">`,
-      `<div style="font-size:52px;margin-bottom:12px">&#10003;</div>`,
-      `<h3 style="font-size:22px;font-weight:800;color:#16a34a;margin:0 0 8px">Comandă plasată cu succes!</h3>`,
-      `<p style="font-size:14px;color:#555;line-height:1.6">Te vom contacta telefonic în cel mai scurt timp pentru confirmare. Livrare în 2-4 zile lucrătoare.</p>`,
-      `</div>`,
-      `</div>`
-    ].join(''),
+    // 14. (Built-in form removed — COD button blocks from the editor handle this via Releasit hook)
 
     // 15. Footer
     `<div style="background:#111;color:#777;padding:20px;text-align:center;font-size:12px;line-height:1.8">`,
     `<p style="margin:0 0 4px;color:#bbb;font-weight:700;font-size:13px">&copy; 2025 ${data.productName}</p>`,
     `<p style="margin:0">Termeni și Condiții &middot; Politica de Confidențialitate &middot; ANPC</p>`,
     `</div>`,
-
-    `<script>`,
-    `function submitOrder(){`,
-    `var n=document.getElementById('f-name').value.trim(),`,
-    `p=document.getElementById('f-phone').value.trim(),`,
-    `a=document.getElementById('f-address').value.trim(),`,
-    `c=document.getElementById('f-city').value.trim(),`,
-    `j=document.getElementById('f-county').value;`,
-    `if(!n||!p||!a||!c||!j){alert('Te rugăm să completezi toate câmpurile!');return;}`,
-    `document.getElementById('form-fields').style.display='none';`,
-    `document.getElementById('form-success').style.display='block';`,
-    `}`,
-    `<\/script>`,
 
     `</div>`,
     `</div>`
@@ -994,37 +961,34 @@ function EditorStyles() {
         padding: 6px 0 14px;
       }
 
-      /* ── Canvas: light grey "stage", LP centered ────── */
+      /* ── Canvas: white stage, LP fills full width for true desktop preview ─── */
       .ue-canvas {
-        background: #f6f6f7;
+        background: #ffffff;
         overflow: auto;
-        padding: 24px;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
+        padding: 0;
       }
       .ue-canvas > div {
-        max-width: 100%;
+        width: 100% !important;
         height: 100% !important;
       }
 
-      /* ── GrapesJS canvas chrome (override its dark default) ── */
+      /* ── GrapesJS canvas chrome (override dark defaults) ── */
       .gjs-cv-canvas {
-        background-color: #f6f6f7 !important;
+        background-color: #ffffff !important;
         top: 0 !important;
         width: 100% !important;
         height: 100% !important;
       }
-      .gjs-cv-canvas-bg { background-color: #f6f6f7 !important; }
+      .gjs-cv-canvas-bg { background-color: #ffffff !important; }
       .gjs-frame-wrapper {
         background: transparent !important;
         padding: 0 !important;
       }
       .gjs-frame {
         background: #ffffff !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06) !important;
-        border-radius: 8px !important;
         max-width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
       }
       .gjs-frames { background: transparent !important; }
 
@@ -1041,50 +1005,75 @@ function EditorStyles() {
       .gjs-toolbar { background: #202223 !important; border-radius: 6px !important; }
       .gjs-toolbar-item { color: #fff !important; }
 
-      /* ── Block panel (left) ────────────────────────── */
-      .gjs-block {
-        border: 1px solid #e1e3e5;
-        border-radius: 8px;
-        background: #ffffff;
-        font-size: 12px;
-        font-weight: 500;
-        color: #202223;
-        margin: 0 0 8px;
-        padding: 12px 10px;
-        text-align: center;
-        cursor: grab;
-        transition: all 0.12s ease;
-        min-height: auto;
-        width: 100%;
-        box-shadow: none;
+      /* ── Block panel (left) — kill ALL GrapesJS dark defaults ─── */
+      #blocks-panel,
+      .gjs-blocks-cs,
+      .gjs-block-categories,
+      .gjs-block-category,
+      .gjs-blocks-no-cs {
+        background: transparent !important;
+        background-color: transparent !important;
+        color: #202223 !important;
       }
+      .gjs-block {
+        border: 1px solid #e1e3e5 !important;
+        border-radius: 8px !important;
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        color: #202223 !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        margin: 0 0 8px !important;
+        padding: 12px 10px !important;
+        text-align: center !important;
+        cursor: grab !important;
+        transition: all 0.12s ease !important;
+        min-height: auto !important;
+        width: 100% !important;
+        box-shadow: none !important;
+      }
+      .gjs-block svg { fill: #6d7175 !important; }
       .gjs-block:hover {
-        border-color: #008060;
-        box-shadow: 0 0 0 2px rgba(0,128,96,0.12);
+        border-color: #008060 !important;
+        box-shadow: 0 0 0 2px rgba(0,128,96,0.12) !important;
         transform: translateY(-1px);
       }
       .gjs-block-label {
-        font-size: 12px;
-        line-height: 1.3;
+        font-size: 12px !important;
+        line-height: 1.3 !important;
+        color: #202223 !important;
       }
       .gjs-block-category {
-        margin-bottom: 12px;
+        margin-bottom: 16px !important;
+        border: none !important;
       }
+      .gjs-block-category > .gjs-title,
       .gjs-block-category .gjs-title {
-        font-size: 11px;
-        font-weight: 700;
-        color: #6d7175;
-        padding: 14px 0 10px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        border: none;
-        background: transparent;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #6d7175 !important;
+        padding: 12px 4px 8px !important;
+        letter-spacing: 0.06em !important;
+        text-transform: uppercase !important;
+        border: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+      .gjs-block-category .gjs-title::before {
+        color: #6d7175 !important;
       }
       .gjs-blocks-c {
-        display: grid;
+        display: grid !important;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 0;
+        gap: 8px !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+      .gjs-one-bg, .gjs-two-bg, .gjs-three-bg, .gjs-four-bg {
+        background-color: transparent !important;
+      }
+      .gjs-one-color, .gjs-two-color, .gjs-three-color, .gjs-four-color {
+        color: #202223 !important;
       }
 
       /* ── Style + Trait panels (right) ───────────────── */
