@@ -814,96 +814,132 @@ function addBlocks(editor, data) {
     return `<div id="_rsi-cod-form-gempages-button-hook" class="unitone-rel-hook" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD - trage-ma unde vrei</span></div>`
   }
 
+  // Mini visual previews — each is a small SVG that hints at what the block does.
+  // GrapesJS renders this as the block thumbnail.
+  const T = {
+    btn: `<svg viewBox="0 0 60 28"><rect x="6" y="6" width="48" height="16" rx="6" fill="${p}"/></svg>`,
+    btnFull: `<svg viewBox="0 0 60 28"><rect x="2" y="6" width="56" height="16" rx="4" fill="${p}"/></svg>`,
+    btnCenter: `<svg viewBox="0 0 60 28"><rect x="14" y="6" width="32" height="16" rx="6" fill="${p}"/></svg>`,
+    col2: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="24" height="28" rx="2" fill="#e1e3e5"/><rect x="32" y="4" width="24" height="28" rx="2" fill="#e1e3e5"/></svg>`,
+    col3: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="16" height="28" rx="2" fill="#e1e3e5"/><rect x="22" y="4" width="16" height="28" rx="2" fill="#e1e3e5"/><rect x="40" y="4" width="16" height="28" rx="2" fill="#e1e3e5"/></svg>`,
+    spacer: `<svg viewBox="0 0 60 36"><rect x="4" y="14" width="52" height="8" rx="2" fill="#e1e3e5" stroke="#c9cccf" stroke-dasharray="2 2"/></svg>`,
+    line: `<svg viewBox="0 0 60 36"><line x1="6" y1="18" x2="54" y2="18" stroke="#898f94" stroke-width="2"/></svg>`,
+    h2: `<svg viewBox="0 0 60 36"><rect x="6" y="12" width="48" height="6" rx="1" fill="#202223"/><rect x="6" y="22" width="32" height="3" rx="1" fill="#c9cccf"/></svg>`,
+    h3: `<svg viewBox="0 0 60 36"><rect x="6" y="14" width="38" height="5" rx="1" fill="#202223"/><rect x="6" y="22" width="28" height="3" rx="1" fill="#c9cccf"/></svg>`,
+    para: `<svg viewBox="0 0 60 36"><rect x="6" y="9" width="48" height="3" rx="1" fill="#898f94"/><rect x="6" y="16" width="48" height="3" rx="1" fill="#898f94"/><rect x="6" y="23" width="36" height="3" rx="1" fill="#898f94"/></svg>`,
+    image: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="52" height="28" rx="3" fill="#e1e3e5"/><circle cx="16" cy="14" r="3" fill="#898f94"/><path d="M4 28 L20 18 L34 26 L56 12 L56 32 L4 32 Z" fill="#898f94"/></svg>`,
+    video: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="52" height="28" rx="3" fill="#202223"/><polygon points="24,12 24,24 36,18" fill="#fff"/></svg>`,
+    compare: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="24" height="28" rx="2" fill="#fee2e2"/><rect x="32" y="4" width="24" height="28" rx="2" fill="#dcfce7"/><line x1="30" y1="4" x2="30" y2="32" stroke="#898f94" stroke-dasharray="2 2"/></svg>`,
+    carousel: `<svg viewBox="0 0 60 36"><rect x="4" y="6" width="20" height="24" rx="2" fill="#e1e3e5"/><rect x="26" y="6" width="20" height="24" rx="2" fill="#c9cccf"/><rect x="48" y="6" width="8" height="24" rx="2" fill="#e1e3e5"/></svg>`,
+    heroDark: `<svg viewBox="0 0 60 36"><rect x="2" y="2" width="56" height="32" rx="2" fill="#202223"/><rect x="14" y="11" width="32" height="4" rx="1" fill="#fff"/><rect x="20" y="18" width="20" height="2" rx="1" fill="#898f94"/><rect x="22" y="24" width="16" height="6" rx="3" fill="${p}"/></svg>`,
+    heroRed: `<svg viewBox="0 0 60 36"><rect x="2" y="2" width="56" height="32" rx="2" fill="${p}"/><rect x="14" y="11" width="32" height="4" rx="1" fill="#fff"/><rect x="20" y="18" width="20" height="2" rx="1" fill="rgba(255,255,255,0.7)"/><rect x="22" y="24" width="16" height="6" rx="3" fill="#fff"/></svg>`,
+    list: `<svg viewBox="0 0 60 36"><circle cx="9" cy="10" r="3" fill="${p}"/><rect x="16" y="9" width="38" height="3" rx="1" fill="#898f94"/><circle cx="9" cy="18" r="3" fill="${p}"/><rect x="16" y="17" width="32" height="3" rx="1" fill="#898f94"/><circle cx="9" cy="26" r="3" fill="${p}"/><rect x="16" y="25" width="36" height="3" rx="1" fill="#898f94"/></svg>`,
+    faq: `<svg viewBox="0 0 60 36"><rect x="4" y="6" width="52" height="10" rx="2" fill="#f6f6f7" stroke="#e1e3e5"/><polyline points="48,9 51,12 48,15" stroke="#898f94" fill="none" stroke-width="1.5"/><rect x="4" y="20" width="52" height="10" rx="2" fill="#f6f6f7" stroke="#e1e3e5"/><polyline points="48,23 51,26 48,29" stroke="#898f94" fill="none" stroke-width="1.5"/></svg>`,
+    marquee: `<svg viewBox="0 0 60 36"><rect x="2" y="13" width="56" height="10" rx="1" fill="#202223"/><text x="6" y="20" font-size="6" fill="#fff" font-family="sans-serif">→ TEXT • TEXT •</text></svg>`,
+    badges: `<svg viewBox="0 0 60 36"><circle cx="12" cy="18" r="6" fill="${p}"/><circle cx="30" cy="18" r="6" fill="${p}"/><circle cx="48" cy="18" r="6" fill="${p}"/></svg>`,
+    testimonial: `<svg viewBox="0 0 60 36"><rect x="4" y="6" width="52" height="24" rx="3" fill="#f6f6f7" stroke="${p}" stroke-width="2"/><text x="8" y="16" font-size="6" fill="#f59e0b">★★★★★</text><rect x="8" y="20" width="40" height="2" rx="1" fill="#898f94"/><rect x="8" y="24" width="28" height="2" rx="1" fill="#898f94"/></svg>`,
+    productCard: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="52" height="28" rx="3" fill="#fff" stroke="#e1e3e5"/><rect x="6" y="6" width="48" height="14" rx="2" fill="#e1e3e5"/><rect x="6" y="22" width="22" height="3" rx="1" fill="#202223"/><rect x="6" y="27" width="14" height="3" rx="1" fill="${p}"/></svg>`,
+    bundle: `<svg viewBox="0 0 60 36"><rect x="6" y="6" width="20" height="10" rx="2" fill="#fff" stroke="#fed7aa" stroke-width="2"/><text x="14" y="13" font-size="6" fill="#666">+</text><rect x="34" y="6" width="20" height="10" rx="2" fill="#fff" stroke="#fed7aa" stroke-width="2"/><rect x="14" y="20" width="32" height="10" rx="2" fill="${p}"/></svg>`,
+    stock: `<svg viewBox="0 0 60 36"><rect x="4" y="10" width="52" height="16" rx="2" fill="#fff8f0" stroke="#fed7aa"/><rect x="6" y="13" width="20" height="3" rx="1" fill="#c2410c"/><rect x="6" y="18" width="14" height="2" rx="1" fill="#ea580c"/><rect x="34" y="14" width="18" height="8" rx="4" fill="#fef3c7"/></svg>`,
+    strip: `<svg viewBox="0 0 60 36"><rect x="2" y="13" width="56" height="10" rx="1" fill="${p}"/><text x="11" y="20" font-size="6" fill="#fff" font-family="sans-serif">⚠ URGENT</text></svg>`,
+    countdown: `<svg viewBox="0 0 60 36"><rect x="2" y="6" width="56" height="24" rx="2" fill="${p}"/><rect x="8" y="14" width="10" height="10" rx="1" fill="rgba(0,0,0,0.3)"/><rect x="22" y="14" width="10" height="10" rx="1" fill="rgba(0,0,0,0.3)"/><rect x="36" y="14" width="10" height="10" rx="1" fill="rgba(0,0,0,0.3)"/><text x="11" y="22" font-size="7" fill="#fff" font-family="monospace">14</text><text x="25" y="22" font-size="7" fill="#fff" font-family="monospace">59</text><text x="39" y="22" font-size="7" fill="#fff" font-family="monospace">00</text></svg>`,
+    delivery: `<svg viewBox="0 0 60 36"><rect x="4" y="10" width="52" height="16" rx="2" fill="#f0fdf4" stroke="#bbf7d0"/><circle cx="14" cy="18" r="3" fill="#15803d"/><rect x="22" y="13" width="28" height="3" rx="1" fill="#15803d"/><rect x="22" y="20" width="20" height="2" rx="1" fill="#16a34a"/></svg>`,
+    coupon: `<svg viewBox="0 0 60 36"><rect x="4" y="8" width="52" height="20" rx="3" fill="#f0fdf4" stroke="#86efac" stroke-width="2" stroke-dasharray="3 2"/><rect x="14" y="14" width="22" height="8" rx="1" fill="#fff" stroke="#86efac"/><rect x="40" y="14" width="12" height="8" rx="1" fill="#16a34a"/></svg>`,
+    newsletter: `<svg viewBox="0 0 60 36"><rect x="4" y="14" width="36" height="10" rx="2" fill="#fff" stroke="#e1e3e5"/><rect x="42" y="14" width="14" height="10" rx="2" fill="${p}"/><rect x="14" y="6" width="32" height="3" rx="1" fill="#202223"/></svg>`,
+    arrowUp: `<svg viewBox="0 0 60 36"><circle cx="48" cy="22" r="8" fill="${p}"/><polygon points="48,18 44,24 52,24" fill="#fff"/></svg>`,
+    code: `<svg viewBox="0 0 60 36"><rect x="2" y="6" width="56" height="24" rx="2" fill="#1e1e2e"/><text x="10" y="22" font-size="9" fill="#a5f3fc" font-family="monospace">&lt;/&gt;</text></svg>`,
+  }
+
   const blocks = [
     // COD FORM
-    { id:'releasit-btn', label:'🛒 Buton COD Form', cat:'COD Form',
+    { id:'releasit-btn', label:'Buton COD', cat:'COD Form', media: T.btn,
       content: relBtn('margin:10px 0;') },
-    { id:'releasit-btn-full', label:'🛒 Buton COD Full Width', cat:'COD Form',
+    { id:'releasit-btn-full', label:'Buton COD Full', cat:'COD Form', media: T.btnFull,
       content: `<div style="padding:10px 20px">${relBtn('width:100%;box-sizing:border-box;')}</div>` },
-    { id:'releasit-btn-center', label:'🛒 Buton COD Centrat', cat:'COD Form',
+    { id:'releasit-btn-center', label:'Buton COD Centrat', cat:'COD Form', media: T.btnCenter,
       content: `<div style="text-align:center;padding:16px 20px">${relBtn('display:inline-block;min-width:240px;')}</div>` },
 
     // LAYOUT
-    { id:'row-2col', label:'2 Coloane', cat:'Layout',
+    { id:'row-2col', label:'2 Coloane', cat:'Layout', media: T.col2,
       content: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px"><div style="padding:16px;background:#f9fafb;border-radius:8px;min-height:60px">Coloana 1</div><div style="padding:16px;background:#f9fafb;border-radius:8px;min-height:60px">Coloana 2</div></div>` },
-    { id:'row-3col', label:'3 Coloane', cat:'Layout',
+    { id:'row-3col', label:'3 Coloane', cat:'Layout', media: T.col3,
       content: `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:20px"><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 1</div><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 2</div><div style="padding:14px;background:#f9fafb;border-radius:8px;min-height:60px">Col 3</div></div>` },
-    { id:'spacer', label:'Spatiu', cat:'Layout',
+    { id:'spacer', label:'Spațiu', cat:'Layout', media: T.spacer,
       content: `<div style="height:40px"></div>` },
-    { id:'line', label:'Separator', cat:'Layout',
+    { id:'line', label:'Separator', cat:'Layout', media: T.line,
       content: `<hr style="border:none;border-top:2px solid #e5e7eb;margin:8px 20px"/>` },
 
     // TEXT
-    { id:'heading', label:'Heading H2', cat:'Text',
-      content: `<h2 style="font-size:28px;font-weight:900;color:#111;padding:16px 20px;margin:0;line-height:1.2">Titlul tau aici</h2>` },
-    { id:'heading-h3', label:'Heading H3', cat:'Text',
+    { id:'heading', label:'Titlu H2', cat:'Text', media: T.h2,
+      content: `<h2 style="font-size:28px;font-weight:900;color:#111;padding:16px 20px;margin:0;line-height:1.2">Titlul tău aici</h2>` },
+    { id:'heading-h3', label:'Subtitlu H3', cat:'Text', media: T.h3,
       content: `<h3 style="font-size:20px;font-weight:800;color:#111;padding:12px 20px;margin:0">Subtitlu</h3>` },
-    { id:'text-block', label:'Paragraf', cat:'Text',
-      content: `<p style="font-size:15px;color:#444;line-height:1.7;padding:12px 20px;margin:0">Textul tau aici. Click pentru a edita.</p>` },
-    { id:'button-cta', label:'Buton CTA', cat:'Text',
-      content: `<div style="padding:16px 20px;text-align:center"><a href="#formular" style="display:inline-block;background:${p};color:#fff;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:800;text-decoration:none">COMANDA ACUM!</a></div>` },
+    { id:'text-block', label:'Paragraf', cat:'Text', media: T.para,
+      content: `<p style="font-size:15px;color:#444;line-height:1.7;padding:12px 20px;margin:0">Textul tău aici. Click pentru a edita.</p>` },
+    { id:'button-cta', label:'Buton CTA', cat:'Text', media: T.btn,
+      content: `<div style="padding:16px 20px;text-align:center"><a href="#formular" style="display:inline-block;background:${p};color:#fff;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:800;text-decoration:none">COMANDĂ ACUM!</a></div>` },
 
     // MEDIA
-    { id:'image', label:'Imagine', cat:'Media',
+    { id:'image', label:'Imagine', cat:'Media', media: T.image,
       content: `<div><img src="https://placehold.co/650x400/f3f4f6/999?text=Imagine" style="width:100%;display:block"/></div>` },
-    { id:'video', label:'Video YouTube', cat:'Media',
+    { id:'video', label:'Video', cat:'Media', media: T.video,
       content: `<div style="padding:20px"><div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div></div>` },
-    { id:'img-comparison', label:'Inainte / Dupa', cat:'Media',
-      content: `<div style="padding:20px"><div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="display:grid;grid-template-columns:1fr 1fr"><div style="text-align:center;padding:12px;background:#fef2f2"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">INAINTE</div><img src="https://placehold.co/300x250/fee2e2/dc2626?text=Inainte" style="width:100%;display:block;border-radius:4px"/></div><div style="text-align:center;padding:12px;background:#f0fdf4"><div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">DUPA</div><img src="https://placehold.co/300x250/dcfce7/16a34a?text=Dupa" style="width:100%;display:block;border-radius:4px"/></div></div></div></div>` },
-    { id:'carousel', label:'Carousel', cat:'Media',
+    { id:'img-comparison', label:'Înainte / După', cat:'Media', media: T.compare,
+      content: `<div style="padding:20px"><div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="display:grid;grid-template-columns:1fr 1fr"><div style="text-align:center;padding:12px;background:#fef2f2"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">ÎNAINTE</div><img src="https://placehold.co/300x250/fee2e2/dc2626?text=Inainte" style="width:100%;display:block;border-radius:4px"/></div><div style="text-align:center;padding:12px;background:#f0fdf4"><div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">DUPĂ</div><img src="https://placehold.co/300x250/dcfce7/16a34a?text=Dupa" style="width:100%;display:block;border-radius:4px"/></div></div></div></div>` },
+    { id:'carousel', label:'Carousel', cat:'Media', media: T.carousel,
       content: `<div style="padding:20px;overflow:hidden"><div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory"><div style="min-width:280px;scroll-snap-align:start;background:#f9fafb;border-radius:10px;overflow:hidden"><img src="https://placehold.co/280x200/f3f4f6/999?text=1" style="width:100%;display:block"/><div style="padding:12px;font-size:14px;font-weight:600">Produs 1</div></div><div style="min-width:280px;scroll-snap-align:start;background:#f9fafb;border-radius:10px;overflow:hidden"><img src="https://placehold.co/280x200/f3f4f6/999?text=2" style="width:100%;display:block"/><div style="padding:12px;font-size:14px;font-weight:600">Produs 2</div></div></div></div>` },
 
     // HERO
-    { id:'hero-dark', label:'Hero Banner Inchis', cat:'Hero',
+    { id:'hero-dark', label:'Hero Închis', cat:'Hero', media: T.heroDark,
       content: `<div style="background:linear-gradient(135deg,#111 0%,#333 100%);padding:60px 20px;text-align:center"><h1 style="color:#fff;font-size:32px;font-weight:900;margin:0 0 14px">Titlu Principal</h1><p style="color:rgba(255,255,255,0.7);font-size:16px;margin:0 0 28px">Subtitlul ofertei tale</p>${relBtn('display:inline-block;min-width:240px;')}</div>` },
-    { id:'hero-red', label:'Hero Banner Rosu', cat:'Hero',
-      content: `<div style="background:${p};padding:50px 20px;text-align:center"><h1 style="color:#fff;font-size:30px;font-weight:900;margin:0 0 12px">Titlu Promo</h1><p style="color:rgba(255,255,255,0.85);font-size:15px;margin:0 0 24px">Oferta limitata!</p>${relBtn('display:inline-block;min-width:240px;')}</div>` },
+    { id:'hero-red', label:'Hero Color', cat:'Hero', media: T.heroRed,
+      content: `<div style="background:${p};padding:50px 20px;text-align:center"><h1 style="color:#fff;font-size:30px;font-weight:900;margin:0 0 12px">Titlu Promo</h1><p style="color:rgba(255,255,255,0.85);font-size:15px;margin:0 0 24px">Ofertă limitată!</p>${relBtn('display:inline-block;min-width:240px;')}</div>` },
 
     // ELEMENTE
-    { id:'icon-list', label:'Lista Beneficii', cat:'Elemente',
-      content: `<div style="padding:20px"><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#222">Livrare rapida in toata Romania</span></div><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#222">Plata la livrare, fara risc</span></div><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#222">Garantie 30 zile retur</span></div></div></div>` },
-    { id:'accordion', label:'FAQ Accordion', cat:'Elemente',
-      content: `<div style="padding:20px"><details style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">Cum functioneaza plata la livrare?</summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">Platesti curierului in momentul in care primesti coletul.</div></details><details style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">Cat dureaza livrarea?</summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">2-5 zile lucratoare.</div></details></div>` },
-    { id:'marquee', label:'Marquee Banner', cat:'Elemente',
-      content: `<div style="overflow:hidden;background:#111;padding:12px 0"><div style="display:flex;animation:unitone-marquee 15s linear infinite;white-space:nowrap"><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#128666; Livrare GRATUITA</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#10003; Plata la livrare</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#8617; Retur 30 zile</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#128666; Livrare GRATUITA</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#10003; Plata la livrare</span></div></div><style>@keyframes unitone-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}</style>` },
+    { id:'icon-list', label:'Listă Beneficii', cat:'Elemente', media: T.list,
+      content: `<div style="padding:20px"><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#222">Livrare rapidă în toată România</span></div><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#222">Plată la livrare, fără risc</span></div><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;background:${p};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">&#10003;</span><span style="font-size:14px;color:#222">Garanție 30 zile retur</span></div></div></div>` },
+    { id:'accordion', label:'FAQ', cat:'Elemente', media: T.faq,
+      content: `<div style="padding:20px"><details style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">Cum funcționează plata la livrare?</summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">Plătești curierului în momentul în care primești coletul.</div></details><details style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><summary style="padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">Cât durează livrarea?</summary><div style="padding:14px 16px;font-size:14px;color:#555;line-height:1.7">2-5 zile lucrătoare.</div></details></div>` },
+    { id:'marquee', label:'Marquee', cat:'Elemente', media: T.marquee,
+      content: `<div style="overflow:hidden;background:#111;padding:12px 0"><div style="display:flex;animation:unitone-marquee 15s linear infinite;white-space:nowrap"><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#128666; Livrare GRATUITĂ</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#10003; Plată la livrare</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#8617; Retur 30 zile</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#128666; Livrare GRATUITĂ</span><span style="color:${p};padding:0 12px">&#9733;</span><span style="color:#fff;font-size:13px;font-weight:600;padding:0 24px">&#10003; Plată la livrare</span></div></div><style>@keyframes unitone-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}</style>` },
 
     // TRUST
-    { id:'trust-badges', label:'Trust Badges', cat:'Trust',
-      content: `<div style="padding:20px;background:#fff;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;text-align:center"><div style="font-size:13px;color:#444"><div style="font-size:28px">&#128179;</div>Plata ramburs</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#10003;</div>Satisfactie garantata</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#8617;</div>Banii inapoi 30 zile</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#128666;</div>Livrare rapida</div></div>` },
-    { id:'testimonial', label:'Testimonial Card', cat:'Trust',
-      content: `<div style="padding:20px 20px 0"><div style="padding:20px;background:#f9fafb;border-radius:12px;border-left:4px solid ${p};margin-bottom:12px"><div style="color:#f39c12;margin-bottom:8px;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p style="color:#333;margin-bottom:12px;font-style:italic;font-size:15px;line-height:1.6">"Produs excelent! L-am primit in 5 zile."</p><strong style="color:#111;font-size:14px">— Maria D., Bucuresti</strong></div></div>` },
+    { id:'trust-badges', label:'Trust Badges', cat:'Trust', media: T.badges,
+      content: `<div style="padding:20px;background:#fff;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;text-align:center"><div style="font-size:13px;color:#444"><div style="font-size:28px">&#128179;</div>Plată ramburs</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#10003;</div>Satisfacție garantată</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#8617;</div>Banii înapoi 30 zile</div><div style="font-size:13px;color:#444"><div style="font-size:28px">&#128666;</div>Livrare rapidă</div></div>` },
+    { id:'testimonial', label:'Testimonial', cat:'Trust', media: T.testimonial,
+      content: `<div style="padding:20px 20px 0"><div style="padding:20px;background:#f9fafb;border-radius:12px;border-left:4px solid ${p};margin-bottom:12px"><div style="color:#f39c12;margin-bottom:8px;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p style="color:#333;margin-bottom:12px;font-style:italic;font-size:15px;line-height:1.6">"Produs excelent! L-am primit în 5 zile."</p><strong style="color:#111;font-size:14px">— Maria D., București</strong></div></div>` },
 
     // PRODUS
-    { id:'product-card', label:'Product Card', cat:'Produs',
+    { id:'product-card', label:'Card Produs', cat:'Produs', media: T.productCard,
       content: `<div style="padding:20px;border:1px solid #e5e7eb;border-radius:10px;margin:16px 20px"><img src="https://placehold.co/400x300/f9fafb/999?text=Produs" style="width:100%;border-radius:8px;display:block;margin-bottom:14px"/><h3 style="font-size:18px;font-weight:800;margin:0 0 6px">Numele Produsului</h3><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><span style="font-size:26px;font-weight:900;color:${p}">149 RON</span><span style="text-decoration:line-through;color:#999;font-size:16px">249 RON</span></div>${relBtn()}</div>` },
-    { id:'bundle', label:'Bundle Discount', cat:'Produs',
+    { id:'bundle', label:'Bundle', cat:'Produs', media: T.bundle,
       content: `<div style="padding:20px;background:#fff8f0;border:2px solid #fed7aa;border-radius:10px;margin:16px 20px"><div style="text-align:center;font-size:12px;font-weight:700;color:#c2410c;letter-spacing:1px;margin-bottom:14px">&#128293; BUNDLE SPECIAL</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #e5e7eb"><div style="font-size:14px;font-weight:600">Produs Principal</div><div style="font-size:15px;font-weight:900;color:${p}">149 RON</div></div><div style="text-align:center;font-size:18px;color:#666">+</div><div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #e5e7eb"><div><div style="font-size:14px;font-weight:600">Produs Bonus</div><div style="font-size:11px;color:#16a34a;font-weight:600">GRATUIT la bundle</div></div><div style="font-size:15px;font-weight:900;text-decoration:line-through;color:#999">29 RON</div></div></div>${relBtn()}</div>` },
 
     // URGENTA
-    { id:'stock-counter', label:'Stoc Limitat', cat:'Urgenta',
-      content: `<div style="padding:12px 20px;background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;margin:0 20px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">&#128230;</span><div><div style="font-size:13px;font-weight:700;color:#c2410c">Stoc limitat!</div><div style="font-size:12px;color:#ea580c">Au mai ramas doar <strong>7 bucati</strong> la acest pret</div></div><div style="margin-left:auto;background:#fef3c7;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;color:#d97706">7 / 50</div></div>` },
-    { id:'urgency-strip', label:'Strip Urgenta', cat:'Urgenta',
-      content: `<div style="background:${p};color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:700">&#9888; STOC LIMITAT - Comanda acum!</div>` },
-    { id:'countdown', label:'Countdown Timer', cat:'Urgenta',
-      content: `<div style="background:${p};color:#fff;padding:14px 20px;text-align:center"><div style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:8px">&#9889; OFERTA EXPIRA IN:</div><div style="display:flex;justify-content:center;gap:10px"><div style="text-align:center"><span id="cd-h" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;opacity:0.8">ORE</div></div><span style="font-size:24px;font-weight:900;padding-top:8px">:</span><div style="text-align:center"><span id="cd-m" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">14</span><div style="font-size:10px;margin-top:3px;opacity:0.8">MIN</div></div><span style="font-size:24px;font-weight:900;padding-top:8px">:</span><div style="text-align:center"><span id="cd-s" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;opacity:0.8">SEC</div></div></div></div><script>(function(){var t=14*60;function r(){var h=String(Math.floor(t/3600)).padStart(2,'0'),m=String(Math.floor((t%3600)/60)).padStart(2,'0'),s=String(t%60).padStart(2,'0');var eh=document.getElementById('cd-h'),em=document.getElementById('cd-m'),es=document.getElementById('cd-s');if(eh)eh.textContent=h;if(em)em.textContent=m;if(es)es.textContent=s;}setInterval(function(){if(t>0)t--;r();},1000);r();})();<\/script>` },
+    { id:'stock-counter', label:'Stoc Limitat', cat:'Urgență', media: T.stock,
+      content: `<div style="padding:12px 20px;background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;margin:0 20px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">&#128230;</span><div><div style="font-size:13px;font-weight:700;color:#c2410c">Stoc limitat!</div><div style="font-size:12px;color:#ea580c">Au mai rămas doar <strong>7 bucăți</strong> la acest preț</div></div><div style="margin-left:auto;background:#fef3c7;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;color:#d97706">7 / 50</div></div>` },
+    { id:'urgency-strip', label:'Strip Urgență', cat:'Urgență', media: T.strip,
+      content: `<div style="background:${p};color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:700">&#9888; STOC LIMITAT - Comandă acum!</div>` },
+    { id:'countdown', label:'Countdown', cat:'Urgență', media: T.countdown,
+      content: `<div style="background:${p};color:#fff;padding:14px 20px;text-align:center"><div style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:8px">&#9889; OFERTA EXPIRĂ ÎN:</div><div style="display:flex;justify-content:center;gap:10px"><div style="text-align:center"><span id="cd-h" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;opacity:0.8">ORE</div></div><span style="font-size:24px;font-weight:900;padding-top:8px">:</span><div style="text-align:center"><span id="cd-m" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">14</span><div style="font-size:10px;margin-top:3px;opacity:0.8">MIN</div></div><span style="font-size:24px;font-weight:900;padding-top:8px">:</span><div style="text-align:center"><span id="cd-s" style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px 14px;font-size:24px;font-weight:900;font-family:monospace;min-width:52px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;opacity:0.8">SEC</div></div></div></div><script>(function(){var t=14*60;function r(){var h=String(Math.floor(t/3600)).padStart(2,'0'),m=String(Math.floor((t%3600)/60)).padStart(2,'0'),s=String(t%60).padStart(2,'0');var eh=document.getElementById('cd-h'),em=document.getElementById('cd-m'),es=document.getElementById('cd-s');if(eh)eh.textContent=h;if(em)em.textContent=m;if(es)es.textContent=s;}setInterval(function(){if(t>0)t--;r();},1000);r();})();<\/script>` },
 
     // CONVERSIE
-    { id:'delivery-date', label:'Data Livrare', cat:'Conversie',
-      content: `<div style="padding:12px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin:0 20px;display:flex;align-items:center;gap:12px"><span style="font-size:24px">&#128666;</span><div><div style="font-size:14px;font-weight:700;color:#15803d">Livrare estimata: 3-5 zile lucratoare</div><div style="font-size:12px;color:#16a34a">Comanda acum!</div></div></div>` },
-    { id:'coupon', label:'Cod Reducere', cat:'Conversie',
+    { id:'delivery-date', label:'Data Livrare', cat:'Conversie', media: T.delivery,
+      content: `<div style="padding:12px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin:0 20px;display:flex;align-items:center;gap:12px"><span style="font-size:24px">&#128666;</span><div><div style="font-size:14px;font-weight:700;color:#15803d">Livrare estimată: 3-5 zile lucrătoare</div><div style="font-size:12px;color:#16a34a">Comandă acum!</div></div></div>` },
+    { id:'coupon', label:'Cupon', cat:'Conversie', media: T.coupon,
       content: `<div style="padding:16px 20px;background:#f0fdf4;border:2px dashed #86efac;border-radius:8px;margin:0 20px;text-align:center"><div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:8px">&#127999; COD REDUCERE</div><div style="display:flex;align-items:center;justify-content:center;gap:10px"><code style="background:#fff;border:1px solid #86efac;border-radius:6px;padding:8px 16px;font-size:18px;font-weight:900;letter-spacing:2px;color:#15803d">COD20</code><button onclick="navigator.clipboard.writeText('COD20');this.textContent='OK!';setTimeout(function(){this.textContent='Copy'},2000)" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Copy</button></div></div>` },
 
     // FORMULARE
-    { id:'newsletter', label:'Newsletter', cat:'Formulare',
-      content: `<div style="padding:32px 20px;background:#f9fafb;text-align:center"><h3 style="font-size:20px;font-weight:800;margin:0 0 8px">Aboneaza-te si primesti -10%</h3><div style="display:flex;gap:10px;max-width:400px;margin:0 auto"><input placeholder="Email" type="email" style="flex:1;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;font-family:inherit"/><button style="background:${p};color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Abonare</button></div></div>` },
+    { id:'newsletter', label:'Newsletter', cat:'Formulare', media: T.newsletter,
+      content: `<div style="padding:32px 20px;background:#f9fafb;text-align:center"><h3 style="font-size:20px;font-weight:800;margin:0 0 8px">Abonează-te și primești -10%</h3><div style="display:flex;gap:10px;max-width:400px;margin:0 auto"><input placeholder="Email" type="email" style="flex:1;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;font-family:inherit"/><button style="background:${p};color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Abonare</button></div></div>` },
 
     // NAVIGARE
-    { id:'back-to-top', label:'Back to Top', cat:'Navigare',
+    { id:'back-to-top', label:'Sus', cat:'Navigare', media: T.arrowUp,
       content: `<div style="position:fixed;bottom:24px;right:20px;z-index:998"><button onclick="window.scrollTo({top:0,behavior:'smooth'})" style="width:44px;height:44px;background:${p};color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25)">&#8593;</button></div>` },
 
     // AVANSAT
-    { id:'custom-code', label:'Custom HTML', cat:'Avansat',
-      content: `<div style="padding:16px 20px;background:#1e1e2e;border-radius:8px;margin:16px 20px"><code style="font-size:13px;color:#a5f3fc;font-family:monospace;display:block">&lt;div&gt;Codul tau HTML&lt;/div&gt;</code></div>` },
+    { id:'custom-code', label:'HTML Custom', cat:'Avansat', media: T.code,
+      content: `<div style="padding:16px 20px;background:#1e1e2e;border-radius:8px;margin:16px 20px"><code style="font-size:13px;color:#a5f3fc;font-family:monospace;display:block">&lt;div&gt;Codul tău HTML&lt;/div&gt;</code></div>` },
   ]
 
   blocks.forEach(b => {
@@ -911,6 +947,7 @@ function addBlocks(editor, data) {
       label: b.label,
       category: { id: b.cat, label: b.cat, open: b.cat === 'COD Form' },
       content: b.content,
+      media: b.media,
       attributes: { class: 'gjs-block-section' }
     })
   })
@@ -1021,27 +1058,49 @@ function EditorStyles() {
         background: #ffffff !important;
         background-color: #ffffff !important;
         color: #202223 !important;
-        font-size: 12px !important;
+        font-size: 11px !important;
         font-weight: 500 !important;
         margin: 0 0 8px !important;
-        padding: 12px 10px !important;
+        padding: 8px 6px !important;
         text-align: center !important;
         cursor: grab !important;
         transition: all 0.12s ease !important;
-        min-height: auto !important;
+        min-height: 80px !important;
         width: 100% !important;
         box-shadow: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
       }
-      .gjs-block svg { fill: #6d7175 !important; }
+      .gjs-block__media {
+        background: #f6f6f7 !important;
+        border-radius: 4px !important;
+        padding: 4px !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-bottom: 4px !important;
+      }
+      .gjs-block svg {
+        width: 100% !important;
+        max-width: 64px !important;
+        height: auto !important;
+        max-height: 36px !important;
+        display: block !important;
+      }
       .gjs-block:hover {
         border-color: #008060 !important;
         box-shadow: 0 0 0 2px rgba(0,128,96,0.12) !important;
         transform: translateY(-1px);
       }
       .gjs-block-label {
-        font-size: 12px !important;
-        line-height: 1.3 !important;
+        font-size: 11px !important;
+        line-height: 1.25 !important;
         color: #202223 !important;
+        font-weight: 500 !important;
       }
       .gjs-block-category {
         margin-bottom: 16px !important;

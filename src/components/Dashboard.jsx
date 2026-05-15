@@ -478,34 +478,37 @@ function TemplatesView({ onUse }) {
       title="Template-uri"
       subtitle="Alege un template optimizat pe nișa ta — editorul se deschide cu conținutul pre-completat."
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, gridAutoRows: '1fr' }}>
         {TEMPLATES.map((t) => (
-          <div key={t.id} style={{ display: 'flex', height: '100%' }}>
-            <div style={{ width: '100%', display: 'flex' }}>
-              <Card>
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}>
-                  <Box
-                    background="bg-surface-secondary"
-                    padding="800"
-                    borderRadius="200"
-                    minHeight="120px"
-                  >
-                    <InlineStack align="center" blockAlign="center">
-                      <Text as="span" variant="heading3xl" tone="subdued">{t.emoji}</Text>
-                    </InlineStack>
-                  </Box>
-                  <BlockStack gap="100">
-                    <Text as="span" variant="bodySm" tone="subdued">{t.name}</Text>
-                    <Text as="h3" variant="headingMd">{t.data.headline}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">{t.description}</Text>
-                  </BlockStack>
-                  <div style={{ flex: 1 }} />
-                  <Button onClick={() => onUse?.(t.data)} variant="primary" fullWidth icon={ChevronRightIcon}>
-                    Folosește template
-                  </Button>
-                </div>
-              </Card>
+          <div key={t.id} style={{
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#fff',
+            borderRadius: 12,
+            boxShadow: '0 0 0 1px rgba(26,26,26,0.07), 0 1px 0 rgba(0,0,0,0.05)',
+            padding: 16,
+            gap: 12
+          }}>
+            <div style={{
+              background: '#f6f6f7',
+              borderRadius: 8,
+              padding: 32,
+              minHeight: 120,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <span style={{ fontSize: 48, color: '#6d7175', lineHeight: 1 }}>{t.emoji}</span>
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <Text as="span" variant="bodySm" tone="subdued">{t.name}</Text>
+              <Text as="h3" variant="headingMd">{t.data.headline}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{t.description}</Text>
+            </div>
+            <div style={{ flex: 1, minHeight: 4 }} />
+            <Button onClick={() => onUse?.(t.data)} variant="primary" fullWidth icon={ChevronRightIcon}>
+              Folosește template
+            </Button>
           </div>
         ))}
       </div>
@@ -570,59 +573,63 @@ function PricingView({ currentPlan, shop, onPlanChange }) {
       <BlockStack gap="400">
         {error && <Banner tone="critical">{error}</Banner>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, gridAutoRows: '1fr', alignItems: 'stretch' }}>
           {PLANS.map((p) => {
             const isCurrent = p.id === currentPlan
             const isLoading = loading === p.id
             return (
-              <div key={p.id} style={{ display: 'flex', height: '100%' }}>
-                <div style={{ width: '100%', display: 'flex' }}>
-                  <Card>
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 16 }}>
-                      <BlockStack gap="100">
-                        <InlineStack gap="200" blockAlign="center">
-                          <Text as="h3" variant="headingLg">{p.name}</Text>
-                          {p.highlight && !isCurrent && <Badge tone="info">Popular</Badge>}
-                          {isCurrent && <Badge tone="success">Planul tău</Badge>}
-                        </InlineStack>
-                        <Text as="p" variant="bodySm" tone="subdued">{p.tagline}</Text>
-                      </BlockStack>
-
-                      <BlockStack gap="100">
-                        <Text as="p" variant="heading2xl">
-                          {p.price === 0 ? 'Gratuit' : `$${p.price}`}
-                          {p.price > 0 && <Text as="span" variant="bodyMd" tone="subdued"> / lună</Text>}
-                        </Text>
-                        <Text as="p" variant="bodyMd" fontWeight="semibold">{p.headline}</Text>
-                        {p.sub && <Text as="p" variant="bodySm" tone="subdued">{p.sub}</Text>}
-                      </BlockStack>
-
-                      <Divider />
-
-                      <List type="bullet">
-                        {p.features.map((f, i) => (
-                          <List.Item key={i}>{f}</List.Item>
-                        ))}
-                      </List>
-
-                      <div style={{ flex: 1 }} />
-
-                      {p.cta ? (
-                        <Button
-                          variant={p.highlight ? 'primary' : 'secondary'}
-                          onClick={() => selectPlan(p.id)}
-                          disabled={isCurrent || isLoading}
-                          loading={isLoading}
-                          fullWidth
-                        >
-                          {isCurrent ? 'Plan activ' : p.cta}
-                        </Button>
-                      ) : (
-                        <Button disabled fullWidth>{isCurrent ? 'Plan activ' : 'Gratuit întotdeauna'}</Button>
-                      )}
-                    </div>
-                  </Card>
+              <div key={p.id} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                background: '#fff',
+                borderRadius: 12,
+                boxShadow: p.highlight && !isCurrent
+                  ? '0 0 0 2px #008060, 0 4px 12px rgba(0,128,96,0.15)'
+                  : '0 0 0 1px rgba(26,26,26,0.07), 0 1px 0 rgba(0,0,0,0.05)',
+                padding: 20,
+                gap: 16
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <InlineStack gap="200" blockAlign="center">
+                    <Text as="h3" variant="headingLg">{p.name}</Text>
+                    {p.highlight && !isCurrent && <Badge tone="success">Popular</Badge>}
+                    {isCurrent && <Badge tone="success">Planul tău</Badge>}
+                  </InlineStack>
+                  <Text as="p" variant="bodySm" tone="subdued">{p.tagline}</Text>
                 </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <Text as="p" variant="heading2xl">
+                    {p.price === 0 ? 'Gratuit' : `$${p.price}`}
+                    {p.price > 0 && <Text as="span" variant="bodyMd" tone="subdued"> / lună</Text>}
+                  </Text>
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">{p.headline}</Text>
+                  {p.sub && <Text as="p" variant="bodySm" tone="subdued">{p.sub}</Text>}
+                </div>
+
+                <div style={{ height: 1, background: '#e1e3e5' }} />
+
+                <List type="bullet">
+                  {p.features.map((f, i) => (
+                    <List.Item key={i}>{f}</List.Item>
+                  ))}
+                </List>
+
+                <div style={{ flex: 1, minHeight: 4 }} />
+
+                {p.cta ? (
+                  <Button
+                    variant={p.highlight ? 'primary' : 'secondary'}
+                    onClick={() => selectPlan(p.id)}
+                    disabled={isCurrent || isLoading}
+                    loading={isLoading}
+                    fullWidth
+                  >
+                    {isCurrent ? 'Plan activ' : p.cta}
+                  </Button>
+                ) : (
+                  <Button disabled fullWidth>{isCurrent ? 'Plan activ' : 'Gratuit întotdeauna'}</Button>
+                )}
               </div>
             )
           })}
