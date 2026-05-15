@@ -50,10 +50,13 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         storageManager: false,
         undoManager: { trackChanges: true },
         deviceManager: {
+          // Desktop fills the canvas. Tablet/Mobile lock to real device widths so
+          // the LP renders exactly as it would on those devices (centered card-style).
+          // `widthMedia` is what triggers our LP's @media queries inside buildCSS.
           devices: [
-            { name: 'Desktop', width: '' },
-            { name: 'Tablet', width: '768px', widthMedia: '992px' },
-            { name: 'Mobile', width: '390px', widthMedia: '600px' }
+            { name: 'Desktop', width: '100%', widthMedia: '1200px' },
+            { name: 'Tablet', width: '820px', widthMedia: '820px' },
+            { name: 'Mobile', width: '390px', widthMedia: '390px' }
           ]
         },
         panels: { defaults: [] },
@@ -1004,36 +1007,52 @@ function EditorStyles() {
         padding: 6px 0 14px;
       }
 
-      /* ── Canvas: white stage, LP fills full width for true desktop preview ─── */
+      /* ── Canvas: studio-grey stage, LP rendered as a centered "device frame" ─── */
       .ue-canvas {
-        background: #ffffff;
-        overflow: auto;
+        background: #e3e5e7;
+        overflow: hidden;
         padding: 0;
+        position: relative;
       }
       .ue-canvas > div {
         width: 100% !important;
         height: 100% !important;
       }
 
-      /* ── GrapesJS canvas chrome (override dark defaults) ── */
       .gjs-cv-canvas {
-        background-color: #ffffff !important;
+        background-color: #e3e5e7 !important;
         top: 0 !important;
         width: 100% !important;
         height: 100% !important;
+        padding: 24px !important;
+        box-sizing: border-box !important;
       }
-      .gjs-cv-canvas-bg { background-color: #ffffff !important; }
+      .gjs-cv-canvas-bg { background-color: #e3e5e7 !important; }
+
+      /* Frame wrapper centers the LP frame horizontally (so tablet/mobile float in the middle) */
       .gjs-frame-wrapper {
         background: transparent !important;
         padding: 0 !important;
+        margin: 0 auto !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
       }
+      .gjs-frames {
+        background: transparent !important;
+        height: 100% !important;
+      }
+      /* The LP iframe — white card with shadow, height fills the canvas */
       .gjs-frame {
         background: #ffffff !important;
-        max-width: 100% !important;
         border: none !important;
-        box-shadow: none !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10) !important;
+        height: 100% !important;
+        margin: 0 auto !important;
+        transition: width 0.25s cubic-bezier(0.4,0,0.2,1) !important;
       }
-      .gjs-frames { background: transparent !important; }
 
       /* Hover/select highlights — softer, Polaris-style */
       .gjs-comp-selected,
