@@ -953,83 +953,236 @@ function addBlocks(editor, data) {
 function EditorStyles() {
   return (
     <style>{`
+      /* ── Editor shell ────────────────────────────── */
       .ue-shell {
         height: 100vh; display: flex; flex-direction: column;
-        background: var(--p-color-bg, #f6f6f7);
+        background: #f6f6f7;
       }
       .ue-toolbar {
         height: 56px; flex-shrink: 0;
         padding: 8px 16px; gap: 12px;
         display: flex; align-items: center;
-        background: var(--p-color-bg-surface, #fff);
-        border-bottom: 1px solid var(--p-color-border, #e1e3e5);
+        background: #ffffff;
+        border-bottom: 1px solid #e1e3e5;
       }
       .ue-tb-title { flex: 1; min-width: 200px; max-width: 480px; }
       .ue-tb-save { margin-left: auto; padding-right: 12px; white-space: nowrap; }
       .ue-tb-error {
         padding: 12px 16px;
-        background: var(--p-color-bg-surface, #fff);
-        border-bottom: 1px solid var(--p-color-border, #e1e3e5);
+        background: #ffffff;
+        border-bottom: 1px solid #e1e3e5;
       }
       .ue-layout {
         flex: 1; display: grid;
-        grid-template-columns: 240px 1fr 280px;
+        grid-template-columns: 260px 1fr 300px;
         min-height: 0; overflow: hidden;
+        background: #f6f6f7;
       }
       .ue-panel {
-        background: var(--p-color-bg-surface, #fff);
-        border-right: 1px solid var(--p-color-border, #e1e3e5);
+        background: #ffffff;
+        border-right: 1px solid #e1e3e5;
         overflow-y: auto; padding: 16px;
       }
       .ue-panel-right {
         border-right: none;
-        border-left: 1px solid var(--p-color-border, #e1e3e5);
+        border-left: 1px solid #e1e3e5;
       }
       .ue-panel-title {
-        font-size: 12px; font-weight: 600;
-        color: var(--p-color-text-secondary, #6d7175);
-        text-transform: uppercase; letter-spacing: 0.04em;
-        padding: 4px 0 12px;
-      }
-      .ue-canvas {
-        background: var(--p-color-bg-surface-secondary, #f6f6f7);
-        overflow: auto;
+        font-size: 11px; font-weight: 600;
+        color: #6d7175;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        padding: 6px 0 14px;
       }
 
-      /* GrapesJS Polaris-friendly overrides */
-      .gjs-block {
-        border: 1px solid var(--p-color-border, #e1e3e5);
-        border-radius: 8px;
-        background: var(--p-color-bg-surface, #fff);
-        font-size: 12px;
-        margin-bottom: 6px;
-        padding: 10px;
+      /* ── Canvas: light grey "stage", LP centered ────── */
+      .ue-canvas {
+        background: #f6f6f7;
+        overflow: auto;
+        padding: 24px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
       }
-      .gjs-block:hover { border-color: var(--p-color-border-emphasis, #898f94); }
+      .ue-canvas > div {
+        max-width: 100%;
+        height: 100% !important;
+      }
+
+      /* ── GrapesJS canvas chrome (override its dark default) ── */
+      .gjs-cv-canvas {
+        background-color: #f6f6f7 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .gjs-cv-canvas-bg { background-color: #f6f6f7 !important; }
+      .gjs-frame-wrapper {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .gjs-frame {
+        background: #ffffff !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06) !important;
+        border-radius: 8px !important;
+        max-width: 100% !important;
+      }
+      .gjs-frames { background: transparent !important; }
+
+      /* Hover/select highlights — softer, Polaris-style */
+      .gjs-comp-selected,
+      .gjs-selected {
+        outline: 2px solid #008060 !important;
+        outline-offset: -2px !important;
+      }
+      .gjs-hovered {
+        outline: 1px solid #5C6AC4 !important;
+        outline-offset: -1px !important;
+      }
+      .gjs-toolbar { background: #202223 !important; border-radius: 6px !important; }
+      .gjs-toolbar-item { color: #fff !important; }
+
+      /* ── Block panel (left) ────────────────────────── */
+      .gjs-block {
+        border: 1px solid #e1e3e5;
+        border-radius: 8px;
+        background: #ffffff;
+        font-size: 12px;
+        font-weight: 500;
+        color: #202223;
+        margin: 0 0 8px;
+        padding: 12px 10px;
+        text-align: center;
+        cursor: grab;
+        transition: all 0.12s ease;
+        min-height: auto;
+        width: 100%;
+        box-shadow: none;
+      }
+      .gjs-block:hover {
+        border-color: #008060;
+        box-shadow: 0 0 0 2px rgba(0,128,96,0.12);
+        transform: translateY(-1px);
+      }
+      .gjs-block-label {
+        font-size: 12px;
+        line-height: 1.3;
+      }
+      .gjs-block-category {
+        margin-bottom: 12px;
+      }
       .gjs-block-category .gjs-title {
-        font-size: 11px; font-weight: 700;
-        color: var(--p-color-text-secondary, #6d7175);
-        padding: 12px 0 8px; letter-spacing: 0.05em;
+        font-size: 11px;
+        font-weight: 700;
+        color: #6d7175;
+        padding: 14px 0 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border: none;
+        background: transparent;
+      }
+      .gjs-blocks-c {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 0;
+      }
+
+      /* ── Style + Trait panels (right) ───────────────── */
+      .gjs-sm-sectors,
+      .gjs-trt-traits {
+        background: transparent !important;
       }
       .gjs-sm-sector {
-        border: none; border-bottom: 1px solid var(--p-color-border, #e1e3e5);
-        padding: 8px 0;
+        border: none !important;
+        border-bottom: 1px solid #e1e3e5 !important;
+        padding: 4px 0 12px;
+        margin-bottom: 8px;
+        background: transparent !important;
       }
+      .gjs-sm-sector:last-child { border-bottom: none !important; }
+      .gjs-sm-sector-title,
       .gjs-sm-sector .gjs-sm-title {
-        font-size: 12px; font-weight: 600;
-        color: var(--p-color-text, #202223);
-        padding: 4px 0;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        color: #202223 !important;
+        padding: 8px 4px !important;
+        background: transparent !important;
+        border: none !important;
+        text-transform: none !important;
+        letter-spacing: 0 !important;
       }
-      .gjs-field {
-        background: var(--p-color-bg-surface, #fff);
-        border: 1px solid var(--p-color-border, #e1e3e5);
-        border-radius: 6px;
+      .gjs-sm-properties {
+        background: transparent !important;
+        padding: 4px 0 !important;
       }
-      .gjs-trt-trait { padding: 8px 0; }
+      .gjs-sm-property {
+        padding: 6px 4px !important;
+      }
+      .gjs-sm-label {
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #6d7175 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .gjs-field,
+      .gjs-input-holder,
+      .gjs-sm-input,
+      .gjs-clm-tags-field {
+        background: #ffffff !important;
+        border: 1px solid #c9cccf !important;
+        border-radius: 6px !important;
+        color: #202223 !important;
+        font-size: 13px !important;
+        box-shadow: none !important;
+      }
+      .gjs-field input,
+      .gjs-field select,
+      .gjs-field textarea {
+        background: #ffffff !important;
+        color: #202223 !important;
+        font-size: 13px !important;
+      }
+      .gjs-field:focus-within {
+        border-color: #008060 !important;
+        box-shadow: 0 0 0 2px rgba(0,128,96,0.18) !important;
+      }
+      .gjs-trt-trait {
+        padding: 8px 4px !important;
+        border-bottom: 1px solid #f1f1f3;
+      }
+      .gjs-trt-trait:last-child { border-bottom: none; }
+      .gjs-trt-traits .gjs-label-wrp {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6d7175;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      /* GrapesJS color picker / number arrows — neutral */
+      .gjs-radio-item-label,
+      .gjs-input-unit {
+        color: #6d7175 !important;
+      }
+
+      /* Scrollbar polish for panels */
+      .ue-panel::-webkit-scrollbar,
+      .ue-canvas::-webkit-scrollbar { width: 8px; height: 8px; }
+      .ue-panel::-webkit-scrollbar-track,
+      .ue-canvas::-webkit-scrollbar-track { background: transparent; }
+      .ue-panel::-webkit-scrollbar-thumb,
+      .ue-canvas::-webkit-scrollbar-thumb {
+        background: #c9cccf;
+        border-radius: 4px;
+      }
+      .ue-panel::-webkit-scrollbar-thumb:hover,
+      .ue-canvas::-webkit-scrollbar-thumb:hover { background: #898f94; }
 
       @media (max-width: 900px) {
         .ue-layout { grid-template-columns: 1fr; }
         .ue-panel { display: none; }
+        .gjs-blocks-c { grid-template-columns: 1fr 1fr; }
       }
     `}</style>
   )
