@@ -190,15 +190,15 @@ function HomeView({ shopOwner, shop, onNew, pagesCount, plan, planLimit, publish
         {/* Plan card */}
         <Card>
           <BlockStack gap="300">
-            <InlineStack align="space-between" blockAlign="center">
-              <InlineStack gap="200" blockAlign="center">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Text as="h3" variant="headingMd">Planul tău</Text>
                 <Badge tone={planTone}>{planLabel}</Badge>
-              </InlineStack>
+              </div>
               {plan !== 'pro' && (
                 <Button onClick={onUpgrade} variant="plain">Upgrade</Button>
               )}
-            </InlineStack>
+            </div>
             {isUnlimited ? (
               <Text as="p" tone="subdued">{pagesCount} pagini · nelimitate</Text>
             ) : (
@@ -215,10 +215,12 @@ function HomeView({ shopOwner, shop, onNew, pagesCount, plan, planLimit, publish
         {/* AI Chat */}
         <Card>
           <BlockStack gap="400">
-            <InlineStack gap="200" blockAlign="center">
-              <Icon source={MagicIcon} tone="info" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ display: 'inline-flex', width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon source={MagicIcon} tone="info" />
+              </span>
               <Text as="h3" variant="headingMd">Asistent AI</Text>
-            </InlineStack>
+            </div>
 
             {messages.length > 0 && (
               <div ref={scrollRef} style={{ maxHeight: 400, overflowY: 'auto', padding: '8px 0' }}>
@@ -271,19 +273,87 @@ function HomeView({ shopOwner, shop, onNew, pagesCount, plan, planLimit, publish
   )
 }
 
+// Inline-bold parser: turns **text** into <strong>text</strong>
+function parseBold(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
+}
+
+// Mini markdown renderer for AI responses: headings, lists (bullet + numbered),
+// bold, paragraphs. Each line becomes its own block element so the layout
+// breathes instead of being a wall of text.
+function renderMarkdown(text) {
+  const lines = (text || '').split(/\r?\n/)
+  const out = []
+  lines.forEach((line, i) => {
+    const trimmed = line.trim()
+    if (!trimmed) {
+      out.push(<div key={i} style={{ height: 6 }} />)
+      return
+    }
+    // ## Heading
+    const h = trimmed.match(/^(#{1,3})\s+(.*)/)
+    if (h) {
+      const sizes = { 1: 16, 2: 15, 3: 14 }
+      out.push(
+        <div key={i} style={{ fontSize: sizes[h[1].length] || 14, fontWeight: 700, marginTop: i === 0 ? 0 : 8, marginBottom: 4, color: '#202223' }}>
+          {parseBold(h[2])}
+        </div>
+      )
+      return
+    }
+    // - bullet  or  * bullet
+    const b = line.match(/^\s*[-*]\s+(.*)/)
+    if (b) {
+      out.push(
+        <div key={i} style={{ display: 'flex', gap: 8, paddingLeft: 4, alignItems: 'flex-start' }}>
+          <span style={{ color: '#6d7175', flexShrink: 0, lineHeight: 1.5 }}>•</span>
+          <span>{parseBold(b[1])}</span>
+        </div>
+      )
+      return
+    }
+    // 1. numbered
+    const n = line.match(/^\s*(\d+)\.\s+(.*)/)
+    if (n) {
+      out.push(
+        <div key={i} style={{ display: 'flex', gap: 8, paddingLeft: 4, alignItems: 'flex-start' }}>
+          <span style={{ color: '#6d7175', flexShrink: 0, fontWeight: 600, minWidth: 18 }}>{n[1]}.</span>
+          <span>{parseBold(n[2])}</span>
+        </div>
+      )
+      return
+    }
+    // plain paragraph
+    out.push(<div key={i}>{parseBold(line)}</div>)
+  })
+  return out
+}
+
 function ChatBubble({ role, content }) {
   const isUser = role === 'user'
   return (
-    <InlineStack align={isUser ? 'end' : 'start'}>
-      <Box
-        background={isUser ? 'bg-fill-brand' : 'bg-surface-secondary'}
-        padding="300"
-        borderRadius="300"
-        maxWidth="85%"
-      >
-        <Text as="p" tone={isUser ? 'text-inverse' : undefined}>{content}</Text>
-      </Box>
-    </InlineStack>
+    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', width: '100%' }}>
+      <div style={{
+        background: isUser ? '#202223' : '#f6f6f7',
+        color: isUser ? '#ffffff' : '#202223',
+        padding: '12px 14px',
+        borderRadius: 12,
+        maxWidth: '88%',
+        fontSize: 14,
+        lineHeight: 1.55,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4
+      }}>
+        {isUser ? content : renderMarkdown(content)}
+      </div>
+    </div>
   )
 }
 
