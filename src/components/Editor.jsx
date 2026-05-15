@@ -81,23 +81,49 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       gjsRef.current = editor
 
       if (data.fromDashboard && data.body_html) {
-        let raw = data.body_html
-        // Extrage continutul LP din overlay-ul nostru (adaugat la publish)
-        const overlayMatch = raw.match(/<div[^>]+id="unitone-lp"[^>]*>([\s\S]*?)<!--\/unitone-lp-->/)
-        if (overlayMatch) raw = overlayMatch[1]
-        // Sterge scripturile si div-ul GemPages adaugate de publish
-        raw = raw.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-        raw = raw.replace(/<div[^>]+class="[^"]*_rsi-cod-form-is-gempage[^"]*"[^>]*><\/div>/gi, '')
-        raw = raw.replace(/<style[^>]*>[\s\S]*?unitone-placeholder-text[\s\S]*?<\/style>/gi, '')
-        // Extrage CSS din primul style tag (LP-ul generat de GrapesJS)
-        const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i)
-        const savedCss = styleMatch ? styleMatch[1] : ''
-        const htmlOnly = raw.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        // Re-wrap în #unitone-lp ca CSS-ul scoped să funcționeze în preview
-        editor.setComponents(`<div id="unitone-lp">${htmlOnly.trim()}</div>`)
-        // Aplică ÎNTOTDEAUNA buildCSS curent (responsive update) + override cu CSS salvat din GrapesJS
+        const raw = data.body_html
+
+        // 1. Find the GrapesJS LP CSS — it's the only <style> tag that
+        //    references the #unitone-lp scope (the others are hide-script
+        //    + Releasit overrides which we DON'T want as base styles).
+        const allStyles = [...raw.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+        let savedCss = ''
+        for (const s of allStyles) {
+          if (s[1].includes('#unitone-lp') || s[1].includes('.unitone-')) {
+            savedCss = s[1]
+            break
+          }
+        }
+
+        // 2. Extract the inside of the #unitone-lp wrapper. Try with the
+        //    HTML-comment marker first (newer publishes); fall back to a
+        //    bracket-balanced extraction if Shopify stripped the comment.
+        let inner = raw
+        const withMarker = raw.match(/<div[^>]+id="unitone-lp"[^>]*>([\s\S]*?)<!--\/unitone-lp-->/)
+        if (withMarker) {
+          inner = withMarker[1]
+        } else {
+          const startMatch = raw.match(/<div[^>]+id="unitone-lp"[^>]*>/)
+          if (startMatch) {
+            const startIdx = startMatch.index + startMatch[0].length
+            inner = raw.substring(startIdx)
+            // Drop the outer wrapper's closing </div> (last one in the slice)
+            const lastDivIdx = inner.lastIndexOf('</div>')
+            if (lastDivIdx > -1) inner = inner.substring(0, lastDivIdx)
+          }
+        }
+
+        // 3. Strip scripts, ALL <style> tags, Releasit hook divs — keep only
+        //    the LP markup with its inline styles intact.
+        const htmlOnly = inner
+          .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<div[^>]+class="[^"]*_rsi-cod-form-is-gempage[^"]*"[^>]*><\/div>/gi, '')
+          .trim()
+
+        editor.setComponents(`<div id="unitone-lp">${htmlOnly}</div>`)
         const baseCss = buildCSS(data)
-        editor.setStyle(savedCss ? baseCss + '\n' + savedCss : baseCss)
+        editor.setStyle(baseCss + (savedCss ? '\n' + savedCss : ''))
       } else {
         const html = buildHTML(data)
         const css = buildCSS(data)
