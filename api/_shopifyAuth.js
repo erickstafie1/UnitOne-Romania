@@ -47,7 +47,12 @@ function tokenExchange(shop, sessionToken) {
       grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
       subject_token: sessionToken,
       subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
-      requested_token_type: 'urn:shopify:params:oauth:token-type:offline-access-token'
+      // Online access token: ALWAYS expiring (~24h), per-user, accepted by Shopify
+      // even if the app isn't yet configured as "modern" in Partners (which would
+      // require `shopify app deploy` to push use_legacy_install_flow=false).
+      // For our flows (all user-initiated, no background tasks), online tokens
+      // are sufficient and avoid the non-expiring offline-token rejection.
+      requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token'
     })
     const req = https.request({
       hostname: shop,
