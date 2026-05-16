@@ -38,7 +38,9 @@ function buildOverlayLayout() {
     'body{padding-top:0!important}',
     'main,#MainContent,.main-content{padding:0!important;margin:0!important;max-width:100%!important}',
     '.page-width{max-width:100%!important;padding:0!important}',
-    '</style>','</head>','<body>',
+    // body classes mimic Shopify's default product page so theme app extensions
+    // (Releasit / EasySell) that gate on template:product still recognize the page
+    '</style>','</head>','<body class="template-product gradient" data-template="product">',
     '{{ content_for_layout }}',
     '{%- if product -%}',
     '<form action="/cart/add" id="product-form-product-template" class="product-form" method="post" enctype="multipart/form-data" style="display:none" novalidate>',
