@@ -114,19 +114,48 @@ async function installTemplates(call) {
   call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE').catch(() => {})
 
   const overlayLayout = buildOverlayLayout()
+  // Online Store 2.0 themes (including Shopify-generated "test-data" themes)
+  // silently reject .liquid templates for products — PUT returns 200 but the
+  // file isn't saved. Push .json templates instead (with "layout" pointing to
+  // our custom .liquid layout). A single shared section renders the LP body.
+  const unitoneLpSection = [
+    '{{ product.description }}',
+    '{% schema %}',
+    '{ "name": "UnitOne LP", "settings": [], "presets": [{ "name": "UnitOne LP" }] }',
+    '{% endschema %}'
+  ].join('\n')
+  const productPagecodJson = JSON.stringify({
+    layout: 'pagecod',
+    sections: { main: { type: 'unitone-lp', settings: {} } },
+    order: ['main']
+  })
+  const productPagecodfullJson = JSON.stringify({
+    layout: 'pagecodfull',
+    sections: { main: { type: 'unitone-lp', settings: {} } },
+    order: ['main']
+  })
   const assets = [
     { key: 'layout/pagecod.liquid', value: overlayLayout },
     { key: 'layout/pagecodfull.liquid', value: FULL_LAYOUT },
-    { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" },
-    { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" },
+    { key: 'sections/unitone-lp.liquid', value: unitoneLpSection },
+    { key: 'templates/product.pagecod.json', value: productPagecodJson },
+    { key: 'templates/product.pagecodfull.json', value: productPagecodfullJson },
     { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' },
     { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) }
   ]
+  // Also clear legacy .liquid product templates that may exist on themes
+  // that previously DID accept them (we don't want both formats coexisting).
+  call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.liquid', 'DELETE').catch(() => {})
+  call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecodfull.liquid', 'DELETE').catch(() => {})
 
   const installed = []
   const failures = []
+  // Verify-after-write: Shopify-managed themes silently drop assets they
+  // don't support (returns 200 on PUT but no file saved). After each PUT,
+  // re-read the asset to confirm it actually exists.
   await Promise.all(assets.map(a =>
     call('/themes/' + id + '/assets.json', 'PUT', { asset: a })
+      .then(() => call('/themes/' + id + '/assets.json?asset%5Bkey%5D=' + encodeURIComponent(a.key)))
       .then(() => installed.push(a.key))
       .catch(e => failures.push({ key: a.key, error: e.message }))
   ))
