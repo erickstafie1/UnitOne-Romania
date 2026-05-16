@@ -76,50 +76,77 @@
     )
   }
 
-  // Reads the merchant's button config from Releasit's loaded settings and
-  // applies it to every .unitone-cod-fallback button on the page so it looks
-  // like what they designed in the Releasit dashboard (text, colors, etc.)
+  // Releasit's icon set: maps iconType strings to inline SVG. We use SVG so
+  // the icon scales with the button font size and inherits the text color.
+  var RSI_ICONS = {
+    cart1: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-0.15em;margin-right:8px"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.6-1.4 2.4c-.2.3-.2.7 0 1l.4.6c.2.3.5.5.9.5H19v-2H7.4l1.1-2H17c.7 0 1.4-.4 1.7-1l3.6-6.6L20.6 4H5.2L4 1H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>',
+    cart2: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-0.15em;margin-right:8px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>',
+    bag1: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-0.15em;margin-right:8px"><path d="M19 7h-3V5.5a3.5 3.5 0 0 0-7 0V7H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm-8.5-1.5a1.5 1.5 0 0 1 3 0V7h-3z"/></svg>',
+    phone: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-0.15em;margin-right:8px"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.07 15.07 0 0 1-6.59-6.59l2.2-2.2a1 1 0 0 0 .24-1.02A11.36 11.36 0 0 1 8.5 4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1c0 9.39 7.61 17 17 17a1 1 0 0 0 1-1v-3.5a1 1 0 0 0-1-1z"/></svg>',
+    truck: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-0.15em;margin-right:8px"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2a3 3 0 1 0 6 0h6a3 3 0 1 0 6 0h2v-5l-3-4zM6 18.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm12 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm-1-7.5V9.5h2.5l1.96 2.5H17z"/></svg>'
+  }
+
+  // Reads the merchant's BUY NOW button config from Releasit's loaded settings
+  // and applies it to every .unitone-cod-fallback button on the page so it looks
+  // exactly like what they designed in the Releasit dashboard.
+  // (Note: we use buyNowButton, NOT form.submitButton — the latter is the
+  // submit button INSIDE the modal which Releasit itself renders.)
   function styleFallbackFromReleasit() {
     var s = window._RSI_COD_FORM_SETTINGS
-    if (!s) return false
-    var buyNow = (s.buyNowButton && s.buyNowButton.style) || {}
-    var submitStyle = (s.form && s.form.submitButton && s.form.submitButton.style) || {}
-    var combined = {}
-    Object.keys(buyNow).forEach(function (k) { combined[k] = buyNow[k] })
-    Object.keys(submitStyle).forEach(function (k) { if (!(k in combined)) combined[k] = submitStyle[k] })
+    if (!s || !s.buyNowButton) return false
+    var b = s.buyNowButton
+    var style = b.style || {}
 
-    var text = (s.form && s.form.submitButton && s.form.submitButton.text) || 'COMANDĂ ACUM'
-    var subt = (s.form && s.form.submitButton && s.form.submitButton.subt) || ''
+    var text = b.text || 'COMANDĂ ACUM'
+    var subt = b.subt || ''
+    var iconType = b.iconType || 'none'
+    var shaker = b.shakerType || 'none'
 
-    // Dump once so the merchant can see the exact config Releasit shipped
     if (!window.__unitoneStyleDumped) {
       window.__unitoneStyleDumped = true
-      console.log('[UnitOne] Releasit button config applied:', { text: text, subt: subt, style: combined })
+      console.log('[UnitOne] Releasit buyNow config applied:', b)
     }
 
     var btns = document.querySelectorAll('.unitone-cod-fallback')
     if (!btns.length) return false
     btns.forEach(function (btn) {
-      // Text (preserve any user-set text via data attribute if needed)
-      btn.textContent = (subt ? text + ' — ' + subt : text)
-      // Apply known style keys. Releasit's keys are typically camelCase
-      // matching common UI-builder conventions (bgColor, textColor, etc.)
+      // Build content: icon + text + optional subtitle
+      var iconHtml = (iconType && iconType !== 'none' && RSI_ICONS[iconType]) ? RSI_ICONS[iconType] : ''
+      var subtHtml = subt ? '<div style="font-size:0.75em;font-weight:400;opacity:0.85;margin-top:2px">' + subt + '</div>' : ''
+      btn.innerHTML = iconHtml + '<span style="vertical-align:middle">' + text + '</span>' + subtHtml
+
       var apply = function (cssProp, val) { if (val != null && val !== '') btn.style.setProperty(cssProp, val, 'important') }
-      apply('background-color', combined.bgColor || combined.backgroundColor || combined.background)
-      apply('color', combined.textColor || combined.color)
-      apply('font-size', combined.fontSize && (combined.fontSize + (typeof combined.fontSize === 'number' ? 'px' : '')))
-      apply('font-weight', combined.fontWeight)
-      apply('border-radius', combined.borderRadius && (combined.borderRadius + (typeof combined.borderRadius === 'number' ? 'px' : '')))
-      apply('padding', combined.padding)
-      apply('border', combined.border)
-      apply('letter-spacing', combined.letterSpacing)
-      apply('text-transform', combined.textTransform)
-      apply('box-shadow', combined.boxShadow)
-      // Shaker animation hint (Releasit has shakerType: 'none', 'shake', 'pulse', etc.)
-      var shaker = (s.buyNowButton && s.buyNowButton.shakerType) || (s.form && s.form.submitButton && s.form.submitButton.shakerType)
+
+      apply('background-color', style.bgColor)
+      apply('color', style.color)
+      // Border: set width/style/color together so non-zero widths actually render
+      if (typeof style.borderWidth === 'number') {
+        apply('border-width', style.borderWidth + 'px')
+        apply('border-style', style.borderWidth > 0 ? 'solid' : 'none')
+        apply('border-color', style.borderColor)
+      }
+      if (typeof style.borderRadius === 'number') apply('border-radius', style.borderRadius + 'px')
+      // fontSizeFactor: 1 = default 16px, 1.5 = 24px, etc.
+      if (typeof style.fontSizeFactor === 'number') {
+        apply('font-size', (16 * style.fontSizeFactor) + 'px')
+      }
+      // shadowOpacity: 0 = no shadow, 0.1 = subtle, 0.3+ = prominent
+      if (typeof style.shadowOpacity === 'number' && style.shadowOpacity > 0) {
+        apply('box-shadow', '0 4px 12px rgba(0,0,0,' + style.shadowOpacity + ')')
+      } else if (style.shadowOpacity === 0) {
+        apply('box-shadow', 'none')
+      }
+
+      // Shaker animation
       if (shaker && shaker !== 'none' && !btn.dataset.unitoneShaker) {
         btn.dataset.unitoneShaker = shaker
-        btn.style.animation = (shaker === 'pulse' ? 'unitone-pulse 1.5s ease-in-out infinite' : 'unitone-shake 0.5s ease-in-out infinite alternate')
+        var animMap = {
+          shake: 'unitone-shake 0.5s ease-in-out infinite alternate',
+          pulse: 'unitone-pulse 1.5s ease-in-out infinite',
+          jiggle: 'unitone-shake 0.4s ease-in-out infinite alternate',
+          bounce: 'unitone-pulse 1s ease-in-out infinite'
+        }
+        if (animMap[shaker]) btn.style.animation = animMap[shaker]
       }
     })
     return true
