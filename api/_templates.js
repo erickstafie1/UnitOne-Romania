@@ -27,6 +27,10 @@ function buildOverlayLayout() {
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
     '<title>{{ product.title }}</title>',
     '{{ content_for_header }}',
+    // CRITICAL: Releasit / EasySell early-exit if Shopify.template isn't "product".
+    // On custom template_suffix pages (product.pagecod), Shopify Core leaves it
+    // undefined so their scripts bail. Force-set it before any external script runs.
+    '<script>window.Shopify=window.Shopify||{};window.Shopify.template="product";window.Shopify.theme=window.Shopify.theme||{};window.Shopify.theme.template="product";</script>',
     '{%- if product -%}<script type="application/json" id="unitone-product-json">{{ product | json }}</script>{%- endif -%}',
     // Releasit + EasySell expect THIS specific product-json node to identify the
     // product attached to the page. Without it they can't bind the variantId to
@@ -78,6 +82,7 @@ const FULL_LAYOUT = [
   '<meta name="viewport" content="width=device-width,initial-scale=1">',
   '<title>{{ product.title }}</title>',
   '{{ content_for_header }}',
+  '<script>window.Shopify=window.Shopify||{};window.Shopify.template="product";window.Shopify.theme=window.Shopify.theme||{};window.Shopify.theme.template="product";</script>',
   // Same Releasit / EasySell product-json signal as in pagecod.liquid
   '{%- if product -%}<script type="text/plain" class="product-json" id="product-json{{ product.id }}">{{ product | json }}</script>{%- endif -%}',
   '</head>',
