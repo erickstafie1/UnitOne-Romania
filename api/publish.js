@@ -33,15 +33,36 @@ function buildHideScript() {
     '</style>'
 }
 
-// Releasit GemPages mode
-function buildReleasitGemPages(variantId) {
+// Universal COD form mode — works with BOTH Releasit and EasySell out of the box.
+// Selectors below use CLASS (not ID), so multiple buttons per page all get processed
+// instead of just the first one. The hidden `_rsi-cod-form-is-gempage` marker tells
+// Releasit's storefront script that this page is a GemPages-style integration.
+function buildCodFormUniversal() {
   return [
     '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>',
     '<style>',
     '.unitone-placeholder-text{display:none!important}',
-    '#_rsi-cod-form-gempages-button-hook,.unitone-rel-hook,.unitone-releasit-btn{border:none!important;background:transparent!important;padding:0!important;min-height:0!important}',
+    '.unitone-cod-hook,._rsi-cod-form-gempages-button-hook,.es-form-hook,.unitone-rel-hook,.unitone-releasit-btn{border:none!important;background:transparent!important;padding:0!important;min-height:0!important}',
     '</style>'
   ].join('')
+}
+
+// Detects whether the page has any COD button hook (either app, either marker).
+function hasCodHook(html) {
+  return html.includes('_rsi-cod-form-gempages-button-hook')
+      || html.includes('es-form-hook')
+      || html.includes('unitone-cod-hook')
+      || html.includes('unitone-rel-hook')
+}
+
+// Adds id="unitone-cod-anchor" to the FIRST hook element on the page. Used by
+// the auto-generated CTA scroll buttons (`<a href="#unitone-cod-anchor">`) so
+// "Comandă acum" anchor links jump to the actual COD button location.
+function addAnchorToFirstHook(html) {
+  return html.replace(
+    /<div\s+(class="[^"]*(?:unitone-cod-hook|_rsi-cod-form-gempages-button-hook|es-form-hook|unitone-rel-hook)[^"]*")/i,
+    '<div id="unitone-cod-anchor" $1'
+  )
 }
 
 module.exports = async function handler(req, res) {
@@ -76,8 +97,9 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      if (codFormApp === 'releasit' || finalHtml.includes('_rsi-cod-form-gempages-button-hook') || finalHtml.includes('rsi-cod-form-gempages-button')) {
-        finalHtml = buildReleasitGemPages(variantId) + finalHtml
+      if (codFormApp || hasCodHook(finalHtml)) {
+        finalHtml = addAnchorToFirstHook(finalHtml)
+        finalHtml = buildCodFormUniversal() + finalHtml
       }
 
       let templateSuffix
@@ -111,9 +133,10 @@ module.exports = async function handler(req, res) {
 
     let finalHtml = html
 
-    if (codFormApp === 'releasit' || finalHtml.includes('_rsi-cod-form-gempages-button-hook') || finalHtml.includes('rsi-cod-form-gempages-button')) {
-      finalHtml = buildReleasitGemPages(variantId) + finalHtml
-      console.log('Releasit GemPages activated, variantId:', variantId)
+    if (codFormApp || hasCodHook(finalHtml)) {
+      finalHtml = addAnchorToFirstHook(finalHtml)
+      finalHtml = buildCodFormUniversal() + finalHtml
+      console.log('COD universal hooks activated, variantId:', variantId)
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }

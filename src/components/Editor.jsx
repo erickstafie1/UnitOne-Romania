@@ -13,7 +13,7 @@ import { apiFetch } from '../apiFetch.js'
 export default function Editor({ data, shop, planLimit, onBack, onPublished, onUpgrade }) {
   // COD form is always handled by external Releasit hooks dropped from the
   // editor's block panel. No built-in form rendered.
-  const codFormApp = 'releasit'
+  const codFormApp = 'universal'
   const editorRef = useRef(null)
   const gjsRef = useRef(null)
   const [device, setDevice] = useState('desktop')
@@ -84,7 +84,17 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         // BEST PATH: the page was published with the metafield-source pipeline
         // (post-2025-05). We have the raw GrapesJS html + css — restore it
         // verbatim, no parsing needed.
-        editor.setComponents(data.editorHtml)
+        // Migration: older saves used id="_rsi-cod-form-gempages-button-hook"
+        // (which blocks multi-button support). Rewrite to universal class-based
+        // hooks so the next Save persists the new format to the metafield.
+        const migrated = data.editorHtml
+          .replace(/id="_rsi-cod-form-gempages-button-hook"\s+class="([^"]*)"/g,
+                   'class="$1 _rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook"')
+          .replace(/class="([^"]*)"\s+id="_rsi-cod-form-gempages-button-hook"/g,
+                   'class="$1 _rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook"')
+          .replace(/id="_rsi-cod-form-gempages-button-hook"/g,
+                   'class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook"')
+        editor.setComponents(migrated)
         editor.setStyle(data.editorCss || buildCSS(data))
       } else if (data.fromDashboard && data.body_html) {
         // FALLBACK: legacy page (published before metafield support). Parse
@@ -197,7 +207,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       const css = gjsRef.current.getCss()
       const fullHtml = `<style>${css}</style>${html}`
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
-      const finalCodFormApp = 'releasit'
+      const finalCodFormApp = 'universal'
       const pid = pageIdRef.current || data.id
       const body = {
         action: 'update', shop, pageId: pid,
@@ -296,7 +306,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       }
 
       const variantId = selectedProduct?.variants?.[0]?.id || data.variantId || null
-      const finalCodFormApp = 'releasit'
+      const finalCodFormApp = 'universal'
 
       const pid = pageIdRef.current || data.id
       // Pure GrapesJS source (html + css) for lossless re-edit. Saved on the
@@ -667,8 +677,10 @@ function buildHTML(data) {
   const benefits = (data.benefits || []).slice(0, 5)
   const testimonials = data.testimonials || []
 
-  const relBtn = `<div id="_rsi-cod-form-gempages-button-hook" class="unitone-rel-hook" style="min-height:54px;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD Releasit - apare automat aici</span></div>`
-  const scrollBtn = `<a href="#_rsi-cod-form-gempages-button-hook" style="display:inline-block;background:${primary};color:#fff;padding:16px 36px;border-radius:8px;font-size:17px;font-weight:900;text-decoration:none;letter-spacing:0.5px">&#128722; COMANDĂ ACUM</a>`
+  // Universal COD hook (multi-app + multi-button) — see relBtn() in addBlocks()
+  const relBtn = `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real</span></div>`
+  // CTA scroll target: the publish pipeline adds id="unitone-cod-anchor" to the FIRST hook
+  const scrollBtn = `<a href="#unitone-cod-anchor" style="display:inline-block;background:${primary};color:#fff;padding:16px 36px;border-radius:8px;font-size:17px;font-weight:900;text-decoration:none;letter-spacing:0.5px">&#128722; COMANDĂ ACUM</a>`
 
   const tCards = testimonials.map(t => [
     `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #f0f0f0;margin-bottom:14px">`,
@@ -842,10 +854,16 @@ function buildHTML(data) {
 function addBlocks(editor, data) {
   const p = data?.style?.primaryColor || '#e8000d'
 
-  // Helper - placeholder vizibil cu border dashed. ID-ul _rsi-cod-form-gempages-button-hook = hook oficial Releasit GemPages.
-  // ID trebuie sa fie unic pe pagina - daca user trage mai multe blocuri, doar primul va fi populat de Releasit.
+  // Universal COD button hook — works with BOTH Releasit and EasySell out of the box.
+  // Uses CLASSES (not ID) so multiple buttons on the same page all get processed
+  // (document.getElementById only matches first; document.querySelectorAll matches all).
+  //   ._rsi-cod-form-gempages-button-hook → Releasit official GemPages hook (per Releasit docs)
+  //   .es-form-hook                       → EasySell official hook (per EasySell docs)
+  //   .unitone-cod-hook                   → our own class for CSS reset / detection
+  // The first hook on the published page gets id="unitone-cod-anchor" added by the
+  // publish pipeline so the auto-generated CTA scroll buttons can target it.
   function relBtn(extra) {
-    return `<div id="_rsi-cod-form-gempages-button-hook" class="unitone-rel-hook" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD - trage-ma unde vrei</span></div>`
+    return `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real (Releasit / EasySell)</span></div>`
   }
 
   // Mini visual previews — each is a small SVG that hints at what the block does.
