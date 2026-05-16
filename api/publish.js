@@ -56,6 +56,17 @@ module.exports = async function handler(req, res) {
     const { title, html, action, productId, hideHeaderFooter, codFormApp, variantId } = body
     const auth = await prepareShopifyAuth(req, res)
 
+    // Editor source metafield: pure GrapesJS html + css for lossless re-edit.
+    // Shopify updates existing metafields when namespace+key match.
+    const editorSourceMetafield = (body.editorHtml || body.editorCss) ? {
+      metafields: [{
+        namespace: 'unitone',
+        key: 'editor_source',
+        type: 'json',
+        value: JSON.stringify({ html: body.editorHtml || '', css: body.editorCss || '' })
+      }]
+    } : {}
+
     if (action === 'get_products') {
       const data = await auth.call('/products.json?limit=50&fields=id,title,handle,images,variants')
       return res.status(200).json({ success: true, products: data.products || [] })
@@ -80,7 +91,7 @@ module.exports = async function handler(req, res) {
       }
 
       const result = await auth.call('/products/' + pageId + '.json', 'PUT', {
-        product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml, template_suffix: templateSuffix }
+        product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml, template_suffix: templateSuffix, ...editorSourceMetafield }
       })
       if (result.product) {
         return res.status(200).json({ success: true, pageUrl: 'https://' + auth.shop + '/products/' + result.product.handle, template_suffix: templateSuffix })
@@ -126,7 +137,8 @@ module.exports = async function handler(req, res) {
         template_suffix: templateSuffix,
         tags: 'unitone-cod-page',
         status: newStatus,
-        ...(title && { title })
+        ...(title && { title }),
+        ...editorSourceMetafield
       }
     })
 

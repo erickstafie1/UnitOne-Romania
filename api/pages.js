@@ -72,15 +72,32 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'get') {
-      const data = await auth.call('/products/' + pageId + '.json')
+      // Fetch the product + the editor_source metafield in parallel.
+      // The metafield holds the pure GrapesJS HTML+CSS for lossless re-edit
+      // (since body_html is wrapped in overlay/scripts/styles that are
+      // painful to parse back out reliably).
+      const [data, mfData] = await Promise.all([
+        auth.call('/products/' + pageId + '.json'),
+        auth.call('/products/' + pageId + '/metafields.json?namespace=unitone&key=editor_source').catch(() => ({}))
+      ])
       const p = data.product
+      let editorHtml = null, editorCss = null
+      const mf = mfData?.metafields?.[0]
+      if (mf?.value) {
+        try {
+          const parsed = JSON.parse(mf.value)
+          editorHtml = parsed.html || null
+          editorCss = parsed.css || null
+        } catch {}
+      }
       return res.status(200).json({
         success: true,
         page: {
           id: p.id, title: p.title, handle: p.handle,
           body_html: p.body_html, published: p.status === 'active',
           template_suffix: p.template_suffix,
-          isProduct: true
+          isProduct: true,
+          editorHtml, editorCss
         }
       })
     }

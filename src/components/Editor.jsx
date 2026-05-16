@@ -80,48 +80,45 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
       gjsRef.current = editor
 
-      if (data.fromDashboard && data.body_html) {
-        const raw = data.body_html
+      if (data.fromDashboard && data.editorHtml) {
+        // BEST PATH: the page was published with the metafield-source pipeline
+        // (post-2025-05). We have the raw GrapesJS html + css — restore it
+        // verbatim, no parsing needed.
+        editor.setComponents(data.editorHtml)
+        editor.setStyle(data.editorCss || buildCSS(data))
+      } else if (data.fromDashboard && data.body_html) {
+        // FALLBACK: legacy page (published before metafield support). Parse
+        // body_html with DOMParser — bulletproof vs. regex extraction.
+        // After the first save from the editor, the next reopen will hit
+        // the BEST PATH above instead.
+        const doc = new DOMParser().parseFromString(`<!doctype html><body>${data.body_html}</body>`, 'text/html')
 
-        // 1. Find the GrapesJS LP CSS — it's the only <style> tag that
-        //    references the #unitone-lp scope (the others are hide-script
-        //    + Releasit overrides which we DON'T want as base styles).
-        const allStyles = [...raw.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
-        let savedCss = ''
-        for (const s of allStyles) {
-          if (s[1].includes('#unitone-lp') || s[1].includes('.unitone-')) {
-            savedCss = s[1]
-            break
-          }
-        }
+        // Strip publish-injected noise that has no place in the editor
+        doc.querySelectorAll('script').forEach(n => n.remove())
+        doc.querySelectorAll('._rsi-cod-form-is-gempage').forEach(n => n.remove())
 
-        // 2. Extract the inside of the #unitone-lp wrapper. Try with the
-        //    HTML-comment marker first (newer publishes); fall back to a
-        //    bracket-balanced extraction if Shopify stripped the comment.
-        let inner = raw
-        const withMarker = raw.match(/<div[^>]+id="unitone-lp"[^>]*>([\s\S]*?)<!--\/unitone-lp-->/)
-        if (withMarker) {
-          inner = withMarker[1]
+        // Collect any saved scoped CSS (GrapesJS-emitted) — these target #unitone-lp
+        // or .unitone-* classes. Skip the publish-only Releasit override styles.
+        const savedCss = [...doc.querySelectorAll('style')]
+          .map(s => s.textContent || '')
+          .filter(css => css.includes('#unitone-lp') || css.includes('.unitone-'))
+          .join('\n')
+
+        // Find the LP wrapper. Editor needs ONLY the inside content, with NO
+        // overlay/embed style attached to the wrapper.
+        const wrapper = doc.querySelector('#unitone-lp')
+        if (wrapper) {
+          // Remove inline style on the wrapper (overlay positioning, z-index, etc.)
+          wrapper.removeAttribute('style')
+          // Remove all <style> tags from inside — we apply CSS via setStyle()
+          wrapper.querySelectorAll('style').forEach(s => s.remove())
         } else {
-          const startMatch = raw.match(/<div[^>]+id="unitone-lp"[^>]*>/)
-          if (startMatch) {
-            const startIdx = startMatch.index + startMatch[0].length
-            inner = raw.substring(startIdx)
-            // Drop the outer wrapper's closing </div> (last one in the slice)
-            const lastDivIdx = inner.lastIndexOf('</div>')
-            if (lastDivIdx > -1) inner = inner.substring(0, lastDivIdx)
-          }
+          // No wrapper found — strip top-level styles directly
+          doc.body.querySelectorAll('style').forEach(s => s.remove())
         }
 
-        // 3. Strip scripts, ALL <style> tags, Releasit hook divs — keep only
-        //    the LP markup with its inline styles intact.
-        const htmlOnly = inner
-          .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<div[^>]+class="[^"]*_rsi-cod-form-is-gempage[^"]*"[^>]*><\/div>/gi, '')
-          .trim()
-
-        editor.setComponents(`<div id="unitone-lp">${htmlOnly}</div>`)
+        const innerHtml = wrapper ? wrapper.innerHTML : doc.body.innerHTML
+        editor.setComponents(`<div id="unitone-lp">${innerHtml.trim()}</div>`)
         const baseCss = buildCSS(data)
         editor.setStyle(baseCss + (savedCss ? '\n' + savedCss : ''))
       } else {
@@ -205,7 +202,8 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       const body = {
         action: 'update', shop, pageId: pid,
         title: pageTitle, html: fullHtml, hideHeaderFooter,
-        codFormApp: finalCodFormApp, variantId
+        codFormApp: finalCodFormApp, variantId,
+        editorHtml: html, editorCss: css  // pure source -> Shopify metafield -> lossless re-edit
       }
       const res = await apiFetch('/api/publish', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -301,9 +299,13 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       const finalCodFormApp = 'releasit'
 
       const pid = pageIdRef.current || data.id
+      // Pure GrapesJS source (html + css) for lossless re-edit. Saved on the
+      // product as a metafield by the backend so re-opening this page in the
+      // editor restores it verbatim.
+      const editorSource = { editorHtml: html, editorCss: css }
       const body = pid
-        ? { action: 'update', shop, pageId: pid, title: finalTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
-        : { shop, title: finalTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId }
+        ? { action: 'update', shop, pageId: pid, title: finalTitle, html: finalHtml, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, ...editorSource }
+        : { shop, title: finalTitle, html: finalHtml, productId: selectedProduct?.id, hideHeaderFooter, codFormApp: finalCodFormApp, variantId, ...editorSource }
 
       const res = await apiFetch('/api/publish', {
         method: 'POST',
