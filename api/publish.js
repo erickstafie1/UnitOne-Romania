@@ -64,7 +64,7 @@ function buildCodFormUniversal() {
           'b.className="unitone-cod-fallback";',
           'b.type="button";',
           'b.innerHTML="\\ud83d\\udecd COMAND\\u0102 ACUM";',
-          'b.onclick=function(){alert("Pentru a primi comenzi, instaleaz\\u0103 Releasit sau EasySell COD Form din Shopify App Store \\u0219i activeaz\\u0103 integrarea cu pagini personalizate.")};',
+          'b.onclick=function(){alert("Butonul COD nu este activ \\u00een tem\\u0103.\\n\\nMergi la: Shopify Admin \\u2192 Online Store \\u2192 Themes \\u2192 Customize \\u2192 App embeds (icon din st\\u00e2nga, ca un puzzle).\\n\\nActiveaz\\u0103 toggle-ul \\"Releasit COD Form\\" sau \\"EasySell COD Form\\" \\u2192 Save.\\n\\nApoi reload aceast\\u0103 pagin\\u0103.")};',
           'h.appendChild(b);',
         '}',
       '});',

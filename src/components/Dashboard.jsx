@@ -132,6 +132,49 @@ export default function Dashboard({
 }
 
 /* ─── HOME ──────────────────────────────────────────────────────────── */
+/* ─── COD app embed reminder banner ─────────────────────────────────── */
+// Releasit / EasySell come as "app embeds" that must be turned ON by the
+// merchant inside Online Store → Themes → Customize → App embeds. Until
+// that toggle is on, our LP buttons can't be replaced and the customer
+// sees the red fallback. This banner walks the merchant straight to the
+// right screen with a deep link. Dismissable per shop (saved in localStorage).
+function CodEmbedBanner({ shop }) {
+  const key = `unitone_codembed_dismissed_${shop || ''}`
+  const [dismissed, setDismissed] = useState(
+    typeof window !== 'undefined' && localStorage.getItem(key) === '1'
+  )
+  if (dismissed) return null
+  // Deep link to Online Store → Themes → Customize (App embeds visible there).
+  // Shopify accepts plain handle (without .myshopify.com) in the admin URL.
+  const handle = (shop || '').replace('.myshopify.com', '')
+  const customizeUrl = `https://admin.shopify.com/store/${handle}/themes/current/editor?context=apps`
+  function dismiss() {
+    try { localStorage.setItem(key, '1') } catch {}
+    setDismissed(true)
+  }
+  return (
+    <Banner
+      title="Activează app-ul COD în temă (Releasit sau EasySell)"
+      tone="warning"
+      onDismiss={dismiss}
+      action={{
+        content: 'Deschide App embeds',
+        onAction: () => {
+          try { (window.top || window).location.href = customizeUrl }
+          catch { window.location.href = customizeUrl }
+        }
+      }}
+    >
+      <p>
+        Ca să meargă butoanele COD pe paginile publicate: <strong>Online Store → Themes → Customize → App embeds (icon puzzle)</strong> → activează toggle-ul pentru <strong>Releasit COD Form</strong> sau <strong>EasySell COD Form</strong> → Save.
+      </p>
+      <p style={{ marginTop: 6 }}>
+        Fără asta, pe pagini apare un buton roșu "COMANDĂ ACUM" fallback care nu primește comenzi.
+      </p>
+    </Banner>
+  )
+}
+
 function HomeView({ shopOwner, shop, onNew, pagesCount, plan, planLimit, publishLimit, pages, onUpgrade }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -187,6 +230,9 @@ function HomeView({ shopOwner, shop, onNew, pagesCount, plan, planLimit, publish
       primaryAction={{ content: 'Pagină nouă', icon: PlusIcon, onAction: onNew }}
     >
       <BlockStack gap="500">
+        {/* Setup reminder — apears until user dismisses (stored in localStorage) */}
+        <CodEmbedBanner shop={shop} />
+
         {/* Plan card */}
         <Card>
           <BlockStack gap="300">
