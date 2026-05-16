@@ -162,16 +162,53 @@
         })
     }
 
-    // Rewire every hook's button to open this modal
+    // Rewire every hook's button. Priority: try Releasit V2 modal first
+    // (their state machine already reached pageName:"fields" so the form is
+    // ready), fall back to V1 RsiCodForm.show(), finally our native modal.
     hookList().forEach(function (h) {
       var btn = h.querySelector('button.unitone-cod-fallback')
       if (btn) {
         btn.onclick = function (e) {
           e.preventDefault()
+          if (tryOpenRsiModal()) return
           modal.style.display = 'flex'
         }
       }
     })
+  }
+
+  // Returns true if a Releasit (or EasySell) modal was opened via their API.
+  function tryOpenRsiModal() {
+    try {
+      var pjsonEl = document.querySelector('[id^="product-json"]')
+      var pdata = pjsonEl ? JSON.parse(pjsonEl.textContent || pjsonEl.innerHTML) : null
+      var productId = pdata ? pdata.id : null
+      var variantId = pdata && pdata.variants && pdata.variants[0] ? pdata.variants[0].id : null
+      // Releasit V2: state-driven UI. Setting isOpen + currentIds should open
+      // the form modal (state already at pageName:"fields" with form data loaded).
+      if (window._rsiV2 && typeof window._rsiV2.setState === 'function') {
+        window._rsiV2.setState({
+          isOpen: true,
+          currentProductId: productId,
+          currentVariantId: variantId
+        })
+        log('opened via _rsiV2.setState', { productId: productId, variantId: variantId })
+        return true
+      }
+      // Releasit V1 fallback
+      if (window.RsiCodForm && typeof window.RsiCodForm.show === 'function') {
+        window.RsiCodForm.show()
+        log('opened via RsiCodForm.show()')
+        return true
+      }
+      // EasySell fallback
+      if (window.EasySellCodForm && typeof window.EasySellCodForm.show === 'function') {
+        window.EasySellCodForm.show()
+        log('opened via EasySellCodForm.show()')
+        return true
+      }
+    } catch (e) { log('tryOpenRsiModal error', e.message) }
+    return false
   }
 
   // Safe shallow-shape inspector — returns keys + types for an object
@@ -260,18 +297,43 @@
     } catch (e) { console.log('[UnitOne diagnostic error]', e.message) }
   }
 
-  // Main flow: poke apps, wait, then native fallback if still nothing
+  // Wire every painted fallback button to try Releasit V2 setState FIRST.
+  // We do this aggressively (every 500ms for 4s) because the painted button
+  // can appear AFTER our cod-loader runs (publish.js script paints at t=0
+  // and t=1500ms), and we need to ensure ALL of them get the right handler.
+  function wireFallbackButtons() {
+    hookList().forEach(function (h) {
+      var btn = h.querySelector('button.unitone-cod-fallback')
+      if (btn && !btn.dataset.unitoneWired) {
+        btn.dataset.unitoneWired = '1'
+        btn.onclick = function (e) {
+          e.preventDefault()
+          if (tryOpenRsiModal()) return
+          // No Releasit/EasySell available — show native modal as last resort
+          if (!document.getElementById('unitone-native-modal')) injectNativeFallback()
+          var nm = document.getElementById('unitone-native-modal')
+          if (nm) nm.style.display = 'flex'
+        }
+      }
+    })
+  }
+
+  // Main flow: poke apps to wake Releasit V2, then re-wire fallback buttons
+  // so click → setState. Native modal is built lazily on click.
   function run() {
     snapshot('pre-poke')
     pokeApps()
+    // Re-wire repeatedly to catch buttons painted later by publish.js script
+    var wireCount = 0
+    var wireInterval = setInterval(function () {
+      wireFallbackButtons()
+      wireCount++
+      if (wireCount > 8) clearInterval(wireInterval)  // 8 * 500ms = 4s of attempts
+    }, 500)
+    wireFallbackButtons()  // also wire immediately
     setTimeout(function () {
       snapshot('post-poke')
-      if (hooksStillEmpty()) {
-        log('still empty after poke — injecting native fallback modal')
-        injectNativeFallback()
-      } else {
-        log('hooks populated by external app')
-      }
+      wireFallbackButtons()
     }, 2500)
   }
 
