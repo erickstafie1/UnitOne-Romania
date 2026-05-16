@@ -150,14 +150,17 @@ function hasCodHook(html) {
       || html.includes('unitone-rel-hook')
 }
 
+// Matches a <div ... class="...HOOK_CLASS..."> regardless of attribute order
+// (GrapesJS emits data-cod="..." id="..." BEFORE class, so the old "class right
+// after <div" regex never matched and our injections silently no-op'd).
+const HOOK_DIV_RE = /<div((?:\s+[a-zA-Z-]+="[^"]*")*?)\s+class="([^"]*(?:unitone-cod-hook|_rsi-cod-form-gempages-button-hook|es-form-hook|unitone-rel-hook)[^"]*)"/i
+const HOOK_DIV_RE_GLOBAL = new RegExp(HOOK_DIV_RE.source, 'gi')
+
 // Adds id="unitone-cod-anchor" to the FIRST hook element on the page. Used by
 // the auto-generated CTA scroll buttons (`<a href="#unitone-cod-anchor">`) so
 // "Comandă acum" anchor links jump to the actual COD button location.
 function addAnchorToFirstHook(html) {
-  return html.replace(
-    /<div\s+(class="[^"]*(?:unitone-cod-hook|_rsi-cod-form-gempages-button-hook|es-form-hook|unitone-rel-hook)[^"]*")/i,
-    '<div id="unitone-cod-anchor" $1'
-  )
+  return html.replace(HOOK_DIV_RE, '<div id="unitone-cod-anchor"$1 class="$2"')
 }
 
 // Releasit V2 + EasySell both bind to hooks via data-product-id. Without this,
@@ -168,8 +171,8 @@ function addAnchorToFirstHook(html) {
 function addProductIdToAllHooks(html, productId) {
   if (!productId) return html
   return html.replace(
-    /<div\s+(class="[^"]*(?:unitone-cod-hook|_rsi-cod-form-gempages-button-hook|es-form-hook|unitone-rel-hook)[^"]*")/gi,
-    `<div data-product-id="${productId}" data-rsi-product-id="${productId}" $1`
+    HOOK_DIV_RE_GLOBAL,
+    `<div data-product-id="${productId}" data-rsi-product-id="${productId}"$1 class="$2"`
   )
 }
 

@@ -223,8 +223,15 @@
         RsiCodForm: typeof window.RsiCodForm,
         EasySellCodForm: typeof window.EasySellCodForm,
         rsiV2Shape: shape(window._rsiV2),
+        rsiV2State: (function () {
+          try { return window._rsiV2 && typeof window._rsiV2.getState === 'function' ? shape(window._rsiV2.getState()) : null }
+          catch (e) { return 'getState_threw: ' + e.message }
+        })(),
+        rsiV2HtmlServiceShape: window._rsiV2 ? shape(window._rsiV2.htmlService) : null,
+        rsiV2CartServiceShape: window._rsiV2 ? shape(window._rsiV2.cartService) : null,
         rsiInitialDataShape: shape(window._RSI_INITIAL_DATA),
         rsiCodFormSettingsShape: shape(window._RSI_COD_FORM_SETTINGS),
+        rsiFormConfiguration: window._RSI_COD_FORM_SETTINGS && window._RSI_COD_FORM_SETTINGS.form ? shape(window._RSI_COD_FORM_SETTINGS.form) : null,
         rsiOriginalFormVersions: window._RSI_ORIGINAL_FORM_VERSIONS,
         bodyClasses: document.body.className
       }, null, 2))
