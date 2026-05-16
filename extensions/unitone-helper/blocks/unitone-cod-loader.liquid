@@ -1,0 +1,19 @@
+{% comment %}
+  UnitOne Helper — theme app embed.
+  When merchant toggles this ON in Online Store → Themes → Customize → App embeds,
+  the helper script is injected into <head> on ALL storefront pages (including
+  our custom pagecod / pagecodfull product templates where Releasit / EasySell
+  scripts otherwise don't load).
+  The script itself (cod-loader.js) only acts when it detects a UnitOne LP
+  via the _rsi-cod-form-is-gempage marker — no-op on regular pages.
+{% endcomment %}
+
+<script src="{{ 'cod-loader.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "UnitOne COD Helper",
+  "target": "head",
+  "settings": []
+}
+{% endschema %}
