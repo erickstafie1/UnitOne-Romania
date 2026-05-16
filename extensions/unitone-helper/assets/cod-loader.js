@@ -24,6 +24,16 @@
   // Bail on non-UnitOne pages
   if (!document.querySelector('._rsi-cod-form-is-gempage')) return
 
+  // CRITICAL: ensure Shopify.template === "product" before any external COD
+  // app script runs its init check. On custom template_suffix product pages
+  // (e.g. product.pagecod), Shopify Core leaves Shopify.template undefined,
+  // which makes Releasit / EasySell silently bail. We force the value here
+  // and also re-set it as part of pokeApps() in case some apps re-read it.
+  window.Shopify = window.Shopify || {}
+  if (!window.Shopify.template) window.Shopify.template = 'product'
+  window.Shopify.theme = window.Shopify.theme || {}
+  if (!window.Shopify.theme.template) window.Shopify.theme.template = 'product'
+
   function log() {
     if (window.UNITONE_DEBUG) console.log.apply(console, ['[UnitOne]'].concat([].slice.call(arguments)))
   }

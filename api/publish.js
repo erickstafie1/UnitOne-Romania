@@ -195,7 +195,11 @@ module.exports = async function handler(req, res) {
       if (codFormApp || hasCodHook(finalHtml)) {
         finalHtml = addAnchorToFirstHook(finalHtml)
         const pjs = await buildProductJsonScript(auth.call, pageId)
-        finalHtml = pjs + buildCodFormUniversal() + finalHtml
+        // Shopify.template MUST be "product" so Releasit / EasySell scripts don't
+        // early-exit. Inject this as the very first thing so it runs before
+        // any deferred external script that gates on it.
+        const shopifyTemplateShim = '<script>window.Shopify=window.Shopify||{};window.Shopify.template="product";window.Shopify.theme=window.Shopify.theme||{};window.Shopify.theme.template="product";</script>'
+        finalHtml = shopifyTemplateShim + pjs + buildCodFormUniversal() + finalHtml
       }
 
       let templateSuffix
@@ -232,7 +236,8 @@ module.exports = async function handler(req, res) {
     if (codFormApp || hasCodHook(finalHtml)) {
       finalHtml = addAnchorToFirstHook(finalHtml)
       const pjs = await buildProductJsonScript(auth.call, productId)
-      finalHtml = pjs + buildCodFormUniversal() + finalHtml
+      const shopifyTemplateShim = '<script>window.Shopify=window.Shopify||{};window.Shopify.template="product";window.Shopify.theme=window.Shopify.theme||{};window.Shopify.theme.template="product";</script>'
+      finalHtml = shopifyTemplateShim + pjs + buildCodFormUniversal() + finalHtml
       console.log('COD universal hooks activated, variantId:', variantId, 'pjs:', pjs.length, 'bytes')
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
