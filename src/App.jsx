@@ -93,10 +93,19 @@ function AppShell() {
 
   async function initApp(s) {
     setShop(s)
+    // Surface install failures to console so we know when theme template push
+    // fails — silent failure here was making LPs render with the merchant's
+    // default theme.liquid instead of our pagecod/pagecodfull layouts.
     apiFetch('/api/pages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reinstall', shop: s })
-    }).catch(() => {})
+    }).then(r => r.json()).then(data => {
+      if (data && data.success) {
+        console.log('[UnitOne] Templates installed in theme:', data.themeName, '(id ' + data.themeId + ')', 'keys:', data.installed)
+      } else {
+        console.error('[UnitOne] Template install FAILED:', data)
+      }
+    }).catch(e => console.error('[UnitOne] Template install request errored:', e.message))
     try {
       const r = await apiFetch('/api/billing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

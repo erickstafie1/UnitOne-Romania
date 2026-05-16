@@ -95,27 +95,48 @@ const FULL_LAYOUT = [
 ].join('\n')
 
 // call(path, method, body) -> Promise<data>
+// Returns { ok: bool, themeId, themeName, installed: [keys], failures: [{key, error}] }
+// so callers can surface install failures to the merchant instead of silently
+// swallowing them. Previously errors were caught + console.log'd, which meant
+// merchants would never know their templates weren't installed.
 async function installTemplates(call) {
+  let themes
   try {
-    const themes = await call('/themes.json')
-    const active = (themes.themes || []).find(t => t.role === 'main')
-    if (!active) return
-    const id = active.id
-
-    // Stale legacy product.pagecod.json gets cleared (best-effort)
-    call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE').catch(() => {})
-
-    const overlayLayout = buildOverlayLayout()
-    await Promise.all([
-      call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecod.liquid', value: overlayLayout } }),
-      call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'layout/pagecodfull.liquid', value: FULL_LAYOUT } }),
-      call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" } }),
-      call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" } }),
-      call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' } }),
-      call('/themes/' + id + '/assets.json', 'PUT', { asset: { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) } })
-    ])
+    themes = await call('/themes.json')
   } catch (e) {
-    console.log('Template install error:', e.message)
+    return { ok: false, error: 'themes_list_failed: ' + e.message }
+  }
+  const active = (themes.themes || []).find(t => t.role === 'main')
+  if (!active) return { ok: false, error: 'no_main_theme' }
+  const id = active.id
+
+  // Stale legacy product.pagecod.json gets cleared (best-effort)
+  call('/themes/' + id + '/assets.json?asset%5Bkey%5D=templates%2Fproduct.pagecod.json', 'DELETE').catch(() => {})
+
+  const overlayLayout = buildOverlayLayout()
+  const assets = [
+    { key: 'layout/pagecod.liquid', value: overlayLayout },
+    { key: 'layout/pagecodfull.liquid', value: FULL_LAYOUT },
+    { key: 'templates/product.pagecod.liquid', value: "{% layout 'pagecod' %}{{ product.description }}" },
+    { key: 'templates/product.pagecodfull.liquid', value: "{% layout 'pagecodfull' %}{{ product.description }}" },
+    { key: 'sections/pagecod-main.liquid', value: '<div data-unitone="true">{{ page.content }}</div>' },
+    { key: 'templates/page.pagecod.json', value: JSON.stringify({ sections: { main: { type: 'pagecod-main', settings: {} } }, order: ['main'] }) }
+  ]
+
+  const installed = []
+  const failures = []
+  await Promise.all(assets.map(a =>
+    call('/themes/' + id + '/assets.json', 'PUT', { asset: a })
+      .then(() => installed.push(a.key))
+      .catch(e => failures.push({ key: a.key, error: e.message }))
+  ))
+
+  return {
+    ok: failures.length === 0,
+    themeId: id,
+    themeName: active.name,
+    installed,
+    failures
   }
 }
 

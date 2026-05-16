@@ -103,8 +103,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'reinstall') {
-      await installTemplates(auth.call)
-      return res.status(200).json({ success: true })
+      const result = await installTemplates(auth.call)
+      return res.status(200).json({ success: result.ok, ...result })
     }
 
     res.status(400).json({ error: 'Unknown action' })
