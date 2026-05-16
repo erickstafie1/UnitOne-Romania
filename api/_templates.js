@@ -28,6 +28,10 @@ function buildOverlayLayout() {
     '<title>{{ product.title }}</title>',
     '{{ content_for_header }}',
     '{%- if product -%}<script type="application/json" id="unitone-product-json">{{ product | json }}</script>{%- endif -%}',
+    // Releasit + EasySell expect THIS specific product-json node to identify the
+    // product attached to the page. Without it they can't bind the variantId to
+    // the COD button hooks. Format matches Releasit's official GemPages snippet.
+    '{%- if product -%}<script type="text/plain" class="product-json" id="product-json{{ product.id }}">{{ product | json }}</script>{%- endif -%}',
     '<style>',
     ...HIDE_SELECTORS,
     '{display:none!important}',
@@ -72,6 +76,8 @@ const FULL_LAYOUT = [
   '<meta name="viewport" content="width=device-width,initial-scale=1">',
   '<title>{{ product.title }}</title>',
   '{{ content_for_header }}',
+  // Same Releasit / EasySell product-json signal as in pagecod.liquid
+  '{%- if product -%}<script type="text/plain" class="product-json" id="product-json{{ product.id }}">{{ product | json }}</script>{%- endif -%}',
   '</head>',
   '<body style="margin:0;padding:0">',
   "{% section 'header' %}",
