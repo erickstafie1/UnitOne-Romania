@@ -37,13 +37,38 @@ function buildHideScript() {
 // Selectors below use CLASS (not ID), so multiple buttons per page all get processed
 // instead of just the first one. The hidden `_rsi-cod-form-is-gempage` marker tells
 // Releasit's storefront script that this page is a GemPages-style integration.
+//
+// Defensive fallback: after 3s, if a hook still contains our placeholder span
+// (meaning neither Releasit nor EasySell processed it — either not installed,
+// integration not enabled in app settings, or script not loaded on the template),
+// we inject a visible "COMANDĂ ACUM" button so the customer at least sees SOMETHING
+// instead of an invisible 0px element. The fallback button shows an alert telling
+// the merchant what to fix.
 function buildCodFormUniversal() {
   return [
     '<div class="_rsi-cod-form-is-gempage" style="display:none"></div>',
     '<style>',
     '.unitone-placeholder-text{display:none!important}',
     '.unitone-cod-hook,._rsi-cod-form-gempages-button-hook,.es-form-hook,.unitone-rel-hook,.unitone-releasit-btn{border:none!important;background:transparent!important;padding:0!important;min-height:0!important}',
-    '</style>'
+    '.unitone-cod-fallback{display:block;width:100%;background:#dc2626;color:#fff;padding:18px 24px;border-radius:8px;text-align:center;font-size:17px;font-weight:900;text-decoration:none;cursor:pointer;border:none;font-family:inherit;letter-spacing:0.5px;box-sizing:border-box}',
+    '.unitone-cod-fallback:hover{background:#b91c1c}',
+    '</style>',
+    '<script>(function(){setTimeout(function(){',
+      'var hooks=document.querySelectorAll(".unitone-cod-hook,._rsi-cod-form-gempages-button-hook,.es-form-hook");',
+      'hooks.forEach(function(h){',
+        'var hasPlaceholder=h.querySelector(".unitone-placeholder-text");',
+        'var isEmpty=h.children.length===0&&h.textContent.trim()==="";',
+        'if(hasPlaceholder||isEmpty){',
+          'h.innerHTML="";',
+          'var b=document.createElement("button");',
+          'b.className="unitone-cod-fallback";',
+          'b.type="button";',
+          'b.innerHTML="\\ud83d\\udecd COMAND\\u0102 ACUM";',
+          'b.onclick=function(){alert("Pentru a primi comenzi, instaleaz\\u0103 Releasit sau EasySell COD Form din Shopify App Store \\u0219i activeaz\\u0103 integrarea cu pagini personalizate.")};',
+          'h.appendChild(b);',
+        '}',
+      '});',
+    '},3000);})();</script>'
   ].join('')
 }
 
