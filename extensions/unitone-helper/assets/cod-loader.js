@@ -174,6 +174,24 @@
     })
   }
 
+  // Safe shallow-shape inspector — returns keys + types for an object
+  // without dumping huge nested values that bloat the console output.
+  function shape(obj) {
+    if (!obj || typeof obj !== 'object') return typeof obj
+    var out = {}
+    for (var k in obj) {
+      try {
+        var v = obj[k]
+        if (v === null) out[k] = 'null'
+        else if (Array.isArray(v)) out[k] = 'array[' + v.length + ']'
+        else if (typeof v === 'object') out[k] = 'object{' + Object.keys(v).slice(0, 5).join(',') + '}'
+        else if (typeof v === 'string') out[k] = 'string(' + v.slice(0, 60) + ')'
+        else out[k] = typeof v
+      } catch (e) { out[k] = 'inaccessible' }
+    }
+    return out
+  }
+
   // Always-on diagnostic dump — written to console so the merchant can copy
   // it back to us when things don't work. Captures both pre-poke and
   // post-poke state so we can see if a poke fixed it or not.
@@ -187,6 +205,7 @@
         .map(function (s) { return s.src.split('/').slice(-2).join('/') })
       var rsiGlobals = Object.keys(window).filter(function (k) { return /rsi|releasit/i.test(k) })
       var esGlobals = Object.keys(window).filter(function (k) { return /easysell/i.test(k) })
+      var firstHook = document.querySelector('._rsi-cod-form-gempages-button-hook, .es-form-hook, .unitone-cod-hook')
       console.log('[UnitOne diagnostic ' + label + ']', JSON.stringify({
         template: (window.Shopify || {}).template,
         themeTemplate: ((window.Shopify || {}).theme || {}).template,
@@ -196,12 +215,17 @@
         marker: !!document.querySelector('._rsi-cod-form-is-gempage'),
         productJson: !!document.querySelector('[id^="product-json"]'),
         hooks: hookList().length,
+        firstHookHtml: firstHook ? firstHook.outerHTML.slice(0, 400) : null,
         rsiScripts: rsiScripts,
         esScripts: esScripts,
         rsiGlobals: rsiGlobals,
         esGlobals: esGlobals,
         RsiCodForm: typeof window.RsiCodForm,
         EasySellCodForm: typeof window.EasySellCodForm,
+        rsiV2Shape: shape(window._rsiV2),
+        rsiInitialDataShape: shape(window._RSI_INITIAL_DATA),
+        rsiCodFormSettingsShape: shape(window._RSI_COD_FORM_SETTINGS),
+        rsiOriginalFormVersions: window._RSI_ORIGINAL_FORM_VERSIONS,
         bodyClasses: document.body.className
       }, null, 2))
     } catch (e) { console.log('[UnitOne diagnostic error]', e.message) }
