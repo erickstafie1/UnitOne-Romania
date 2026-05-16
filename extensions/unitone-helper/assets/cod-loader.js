@@ -24,6 +24,12 @@
   // Bail on non-UnitOne pages
   if (!document.querySelector('._rsi-cod-form-is-gempage')) return
 
+  // Animation keyframes for Releasit "shaker" effect (their dashboard offers
+  // shake/pulse options for buy-now buttons). Injected once.
+  var animStyle = document.createElement('style')
+  animStyle.textContent = '@keyframes unitone-shake{0%{transform:translateX(-2px)}100%{transform:translateX(2px)}}@keyframes unitone-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}'
+  document.head.appendChild(animStyle)
+
   // CRITICAL: ensure Shopify.template === "product" before any external COD
   // app script runs its init check. On custom template_suffix product pages
   // (e.g. product.pagecod), Shopify Core leaves Shopify.template undefined,
@@ -68,6 +74,55 @@
     return document.querySelectorAll(
       '._rsi-cod-form-gempages-button-hook, .es-form-hook, .unitone-cod-hook'
     )
+  }
+
+  // Reads the merchant's button config from Releasit's loaded settings and
+  // applies it to every .unitone-cod-fallback button on the page so it looks
+  // like what they designed in the Releasit dashboard (text, colors, etc.)
+  function styleFallbackFromReleasit() {
+    var s = window._RSI_COD_FORM_SETTINGS
+    if (!s) return false
+    var buyNow = (s.buyNowButton && s.buyNowButton.style) || {}
+    var submitStyle = (s.form && s.form.submitButton && s.form.submitButton.style) || {}
+    var combined = {}
+    Object.keys(buyNow).forEach(function (k) { combined[k] = buyNow[k] })
+    Object.keys(submitStyle).forEach(function (k) { if (!(k in combined)) combined[k] = submitStyle[k] })
+
+    var text = (s.form && s.form.submitButton && s.form.submitButton.text) || 'COMANDĂ ACUM'
+    var subt = (s.form && s.form.submitButton && s.form.submitButton.subt) || ''
+
+    // Dump once so the merchant can see the exact config Releasit shipped
+    if (!window.__unitoneStyleDumped) {
+      window.__unitoneStyleDumped = true
+      console.log('[UnitOne] Releasit button config applied:', { text: text, subt: subt, style: combined })
+    }
+
+    var btns = document.querySelectorAll('.unitone-cod-fallback')
+    if (!btns.length) return false
+    btns.forEach(function (btn) {
+      // Text (preserve any user-set text via data attribute if needed)
+      btn.textContent = (subt ? text + ' — ' + subt : text)
+      // Apply known style keys. Releasit's keys are typically camelCase
+      // matching common UI-builder conventions (bgColor, textColor, etc.)
+      var apply = function (cssProp, val) { if (val != null && val !== '') btn.style.setProperty(cssProp, val, 'important') }
+      apply('background-color', combined.bgColor || combined.backgroundColor || combined.background)
+      apply('color', combined.textColor || combined.color)
+      apply('font-size', combined.fontSize && (combined.fontSize + (typeof combined.fontSize === 'number' ? 'px' : '')))
+      apply('font-weight', combined.fontWeight)
+      apply('border-radius', combined.borderRadius && (combined.borderRadius + (typeof combined.borderRadius === 'number' ? 'px' : '')))
+      apply('padding', combined.padding)
+      apply('border', combined.border)
+      apply('letter-spacing', combined.letterSpacing)
+      apply('text-transform', combined.textTransform)
+      apply('box-shadow', combined.boxShadow)
+      // Shaker animation hint (Releasit has shakerType: 'none', 'shake', 'pulse', etc.)
+      var shaker = (s.buyNowButton && s.buyNowButton.shakerType) || (s.form && s.form.submitButton && s.form.submitButton.shakerType)
+      if (shaker && shaker !== 'none' && !btn.dataset.unitoneShaker) {
+        btn.dataset.unitoneShaker = shaker
+        btn.style.animation = (shaker === 'pulse' ? 'unitone-pulse 1.5s ease-in-out infinite' : 'unitone-shake 0.5s ease-in-out infinite alternate')
+      }
+    })
+    return true
   }
 
   function hooksStillEmpty() {
@@ -323,17 +378,21 @@
   function run() {
     snapshot('pre-poke')
     pokeApps()
-    // Re-wire repeatedly to catch buttons painted later by publish.js script
+    // Re-wire + restyle repeatedly to catch buttons painted later by publish.js
+    // script AND to apply Releasit styles as soon as their config is loaded.
     var wireCount = 0
     var wireInterval = setInterval(function () {
       wireFallbackButtons()
+      styleFallbackFromReleasit()
       wireCount++
       if (wireCount > 8) clearInterval(wireInterval)  // 8 * 500ms = 4s of attempts
     }, 500)
     wireFallbackButtons()  // also wire immediately
+    styleFallbackFromReleasit()
     setTimeout(function () {
       snapshot('post-poke')
       wireFallbackButtons()
+      styleFallbackFromReleasit()
     }, 2500)
   }
 
