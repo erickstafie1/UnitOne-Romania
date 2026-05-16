@@ -34,6 +34,32 @@
   window.Shopify.theme = window.Shopify.theme || {}
   if (!window.Shopify.theme.template) window.Shopify.theme.template = 'product'
 
+  // Build window.meta.product from the injected product-json node.
+  // Standard Shopify product templates expose this via section render. On our
+  // custom pagecod layout, sections aren't used so meta is never built —
+  // Releasit's init reads meta.product to bind variant info, and silently
+  // bails when it's missing. Reconstructing it here is what unblocks
+  // RsiCodForm initialization.
+  try {
+    var pjsonEl = document.querySelector('[id^="product-json"]')
+    if (pjsonEl && !window.meta) {
+      var pdata = JSON.parse(pjsonEl.textContent || pjsonEl.innerHTML)
+      window.meta = {
+        page: { pageType: 'product', resourceType: 'product', resourceId: pdata.id },
+        product: {
+          id: pdata.id,
+          gid: 'gid://shopify/Product/' + pdata.id,
+          vendor: pdata.vendor || '',
+          type: pdata.type || '',
+          variants: (pdata.variants || []).map(function (v) {
+            return { id: v.id, price: Math.round(parseFloat(v.price || 0) * 100), name: v.title }
+          })
+        }
+      }
+      window.ShopifyAnalytics = window.ShopifyAnalytics || { meta: { page: window.meta.page, product: window.meta.product } }
+    }
+  } catch (e) { /* swallow — diagnostic below will surface */ }
+
   function log() {
     if (window.UNITONE_DEBUG) console.log.apply(console, ['[UnitOne]'].concat([].slice.call(arguments)))
   }
@@ -148,10 +174,45 @@
     })
   }
 
+  // Always-on diagnostic dump — written to console so the merchant can copy
+  // it back to us when things don't work. Captures both pre-poke and
+  // post-poke state so we can see if a poke fixed it or not.
+  function snapshot(label) {
+    try {
+      var rsiScripts = [].slice.call(document.scripts)
+        .filter(function (s) { return /releasit|rsi/i.test(s.src) })
+        .map(function (s) { return s.src.split('/').slice(-2).join('/') })
+      var esScripts = [].slice.call(document.scripts)
+        .filter(function (s) { return /easysell/i.test(s.src) })
+        .map(function (s) { return s.src.split('/').slice(-2).join('/') })
+      var rsiGlobals = Object.keys(window).filter(function (k) { return /rsi|releasit/i.test(k) })
+      var esGlobals = Object.keys(window).filter(function (k) { return /easysell/i.test(k) })
+      console.log('[UnitOne diagnostic ' + label + ']', JSON.stringify({
+        template: (window.Shopify || {}).template,
+        themeTemplate: ((window.Shopify || {}).theme || {}).template,
+        hasMeta: typeof window.meta !== 'undefined',
+        metaProduct: window.meta && window.meta.product ? Object.keys(window.meta.product) : null,
+        productVariantsCount: window.meta && window.meta.product && window.meta.product.variants ? window.meta.product.variants.length : 0,
+        marker: !!document.querySelector('._rsi-cod-form-is-gempage'),
+        productJson: !!document.querySelector('[id^="product-json"]'),
+        hooks: hookList().length,
+        rsiScripts: rsiScripts,
+        esScripts: esScripts,
+        rsiGlobals: rsiGlobals,
+        esGlobals: esGlobals,
+        RsiCodForm: typeof window.RsiCodForm,
+        EasySellCodForm: typeof window.EasySellCodForm,
+        bodyClasses: document.body.className
+      }, null, 2))
+    } catch (e) { console.log('[UnitOne diagnostic error]', e.message) }
+  }
+
   // Main flow: poke apps, wait, then native fallback if still nothing
   function run() {
+    snapshot('pre-poke')
     pokeApps()
     setTimeout(function () {
+      snapshot('post-poke')
       if (hooksStillEmpty()) {
         log('still empty after poke — injecting native fallback modal')
         injectNativeFallback()
