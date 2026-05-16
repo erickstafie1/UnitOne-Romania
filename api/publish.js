@@ -160,6 +160,19 @@ function addAnchorToFirstHook(html) {
   )
 }
 
+// Releasit V2 + EasySell both bind to hooks via data-product-id. Without this,
+// they don't know which product to attach the COD form to and silently skip
+// the hook (even though their bundle has loaded and globals are present).
+// We inject these on EVERY hook on the page (not just first) so multi-button
+// pages all work. Also adds data-rsi-product-id which Releasit V2 prefers.
+function addProductIdToAllHooks(html, productId) {
+  if (!productId) return html
+  return html.replace(
+    /<div\s+(class="[^"]*(?:unitone-cod-hook|_rsi-cod-form-gempages-button-hook|es-form-hook|unitone-rel-hook)[^"]*")/gi,
+    `<div data-product-id="${productId}" data-rsi-product-id="${productId}" $1`
+  )
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -193,6 +206,7 @@ module.exports = async function handler(req, res) {
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
       if (codFormApp || hasCodHook(finalHtml)) {
+        finalHtml = addProductIdToAllHooks(finalHtml, pageId)
         finalHtml = addAnchorToFirstHook(finalHtml)
         const pjs = await buildProductJsonScript(auth.call, pageId)
         // Shopify.template MUST be "product" so Releasit / EasySell scripts don't
@@ -234,6 +248,7 @@ module.exports = async function handler(req, res) {
     let finalHtml = html
 
     if (codFormApp || hasCodHook(finalHtml)) {
+      finalHtml = addProductIdToAllHooks(finalHtml, productId)
       finalHtml = addAnchorToFirstHook(finalHtml)
       const pjs = await buildProductJsonScript(auth.call, productId)
       const shopifyTemplateShim = '<script>window.Shopify=window.Shopify||{};window.Shopify.template="product";window.Shopify.theme=window.Shopify.theme||{};window.Shopify.theme.template="product";</script>'
