@@ -108,6 +108,40 @@ function buildCodFormUniversal() {
   ].join('')
 }
 
+// Builds the product-json script element COD apps look for to bind variant info.
+// Format matches Releasit's official GemPages snippet (type="text/plain",
+// class="product-json", id="product-json{productId}"). Injected directly into
+// body_html so we don't depend on the theme template being re-installed.
+async function buildProductJsonScript(call, productId) {
+  try {
+    const data = await call('/products/' + productId + '.json')
+    const p = data.product
+    if (!p) return ''
+    // Trim down to fields the COD apps use — keeps the inline script small.
+    const slim = {
+      id: p.id,
+      title: p.title,
+      handle: p.handle,
+      vendor: p.vendor,
+      type: p.product_type,
+      tags: p.tags,
+      price: p.variants?.[0]?.price,
+      available: p.variants?.some(v => v.inventory_quantity > 0 || v.inventory_management === null) ?? true,
+      variants: (p.variants || []).map(v => ({
+        id: v.id, title: v.title, price: v.price,
+        available: v.inventory_quantity > 0 || v.inventory_management === null,
+        sku: v.sku, option1: v.option1, option2: v.option2, option3: v.option3
+      })),
+      images: (p.images || []).map(i => i.src),
+      featured_image: p.image?.src || null
+    }
+    return `<script type="text/plain" class="product-json" id="product-json${p.id}">${JSON.stringify(slim)}</script>`
+  } catch (e) {
+    console.log('buildProductJsonScript error:', e.message)
+    return ''
+  }
+}
+
 // Detects whether the page has any COD button hook (either app, either marker).
 function hasCodHook(html) {
   return html.includes('_rsi-cod-form-gempages-button-hook')
@@ -160,7 +194,8 @@ module.exports = async function handler(req, res) {
       let finalHtml = html
       if (codFormApp || hasCodHook(finalHtml)) {
         finalHtml = addAnchorToFirstHook(finalHtml)
-        finalHtml = buildCodFormUniversal() + finalHtml
+        const pjs = await buildProductJsonScript(auth.call, pageId)
+        finalHtml = pjs + buildCodFormUniversal() + finalHtml
       }
 
       let templateSuffix
@@ -196,8 +231,9 @@ module.exports = async function handler(req, res) {
 
     if (codFormApp || hasCodHook(finalHtml)) {
       finalHtml = addAnchorToFirstHook(finalHtml)
-      finalHtml = buildCodFormUniversal() + finalHtml
-      console.log('COD universal hooks activated, variantId:', variantId)
+      const pjs = await buildProductJsonScript(auth.call, productId)
+      finalHtml = pjs + buildCodFormUniversal() + finalHtml
+      console.log('COD universal hooks activated, variantId:', variantId, 'pjs:', pjs.length, 'bytes')
     } else if (variantId) {
       finalHtml = finalHtml.replace(/VARIANT_ID/g, variantId)
     }
