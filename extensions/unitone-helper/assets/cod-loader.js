@@ -227,6 +227,28 @@
           try { return window._rsiV2 && typeof window._rsiV2.getState === 'function' ? shape(window._rsiV2.getState()) : null }
           catch (e) { return 'getState_threw: ' + e.message }
         })(),
+        // VALUES for the state fields that decide whether Releasit V2 renders
+        rsiV2StateValues: (function () {
+          try {
+            if (!window._rsiV2 || typeof window._rsiV2.getState !== 'function') return null
+            var s = window._rsiV2.getState()
+            return {
+              pageName: s.pageName,
+              page: s.page,
+              availablePages: s.availablePages,
+              currentProductId: s.currentProductId,
+              currentVariantId: s.currentVariantId,
+              productsLen: (s.products || []).length,
+              isOpen: s.isOpen,
+              isVisibilityValid: s.isVisibilityValid,
+              isTotalAmountValid: s.isTotalAmountValid,
+              loadingState: s.loadingState,
+              loadingReason: s.loadingState && s.loadingState.loadingReason,
+              testMode: s.testMode,
+              hasFormConfig: !!s.form && Object.keys(s.form).length > 0
+            }
+          } catch (e) { return 'state_values_threw: ' + e.message }
+        })(),
         rsiV2HtmlServiceShape: window._rsiV2 ? shape(window._rsiV2.htmlService) : null,
         rsiV2CartServiceShape: window._rsiV2 ? shape(window._rsiV2.cartService) : null,
         rsiInitialDataShape: shape(window._RSI_INITIAL_DATA),
