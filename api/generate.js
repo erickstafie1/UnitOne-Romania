@@ -33,35 +33,39 @@ const HERO_VARIANTS = ['split', 'centered', 'overlay']
 // 'overlay'  - image as background with darkened overlay + text on top (bold/luxury)
 
 // Detecteaza tematica produsului din descriere SAU nume scrape-uit si returneaza
-// paleta+heroVariant potrivite. Cu descriere/nume relevant -> match pe keyword;
-// fara nimic util -> random pentru diversitate.
+// paleta+heroVariant potrivite. 'split' (image left, text right) e default
+// pentru ca seamana cel mai mult cu stilul GemPages / produsutil.ro.
 // Mapping: PALETTES[0]=Red, 1=Blue, 2=Green, 3=Orange, 4=Purple, 5=Pink, 6=Teal, 7=Gold
 function pickVariantsByDescription(desc, productName) {
   // Combina descrierea user-ului + numele scrape-uit; ambele pot avea cuvinte cheie
   const txt = ((desc || '') + ' ' + (productName || '')).toLowerCase()
   // Categorii cu cuvinte cheie + indici paleta corespunzatoare + variante hero recomandate
+  // Per-category palette picks. heroVariant default 'split' (image left + text
+  // right, side-by-side on desktop) — user-ul a cerut explicit lateral-lateral.
+  // Variantele 'centered' / 'overlay' raman optionale pentru viitor diverse,
+  // dar nu se mai pica automat.
   const matchers = [
-    { kw: ['femei', 'beauty', 'cosmetic', 'skincare', 'machiaj', 'parfum', 'serum', 'crema'], palettes: [5, 4], hero: ['centered', 'overlay'] },
-    { kw: ['barbati', 'sportiv', 'fitness', 'antrenament', 'forta', 'masculin'], palettes: [0, 3], hero: ['overlay', 'split'] },
-    { kw: ['copii', 'bebe', 'parinti', 'mame', 'familie', 'jucarie', 'gradinita'], palettes: [3, 5], hero: ['centered', 'split'] },
-    { kw: ['tehnologie', 'tech', 'gadget', 'electronic', 'wireless', 'bluetooth', 'smart', 'usb'], palettes: [1, 7], hero: ['split', 'overlay'] },
-    { kw: ['sanatate', 'natural', 'eco', 'organic', 'wellness', 'supliment', 'vitamine', 'detox'], palettes: [2, 6], hero: ['centered', 'split'] },
-    { kw: ['luxury', 'luxos', 'premium', 'elegant', 'piele', 'lemn', 'aur', 'argint'], palettes: [7, 4], hero: ['overlay', 'split'] },
-    { kw: ['bucatarie', 'casa', 'mancare', 'gatit', 'curatenie', 'menaj'], palettes: [3, 2], hero: ['split', 'centered'] },
-    { kw: ['fashion', 'haine', 'imbracaminte', 'geanta', 'pantofi', 'bijuterii', 'accesori'], palettes: [4, 5], hero: ['overlay', 'centered'] }
+    { kw: ['femei', 'beauty', 'cosmetic', 'skincare', 'machiaj', 'parfum', 'serum', 'crema'], palettes: [5, 4] },
+    { kw: ['barbati', 'sportiv', 'fitness', 'antrenament', 'forta', 'masculin'], palettes: [0, 3] },
+    { kw: ['copii', 'bebe', 'parinti', 'mame', 'familie', 'jucarie', 'gradinita'], palettes: [3, 5] },
+    { kw: ['tehnologie', 'tech', 'gadget', 'electronic', 'wireless', 'bluetooth', 'smart', 'usb'], palettes: [1, 7] },
+    { kw: ['sanatate', 'natural', 'eco', 'organic', 'wellness', 'supliment', 'vitamine', 'detox'], palettes: [2, 6] },
+    { kw: ['luxury', 'luxos', 'premium', 'elegant', 'piele', 'lemn', 'aur', 'argint'], palettes: [7, 4] },
+    { kw: ['bucatarie', 'casa', 'mancare', 'gatit', 'curatenie', 'menaj', 'soareci', 'sobolan', 'capcana'], palettes: [3, 2] },
+    { kw: ['fashion', 'haine', 'imbracaminte', 'geanta', 'pantofi', 'bijuterii', 'accesori'], palettes: [4, 5] }
   ]
   for (const m of matchers) {
     if (m.kw.some(k => txt.includes(k))) {
       return {
         palette: PALETTES[m.palettes[Math.floor(Math.random() * m.palettes.length)]],
-        heroVariant: m.hero[Math.floor(Math.random() * m.hero.length)]
+        heroVariant: 'split'  // default lateral-lateral
       }
     }
   }
-  // Fallback: full random (descriere generica sau lipsa)
+  // Fallback: random paleta + split hero (consistency on layout)
   return {
     palette: PALETTES[Math.floor(Math.random() * PALETTES.length)],
-    heroVariant: HERO_VARIANTS[Math.floor(Math.random() * HERO_VARIANTS.length)]
+    heroVariant: 'split'
   }
 }
 

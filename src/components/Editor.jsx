@@ -277,6 +277,25 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
     }
   }, [data.id, data.aliUrl, pageTitle, shop, hideHeaderFooter])
 
+  // Auto-apply pretul produsului Shopify cand user-ul selecteaza unul.
+  // Inlocuieste pretul placeholder AI cu cel real fara sa fie nevoie de click pe buton.
+  useEffect(() => {
+    if (!selectedProduct?.variants?.[0]?.price || !gjsRef.current) return
+    const realPrice = Math.round(parseFloat(selectedProduct.variants[0].price))
+    if (!realPrice) return
+    const newOldPrice = Math.round(realPrice * 1.6)
+    let html = gjsRef.current.getHtml()
+    const before = html
+    // Hero priceblock are font-size:42px (split/centered) sau in overlay
+    html = html.replace(/(<span[^>]*font-size:42px[^>]*>)(\d+)(<\/span>)/g, `$1${realPrice}$3`)
+    html = html.replace(/(<span[^>]*text-decoration:line-through[^>]*>)(\d+)( LEI<\/span>)/g, `$1${newOldPrice}$3`)
+    html = html.replace(/Economise(s|ș)ti \d+ LEI/g, `Economise$1ti ${newOldPrice - realPrice} LEI`)
+    if (html !== before) {
+      gjsRef.current.setComponents(html)
+      dirtyRef.current = true
+    }
+  }, [selectedProduct?.id])
+
   async function autoSave() {
     if (!gjsRef.current) return
     setSaving(true)
@@ -306,7 +325,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
     setSaving(false)
   }
 
-  async function loadProducts() {
+  async function loadProducts(attempt = 0) {
     setLoadingProducts(true)
     setProductsError('')
     try {
@@ -321,8 +340,20 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       if (d.error === 'reauth_required') {
         setProductsError('REAUTH')
       } else if (!res.ok || d.error) {
+        // Auto-retry pe erori transient (sesiune Shopify in curs de exchange,
+        // rate limit, etc). Pana la 2 reincercari cu backoff 1.5s/3s.
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1500 * (attempt + 1)))
+          return loadProducts(attempt + 1)
+        }
         throw new Error(d.error || 'Eroare server')
       } else if ((d.products || []).length === 0) {
+        // Lista poate fi goala daca shop-ul e nou sau Shopify n-a indexat inca
+        // Retry o data dupa 2s — uneori e doar lag in API-ul Shopify.
+        if (attempt < 1) {
+          await new Promise(r => setTimeout(r, 2000))
+          return loadProducts(attempt + 1)
+        }
         setProductsError('Niciun produs găsit în magazin.')
       } else {
         setProducts(d.products)
