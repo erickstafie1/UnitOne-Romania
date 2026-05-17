@@ -148,11 +148,11 @@ export default function Generator({ onGenerated, onBack }) {
           />
 
           <TextField
-            label="Descrie produsul tău"
-            helpText='Spune ce e, pentru cine, ce probleme rezolvă, ce-l face special. Apasă „Îmbunătățește cu AI” ca să adauge detalii comerciale peste ce ai scris.'
+            label="Detalii adiționale (opțional)"
+            helpText='Imaginile și numele produsului vin din AliExpress. Aici poți adăuga audiența țintă, ton dorit, unghi de vânzare. Apasă „Îmbunătățește cu AI” să extindem contextul.'
             value={styleDesc}
             onChange={setStyleDesc}
-            placeholder="Ex: Set de tacâmuri ergonomice pentru copii 1-3 ani care învață să mănânce singuri. Au ventuze să nu se răstoarne farfuria și bavețică colectoare. Mamele scapă de mizeria de pe haine."
+            placeholder="Ex: pentru mame cu copii 1-3 ani, ton cald și protectiv, accent pe siguranță și mizeria evitată"
             multiline={4}
             autoComplete="off"
             disabled={enhancing}

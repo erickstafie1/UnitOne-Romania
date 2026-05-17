@@ -32,11 +32,13 @@ const HERO_VARIANTS = ['split', 'centered', 'overlay']
 // 'centered' - image full-width on top, all details centered below (more emotional)
 // 'overlay'  - image as background with darkened overlay + text on top (bold/luxury)
 
-// Detecteaza tematica produsului din descriere si returneaza paleta+heroVariant
-// potrivite. Daca descrierea e generica/lipsa, returneaza random ca fallback.
+// Detecteaza tematica produsului din descriere SAU nume scrape-uit si returneaza
+// paleta+heroVariant potrivite. Cu descriere/nume relevant -> match pe keyword;
+// fara nimic util -> random pentru diversitate.
 // Mapping: PALETTES[0]=Red, 1=Blue, 2=Green, 3=Orange, 4=Purple, 5=Pink, 6=Teal, 7=Gold
-function pickVariantsByDescription(desc) {
-  const txt = (desc || '').toLowerCase()
+function pickVariantsByDescription(desc, productName) {
+  // Combina descrierea user-ului + numele scrape-uit; ambele pot avea cuvinte cheie
+  const txt = ((desc || '') + ' ' + (productName || '')).toLowerCase()
   // Categorii cu cuvinte cheie + indici paleta corespunzatoare + variante hero recomandate
   const matchers = [
     { kw: ['femei', 'beauty', 'cosmetic', 'skincare', 'machiaj', 'parfum', 'serum', 'crema'], palettes: [5, 4], hero: ['centered', 'overlay'] },
@@ -123,12 +125,12 @@ function callClaude(productInfo, styleDesc) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
-  // styleDesc e DESCRIEREA PRODUSULUI scrisa de user (poate fi enhanced cu
-  // /api/chat?action=enhance_prompt). E SURSA DE ADEVAR — peste ce a fost
-  // scrape-uit de pe AliExpress. Daca user-ul spune "set tacamuri pentru
-  // copii", asta e produsul, chiar daca AliExpress zice altceva.
+  // styleDesc e CONTEXT COMERCIAL OPTIONAL din partea user-ului (audienta tinta,
+  // ton, unghi specific de vanzare, features pe care vrea sa le accentueze).
+  // Identitatea produsului (ce E) vine din AliExpress (productInfo.title).
+  // Descrierea complementeaza, nu inlocuieste.
   const briefBlock = styleDesc
-    ? `\n\n=== DESCRIEREA PRODUSULUI (SURSA DE ADEVAR — folosita peste orice altceva) ===\n"""\n${styleDesc}\n"""\n\nIntreaga pagina (productName, headline, subheadline, benefits, topBenefits, featureSections, testimoniale, FAQ) trebuie sa fie despre acest produs SPECIFIC asa cum l-a descris user-ul:\n- productName/headline reflecta exact ce e produsul (NU schimba in alt produs)\n- topBenefits si benefits sunt PROBLEMELE pe care produsul le rezolva, din descriere\n- featureSections explica EXACT functionalitatile mentionate de user\n- testimoniale sunt din partea audientei tinta mentionate in descriere (varsta, sex, situatie)\n- tonul copy-ului se potriveste cu audienta din descriere (parinti = cald/protectiv, sportivi = direct/energic, etc.)\n- featureSections.bullets si benefits CITEAZA caracteristici concrete din descriere\n\nDACA descrierea user-ului contrazice numele scrape-uit din AliExpress, CREDE-l pe USER.`
+    ? `\n\n=== CONTEXT COMERCIAL ADITIONAL (din partea user-ului) ===\n"""\n${styleDesc}\n"""\n\nFoloseste contextul pentru:\n- audienta tinta (varsta, sex, situatie de viata reflectate in testimoniale + ton)\n- unghiul de vanzare (frica/dorinta/economie/aspiratie)\n- features sau beneficii specifice pe care user-ul vrea sa le accentueze\n- tonul copy-ului (cald/direct/profesional dupa context)\n\nIMPORTANT: identitatea produsului (ce este, ce face) vine din nume + poze AliExpress. Contextul aditional NU schimba ce e produsul — doar adauga unghi comercial peste.`
     : ''
   // Prompt scris pentru a produce copy în stilul produsutil.ro:
   // - frază "PROBLEMĂ → REZOLVARE" cu cuvinte CAPITALIZATE la început
@@ -419,11 +421,10 @@ module.exports = async function handler(req, res) {
     ].filter(Boolean)
     copy.aliImages = aliImages
 
-    // Smart palette + hero pick — bazat pe descrierea user-ului (categorie
-    // produs) ca sa nu primesti Classic Red la beauty sau Hot Pink la gadgets.
-    // Daca descrierea e generica/lipsa, cade pe random pentru diversitate.
-    // Saved cu LP-ul ca re-edit sa preserve look-ul.
-    const variants = pickVariantsByDescription(styleDesc)
+    // Smart palette + hero pick — match pe cuvinte cheie din descrierea
+    // user-ului SAU din numele scrape-uit de pe AliExpress. Fara nimic util,
+    // cade pe random pentru diversitate.
+    const variants = pickVariantsByDescription(styleDesc, copy.productName)
     copy.style = Object.assign({}, copy.style || {}, {
       primaryColor: variants.palette.primary,
       secondaryColor: variants.palette.secondary,
