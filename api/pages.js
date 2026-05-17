@@ -42,8 +42,24 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'delete') {
-      await auth.call('/products/' + pageId + '.json', 'DELETE')
-      return res.status(200).json({ success: true })
+      // IMPORTANT: NU stergem produsul Shopify (user-ul si-l vrea inapoi normal).
+      // Doar "dezatasam" LP-ul: clear template_suffix, scoatem tag-ul nostru,
+      // si daca avem backup body_html in metafield il restauram (altfel lasam
+      // body_html actual ca user-ul sa-l editeze manual in Shopify admin).
+      const current = await auth.call('/products/' + pageId + '.json')
+      const currentTags = (current.product?.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== 'unitone-cod-page').join(', ')
+      // Try restoring original body_html from backup metafield (if we saved one)
+      let restoredBody = current.product?.body_html || ''
+      try {
+        const mfData = await auth.call('/products/' + pageId + '/metafields.json?namespace=unitone&key=original_body_html').catch(() => ({}))
+        const mf = mfData?.metafields?.[0]
+        if (mf?.value) restoredBody = mf.value
+      } catch (e) { /* no backup → keep current body */ }
+
+      await auth.call('/products/' + pageId + '.json', 'PUT', {
+        product: { id: pageId, template_suffix: null, tags: currentTags, body_html: restoredBody }
+      })
+      return res.status(200).json({ success: true, kept: true })
     }
 
     if (action === 'unmark') {

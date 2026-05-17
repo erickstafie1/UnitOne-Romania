@@ -113,12 +113,27 @@ function extractImages(html) {
 }
 
 function extractMeta(html) {
-  let title = '', priceUSD = 0
-  const tm = html.match(/"subject"\s*:\s*"([^"]{10,200})"/) || html.match(/<title[^>]*>([^<|]+)/i)
+  let title = '', priceUSD = 0, description = '', specs = []
+  const tm = html.match(/"subject"\s*:\s*"([^"]{10,300})"/) || html.match(/<title[^>]*>([^<|]+)/i)
   if (tm?.[1]) title = tm[1].replace(/\s*[-|]\s*AliExpress.*$/i, '').replace(/&amp;/g, '&').trim()
   const pm = html.match(/"discountPrice"\s*:\s*\{"value"\s*:\s*"([0-9.]+)"/) || html.match(/US \$\s*([0-9.]+)/)
   if (pm?.[1]) priceUSD = parseFloat(pm[1])
-  return { title, priceUSD }
+  // Description meta — AliExpress JSON has descMod or productDescription
+  const dm = html.match(/"description"\s*:\s*"((?:[^"\\]|\\.){50,2000})"/) || html.match(/<meta\s+name="description"\s+content="([^"]{50,500})"/i)
+  if (dm?.[1]) description = dm[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500)
+  // Specs / properties — common in AliExpress product pages
+  try {
+    const sm = html.match(/"productProps"\s*:\s*\[([^\]]+)\]/)
+    if (sm) {
+      const props = sm[1].match(/"name"\s*:\s*"([^"]{2,40})"[^}]*"value"\s*:\s*"([^"]{2,80})"/g) || []
+      specs = props.slice(0, 8).map(p => {
+        const n = p.match(/"name"\s*:\s*"([^"]+)"/)?.[1]
+        const v = p.match(/"value"\s*:\s*"([^"]+)"/)?.[1]
+        return n && v ? `${n}: ${v}` : null
+      }).filter(Boolean)
+    }
+  } catch (e) {}
+  return { title, priceUSD, description, specs }
 }
 
 function callClaude(productInfo, styleDesc) {
@@ -208,16 +223,28 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
   ]
 }`
 
+  // Detalii AliExpress de pasat la Claude — fara ele inventeaza orb
+  const productContext = [
+    `Nume produs: "${productInfo.title || 'produs'}"`,
+    `Pret RO: ~${rp} LEI`,
+    productInfo.description ? `\nDescriere AliExpress (de aici extragi feature-urile reale):\n"""\n${productInfo.description}\n"""` : '',
+    productInfo.specs?.length ? `\nSpecificatii produs:\n- ${productInfo.specs.join('\n- ')}` : ''
+  ].filter(Boolean).join('\n')
+
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 4000,
     system: system,
-    messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru produsul: "${productInfo.title || 'produs'}" (pret AliExpress ~${productInfo.priceUSD} USD, pret RO final ~${rp} LEI).
+    messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru ACEST produs concret:
 
-Studiaza numele produsului si gandeste-te:
-- Ce PROBLEMA rezolva? (nu "ofera comoditate" — fii specific: "copilul varsa mancarea pe haine", "podeaua e plina de matase de la curatat", "spatele te doare cand stai pe scaun", etc.)
-- Cine cumpara? (mama tanara, batran, sportiv, etc.) — adapteaza copy-ul
-- Care e momentul cheie cand il foloseste? (descrie in featureSections)
+${productContext}
+
+Reguli specifice produsului:
+- productName si headline trebuie sa fie despre ACEST produs (nu generic).
+- benefits si topBenefits sa fie despre features REALE ale produsului (din descriere/specs de mai sus, NU inventezi).
+- featureSections.bullets sa cite specs concrete (dimensiuni, material, mod de folosire, etc.) din descrierea / specs date.
+- testimoniale sa mentioneze cum au folosit ACEST produs (nu generic "produs bun").
+- Daca descrierea spune ceva specific (gen "5 niveluri rezistenta", "bateriile dureaza 40 ore"), foloseste exact in featureSections.
 
 Returneaza EXACT acest JSON schema completat:
 ${schema}` }]
@@ -366,14 +393,16 @@ module.exports = async function handler(req, res) {
     // testimoniale despre "produs bun" care apoi nu se potrivesc cu produsul real.
     const html = await fetchWithScraper(aliUrl).catch(() => '')
     let aliImages = []
-    let productInfo = { title: '', priceUSD: 0 }
+    let productInfo = { title: '', priceUSD: 0, description: '', specs: [] }
     if (html.length > 1000) {
       aliImages = extractImages(html)
       const meta = extractMeta(html)
       if (meta.title?.length > 5) productInfo.title = meta.title.substring(0, 100)
       if (meta.priceUSD > 0) productInfo.priceUSD = meta.priceUSD
+      if (meta.description) productInfo.description = meta.description
+      if (meta.specs?.length) productInfo.specs = meta.specs
     }
-    console.log('Ali scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length })
+    console.log('Ali scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length, descLen: productInfo.description?.length, specsCount: productInfo.specs?.length })
 
     // STEP 2: Claude cu produsul REAL — toate textele (benefits, testimoniale,
     // featureSections, FAQ) sunt despre produsul efectiv, nu generic.

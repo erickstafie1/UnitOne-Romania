@@ -33,6 +33,20 @@ function buildHideScript() {
     '</style>'
 }
 
+// Forteaza LP-ul sa fie full-width PESTE constrangerile de theme.liquid (Dawn,
+// Horizon, etc). Necesar pentru cazurile in care templeturile noastre nu se
+// instaleaza (teme Shopify-generate "test-data" rejected silent) si LP-ul cade
+// pe theme.liquid care impune max-width via .page-width / .container.
+function buildFullWidthOverride() {
+  return '<style>\n' +
+    '#unitone-lp,#unitone-lp *{box-sizing:border-box}\n' +
+    /* Cancel theme width constraints around our LP */
+    '.product,.product__main,.product-section,.page-width,.container,.main-content,#MainContent,main,.shopify-section,.section-template--main{max-width:100%!important;padding-left:0!important;padding-right:0!important;margin-left:0!important;margin-right:0!important;width:100%!important}\n' +
+    /* Hide native Shopify product header (title, price, add-to-cart) that some themes auto-render on product pages — our LP has its own */
+    '.product__title,.product__info-container > h1,.product-form,.product__price,.price--listing,.product-form__buttons,.product__view-details,.product__pickup-availabilities,.product__media-wrapper,.product__media-list,.shopify-payment-button{display:none!important}\n' +
+    '</style>'
+}
+
 // Universal COD form mode — works with BOTH Releasit and EasySell out of the box.
 // Selectors below use CLASS (not ID), so multiple buttons per page all get processed
 // instead of just the first one. The hidden `_rsi-cod-form-is-gempage` marker tells
@@ -228,9 +242,22 @@ module.exports = async function handler(req, res) {
         finalHtml = buildHideScript() + finalHtml
         templateSuffix = 'pagecod'
       }
+      // Forteaza full-width chiar daca templeturile noastre n-au prins
+      finalHtml = buildFullWidthOverride() + finalHtml
+
+      // IMPORTANT: nu trimitem title pe UPDATE — daca user-ul redenumeste LP-ul
+      // in editor, NU vrem sa schimbam numele produsului Shopify (al lor real).
+      // LP title se pastreaza ca metafield separat (unitone:lp_title) ca sa-l
+      // afisam in dashboard, dar product.title ramane intact.
+      const lpTitleMetafield = title ? {
+        metafields: [
+          ...(editorSourceMetafield.metafields || []),
+          { namespace: 'unitone', key: 'lp_title', type: 'single_line_text_field', value: String(title).slice(0, 250) }
+        ]
+      } : editorSourceMetafield
 
       const result = await auth.call('/products/' + pageId + '.json', 'PUT', {
-        product: { id: pageId, title: title || 'Pagina COD', body_html: finalHtml, template_suffix: templateSuffix, ...editorSourceMetafield }
+        product: { id: pageId, body_html: finalHtml, template_suffix: templateSuffix, ...lpTitleMetafield }
       })
       if (result.product) {
         return res.status(200).json({ success: true, pageUrl: 'https://' + auth.shop + '/products/' + result.product.handle, template_suffix: templateSuffix })
@@ -270,8 +297,39 @@ module.exports = async function handler(req, res) {
       finalHtml = buildHideScript() + finalHtml
       templateSuffix = 'pagecod'
     }
+    // Forteaza full-width — defense in depth contra theme.liquid constraints
+    finalHtml = buildFullWidthOverride() + finalHtml
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
+
+    // Backup original body_html BEFORE overwriting — pe delete LP putem restaura
+    // descrierea originala a produsului. Skip daca produsul are deja LP atasat
+    // (tag-ul nostru) sau daca am salvat deja backup-ul.
+    try {
+      const current = await auth.call('/products/' + productId + '.json')
+      const hasOurTag = (current.product?.tags || '').includes('unitone-cod-page')
+      if (!hasOurTag && current.product?.body_html) {
+        await auth.call('/products/' + productId + '/metafields.json', 'POST', {
+          metafield: {
+            namespace: 'unitone',
+            key: 'original_body_html',
+            type: 'multi_line_text_field',
+            value: current.product.body_html.slice(0, 65535)
+          }
+        }).catch(() => {})
+      }
+    } catch (e) { console.log('Backup body_html skip:', e.message) }
+
+    // IMPORTANT: NU trimitem title pe primul publish — produsul a fost selectat
+    // de user din Shopify (numele lui real). LP title (numele dat de user in
+    // editor) il salvam in metafield separat pentru afisare in dashboard-ul nostru.
+    const lpTitleMetafield = title ? [
+      { namespace: 'unitone', key: 'lp_title', type: 'single_line_text_field', value: String(title).slice(0, 250) }
+    ] : []
+    const allMetafields = [
+      ...(editorSourceMetafield.metafields || []),
+      ...lpTitleMetafield
+    ]
 
     const result = await auth.call('/products/' + productId + '.json', 'PUT', {
       product: {
@@ -280,8 +338,7 @@ module.exports = async function handler(req, res) {
         template_suffix: templateSuffix,
         tags: 'unitone-cod-page',
         status: newStatus,
-        ...(title && { title }),
-        ...editorSourceMetafield
+        ...(allMetafields.length && { metafields: allMetafields })
       }
     })
 
