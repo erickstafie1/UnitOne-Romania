@@ -688,6 +688,12 @@ function buildHTML(data) {
   const featureSections = (data.featureSections || []).slice(0, 2)
   const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
   const riskReversalText = data.riskReversalText || 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.'
+  // Palette accents — generator assigns these per LP; fallback la galben default
+  const secondary = data.style?.secondaryColor || '#111111'
+  const bgAccent = data.style?.bgAccent || '#fffbeb'
+  const bgAccentBorder = data.style?.bgAccentBorder || '#facc15'
+  // Hero layout variant ('split' | 'centered' | 'overlay') — see HERO_VARIANTS in api/generate.js
+  const heroVariant = data.heroVariant || 'split'
 
   // Universal COD hook (multi-app + multi-button) — see relBtn() in addBlocks()
   const relBtn = `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real</span></div>`
@@ -752,10 +758,16 @@ function buildHTML(data) {
   // Gift banner pulse animation pentru atragere atentie
   const styleBlock = `<style>
     @media(min-width:768px){
-      #unitone-lp .unitone-hero-grid{grid-template-columns:1fr 1fr !important;gap:40px !important;padding:48px 32px !important;align-items:center}
-      #unitone-lp .unitone-hero-headline{font-size:32px !important;text-align:left !important}
-      #unitone-lp .unitone-hero-sub{text-align:left !important;font-size:16px !important}
-      #unitone-lp .unitone-hero-rating{justify-content:flex-start !important}
+      #unitone-lp .unitone-hero-split{grid-template-columns:1fr 1fr !important;gap:40px !important;padding:48px 32px !important;align-items:center}
+      #unitone-lp .unitone-hero-split .unitone-hero-headline{font-size:32px !important;text-align:left !important}
+      #unitone-lp .unitone-hero-split .unitone-hero-sub{text-align:left !important;font-size:16px !important}
+      #unitone-lp .unitone-hero-split .unitone-hero-rating{justify-content:flex-start !important}
+      #unitone-lp .unitone-hero-split .unitone-hero-priceblock{justify-content:flex-start !important}
+      #unitone-lp .unitone-hero-centered{padding:48px 32px !important}
+      #unitone-lp .unitone-hero-centered .unitone-hero-headline{font-size:36px !important}
+      #unitone-lp .unitone-hero-centered .unitone-hero-img{max-width:560px !important;margin:0 auto 24px !important}
+      #unitone-lp .unitone-hero-overlay{min-height:520px !important}
+      #unitone-lp .unitone-hero-overlay .unitone-hero-headline{font-size:42px !important}
       #unitone-lp .unitone-feature-grid{grid-template-columns:1fr 1fr !important;gap:40px !important}
       #unitone-lp .unitone-topben-grid{grid-template-columns:repeat(3,1fr) !important;gap:20px !important}
       #unitone-lp .unitone-test-grid{grid-template-columns:repeat(3,1fr) !important;gap:18px !important}
@@ -769,6 +781,29 @@ function buildHTML(data) {
     #unitone-lp details[open] > summary::after{content:"−"}
   </style>`
 
+  // Hero content blocks — reused across variants
+  const ratingBlock = `<div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px"><span style="color:#f59e0b;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-size:13px;color:#555;font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span></div>`
+  const headlineBlock = `<h1 class="unitone-hero-headline" style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 12px;color:#111;text-align:center">${data.headline || data.productName || ''}</h1>`
+  const subBlock = `<p class="unitone-hero-sub" style="font-size:15px;color:#555;line-height:1.6;margin:0 0 18px;text-align:center">${data.subheadline || ''}</p>`
+  const priceBlock = `<div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:18px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span><span style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:${primary}">LEI</span><span style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span></div><p style="font-size:12px;color:#999;text-align:center;margin:0 0 16px">Economisești ${oldPrice - price} LEI</p>`
+  const trustRowBlock = `<div style="display:flex;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap"><span style="font-size:12px;color:#16a34a;font-weight:700">&#10003; Livrare 24-48h</span><span style="font-size:12px;color:#16a34a;font-weight:700">&#128666; Plata ramburs</span><span style="font-size:12px;color:#16a34a;font-weight:700">&#8617; Retur 30 zile</span></div>`
+  const heroImgFallback = '<div style="background:#f0f0f0;aspect-ratio:1;border-radius:8px;width:100%"></div>'
+
+  // 3 hero variants — same content, completely different visual structure.
+  // Picked at generation time, persisted in data.heroVariant.
+  let heroHtml
+  if (heroVariant === 'centered') {
+    // Centered: image top full-width, all details below center-aligned
+    heroHtml = `<div class="unitone-hero-centered" style="padding:28px 20px;background:${bgAccent};text-align:center">${imgs[0] ? `<div class="unitone-hero-img" style="margin:0 auto 18px">${imgTag(imgs[0], 'width:100%;max-height:420px;object-fit:contain;display:block;border-radius:8px')}</div>` : ''}${ratingBlock}${headlineBlock}${subBlock}${priceBlock}${relBtn}${trustRowBlock}</div>`
+  } else if (heroVariant === 'overlay') {
+    // Overlay: image as background with darkened gradient, text on top
+    const bgImg = imgs[0] || ''
+    heroHtml = `<div class="unitone-hero-overlay" style="position:relative;min-height:480px;padding:40px 20px;background:${bgImg ? `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.75)),url('${bgImg}')` : secondary};background-size:cover;background-position:center;color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center"><div style="max-width:640px;margin:0 auto"><div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px"><span style="color:#facc15;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-size:13px;color:rgba(255,255,255,0.9);font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span></div><h1 class="unitone-hero-headline" style="font-size:28px;font-weight:900;line-height:1.2;margin:0 0 14px;color:#fff">${data.headline || data.productName || ''}</h1><p class="unitone-hero-sub" style="font-size:15px;color:rgba(255,255,255,0.9);line-height:1.6;margin:0 0 22px">${data.subheadline || ''}</p><div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:18px;color:rgba(255,255,255,0.55);text-decoration:line-through">${oldPrice} LEI</span><span style="font-size:42px;font-weight:900;color:#fff;line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:#fff">LEI</span><span style="background:#fff;color:${primary};font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span></div><p style="font-size:12px;color:rgba(255,255,255,0.7);text-align:center;margin:0 0 20px">Economisești ${oldPrice - price} LEI</p>${relBtn}<div style="display:flex;justify-content:center;gap:14px;margin-top:16px;flex-wrap:wrap"><span style="font-size:12px;color:#fff;font-weight:700">&#10003; Livrare 24-48h</span><span style="font-size:12px;color:#fff;font-weight:700">&#128666; Plata ramburs</span><span style="font-size:12px;color:#fff;font-weight:700">&#8617; Retur 30 zile</span></div></div></div>`
+  } else {
+    // Split (default): image left / details right (2-col on desktop)
+    heroHtml = `<div class="unitone-hero-split" style="display:grid;grid-template-columns:1fr;gap:20px;padding:20px;background:#fff"><div>${imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto;border-radius:8px') : heroImgFallback}</div><div>${ratingBlock}${headlineBlock}${subBlock}${priceBlock}${relBtn}${trustRowBlock}</div></div>`
+  }
+
   return [
     `<div id="unitone-lp">`,
     styleBlock,
@@ -779,36 +814,8 @@ function buildHTML(data) {
     `&#128222; ${phoneNumber} &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDĂ &middot; PLATĂ LA LIVRARE`,
     `</div>`,
 
-    // ─── 2. Hero 2-col desktop (imagine stanga / detalii dreapta) ─────
-    `<div class="unitone-hero-grid" style="display:grid;grid-template-columns:1fr;gap:20px;padding:20px;background:#fff">`,
-    // Coloana stanga: imagine principala
-    `<div>`,
-    imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto;border-radius:8px') : '<div style="background:#f0f0f0;aspect-ratio:1;border-radius:8px"></div>',
-    `</div>`,
-    // Coloana dreapta: rating + titlu + pret + CTA + trust
-    `<div>`,
-    `<div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px">`,
-    `<span style="color:#f59e0b;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
-    `<span style="font-size:13px;color:#555;font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span>`,
-    `</div>`,
-    `<h1 class="unitone-hero-headline" style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 12px;color:#111;text-align:center">${data.headline || data.productName || ''}</h1>`,
-    `<p class="unitone-hero-sub" style="font-size:15px;color:#555;line-height:1.6;margin:0 0 18px;text-align:center">${data.subheadline || ''}</p>`,
-    // Pret cu reducere
-    `<div style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">`,
-    `<span style="font-size:18px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span>`,
-    `<span style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span>`,
-    `<span style="font-size:18px;font-weight:900;color:${primary}">LEI</span>`,
-    `<span style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span>`,
-    `</div>`,
-    `<p style="font-size:12px;color:#999;text-align:center;margin:0 0 16px">Economisești ${oldPrice - price} LEI</p>`,
-    relBtn,
-    `<div style="display:flex;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap">`,
-    `<span style="font-size:12px;color:#16a34a;font-weight:700">&#10003; Livrare 24-48h</span>`,
-    `<span style="font-size:12px;color:#16a34a;font-weight:700">&#128666; Plata ramburs</span>`,
-    `<span style="font-size:12px;color:#16a34a;font-weight:700">&#8617; Retur 30 zile</span>`,
-    `</div>`,
-    `</div>`, // /coloana dreapta
-    `</div>`, // /hero-grid
+    // ─── 2. Hero (3 variante: split / centered / overlay) ─────────────
+    heroHtml,
 
     // ─── 3. Trust microstrip ──────────────────────────────────────────
     `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 16px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap;text-align:center">`,
@@ -818,9 +825,9 @@ function buildHTML(data) {
     `<span style="font-size:12px;color:#333;font-weight:700">&#127775; Garanție 24 luni</span>`,
     `</div>`,
 
-    // ─── 4. Gift banner (cu pulse animation) ──────────────────────────
+    // ─── 4. Gift banner (cu pulse animation, palette accent) ──────────
     `<div style="padding:18px 20px;text-align:center;background:#fff">`,
-    `<div class="unitone-gift" style="display:inline-block;background:#fffbeb;border:2px solid #facc15;border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:#92400e">`,
+    `<div class="unitone-gift" style="display:inline-block;background:${bgAccent};border:2px solid ${bgAccentBorder};border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:${secondary}">`,
     `&#127873; Primești Cadou în valoare de ${giftValue} LEI!`,
     `</div>`,
     `</div>`,

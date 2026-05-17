@@ -2,6 +2,36 @@
 const https = require('https')
 const http = require('http')
 
+// Curated COD-optimized palettes — each combination is tested in real RO COD
+// campaigns. Random pick per generation so every merchant's LP feels unique.
+// Each palette has: primary (CTA + accents), secondary (text/borders),
+// bgAccent (gift banner/highlight bg), bgAccentBorder (highlight border).
+const PALETTES = [
+  // 1. Classic Red — universal high-urgency default (most COD pages)
+  { primary: '#dc2626', secondary: '#111111', bgAccent: '#fffbeb', bgAccentBorder: '#facc15' },
+  // 2. Bold Blue — trust, tech, finance, B2B-ish
+  { primary: '#1e40af', secondary: '#0f172a', bgAccent: '#eff6ff', bgAccentBorder: '#3b82f6' },
+  // 3. Forest Green — health, wellness, eco, food
+  { primary: '#16a34a', secondary: '#14532d', bgAccent: '#f0fdf4', bgAccentBorder: '#22c55e' },
+  // 4. Burnt Orange — warm, food, lifestyle, beauty (subdued)
+  { primary: '#ea580c', secondary: '#431407', bgAccent: '#fff7ed', bgAccentBorder: '#fb923c' },
+  // 5. Royal Purple — premium beauty, fashion, accessories
+  { primary: '#7c3aed', secondary: '#1e1b4b', bgAccent: '#faf5ff', bgAccentBorder: '#a855f7' },
+  // 6. Hot Pink — beauty, cosmetics, women's products
+  { primary: '#db2777', secondary: '#500724', bgAccent: '#fdf2f8', bgAccentBorder: '#ec4899' },
+  // 7. Deep Teal — wellness, eco, modern minimalist
+  { primary: '#0d9488', secondary: '#042f2e', bgAccent: '#f0fdfa', bgAccentBorder: '#14b8a6' },
+  // 8. Charcoal Gold — luxury, premium, high-end fashion/tech
+  { primary: '#1f2937', secondary: '#111827', bgAccent: '#fefce8', bgAccentBorder: '#d4af37' }
+]
+
+// Hero layout variants — same content, different visual treatment.
+// Saved with the LP at generation time so re-edits preserve the chosen look.
+const HERO_VARIANTS = ['split', 'centered', 'overlay']
+// 'split'    - image left / details right (2-col on desktop) — current default
+// 'centered' - image full-width on top, all details centered below (more emotional)
+// 'overlay'  - image as background with darkened overlay + text on top (bold/luxury)
+
 function fetchWithScraper(url) {
   const apiKey = process.env.SCRAPER_API_KEY
   if (!apiKey) return fetchDirect(url)
@@ -352,6 +382,20 @@ module.exports = async function handler(req, res) {
       goodGemini[3] || ali[3] || null   // UGC - client fericit
     ].filter(Boolean)
     copy.aliImages = aliImages
+
+    // Inject random palette + hero variant — each LP gets a unique "signature"
+    // so two merchants generating from same product never get identical pages.
+    // Saved with the LP so re-edits preserve the chosen look.
+    const palette = PALETTES[Math.floor(Math.random() * PALETTES.length)]
+    const heroVariant = HERO_VARIANTS[Math.floor(Math.random() * HERO_VARIANTS.length)]
+    copy.style = Object.assign({}, copy.style || {}, {
+      primaryColor: palette.primary,
+      secondaryColor: palette.secondary,
+      bgAccent: palette.bgAccent,
+      bgAccentBorder: palette.bgAccentBorder
+    })
+    copy.heroVariant = heroVariant
+    console.log('Variant signature: palette=' + palette.primary + ' hero=' + heroVariant)
 
     console.log('=== DONE === Images:', copy.images.length)
     res.status(200).json({ success: true, data: copy })
