@@ -355,7 +355,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, styleDesc } = req.body
+    const { aliUrl, styleDesc, presetStyle } = req.body
     if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
 
     const geminiKey = process.env.GEMINI_API_KEY
@@ -426,18 +426,25 @@ module.exports = async function handler(req, res) {
     ].filter(Boolean)
     copy.aliImages = aliImages
 
-    // Smart palette + hero pick — match pe cuvinte cheie din descrierea
-    // user-ului SAU din numele scrape-uit de pe AliExpress. Fara nimic util,
-    // cade pe random pentru diversitate.
-    const variants = pickVariantsByDescription(styleDesc, copy.productName)
-    copy.style = Object.assign({}, copy.style || {}, {
-      primaryColor: variants.palette.primary,
-      secondaryColor: variants.palette.secondary,
-      bgAccent: variants.palette.bgAccent,
-      bgAccentBorder: variants.palette.bgAccentBorder
-    })
-    copy.heroVariant = variants.heroVariant
-    console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant + ' (from desc=' + (styleDesc ? 'YES' : 'NO') + ')')
+    // Style selection:
+    //  1. presetStyle (user a venit din Templates → are paleta fixata) → override
+    //  2. smart pick din descriere + nume scrape-uit → palette + hero din keywords
+    //  3. fallback random pentru diversitate
+    if (presetStyle && presetStyle.primaryColor) {
+      copy.style = Object.assign({}, copy.style || {}, presetStyle)
+      if (!copy.heroVariant) copy.heroVariant = 'split'  // default safe daca preset nu specifica
+      console.log('Variant signature: preset palette=' + presetStyle.primaryColor + ' hero=' + (presetStyle.heroVariant || 'split'))
+    } else {
+      const variants = pickVariantsByDescription(styleDesc, copy.productName)
+      copy.style = Object.assign({}, copy.style || {}, {
+        primaryColor: variants.palette.primary,
+        secondaryColor: variants.palette.secondary,
+        bgAccent: variants.palette.bgAccent,
+        bgAccentBorder: variants.palette.bgAccentBorder
+      })
+      copy.heroVariant = variants.heroVariant
+      console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant + ' (from desc=' + (styleDesc ? 'YES' : 'NO') + ')')
+    }
 
     console.log('=== DONE === Images:', copy.images.length)
     res.status(200).json({ success: true, data: copy })

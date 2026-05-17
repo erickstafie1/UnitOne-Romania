@@ -13,7 +13,7 @@ const STEPS = [
   { pct: 97, msg: 'Finalizare pagină', delay: 14000 },
 ]
 
-export default function Generator({ onGenerated, onBack }) {
+export default function Generator({ onGenerated, onBack, presetStyle }) {
   const [aliUrl, setAliUrl] = useState('')
   const [styleDesc, setStyleDesc] = useState('')
   const [loading, setLoading] = useState(false)
@@ -70,7 +70,11 @@ export default function Generator({ onGenerated, onBack }) {
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aliUrl: aliUrl.trim(), styleDesc: styleDesc.trim() })
+        body: JSON.stringify({
+          aliUrl: aliUrl.trim(),
+          styleDesc: styleDesc.trim(),
+          presetStyle: presetStyle?.style || null  // overrides smart-pick palette
+        })
       })
       cancelRef.current = true
       if (!res.ok) throw new Error('Server error ' + res.status)
@@ -137,6 +141,11 @@ export default function Generator({ onGenerated, onBack }) {
     >
       <Card>
         <BlockStack gap="400">
+          {presetStyle && (
+            <Banner tone="info">
+              Stil pre-selectat: <strong>{presetStyle.templateName}</strong>. AI-ul va genera conținutul pentru produsul tău folosind paleta și layout-ul acestui stil.
+            </Banner>
+          )}
           <TextField
             label="Link AliExpress"
             value={aliUrl}

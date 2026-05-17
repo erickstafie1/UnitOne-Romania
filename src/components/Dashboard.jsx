@@ -15,7 +15,7 @@ const CONTACT_EMAIL = 'bellatorixx@gmail.com'
 
 export default function Dashboard({
   shop, plan, planLimit, publishLimit = 1,
-  onNew, onEdit, onUseTemplate,
+  onNew, onEdit, onUseTemplate, onUseStyle,
   section = 'home',
   onSectionChange,
   onPlanChange
@@ -115,7 +115,7 @@ export default function Dashboard({
           onEdit={openEdit} onToggle={togglePage} onDelete={deletePage} deleting={deleting} />
       )}
       {section === 'templates' && (
-        <TemplatesView onUse={onUseTemplate || onNew} />
+        <TemplatesView onUse={onUseTemplate || onNew} onUseAsStyle={onUseStyle || onNew} />
       )}
       {section === 'pricing' && (
         <PricingView currentPlan={plan} shop={shop} onPlanChange={onPlanChange} />
@@ -640,11 +640,17 @@ const TEMPLATES = [
   }
 ]
 
-function TemplatesView({ onUse }) {
+function TemplatesView({ onUse, onUseAsStyle }) {
+  // Refactored: fiecare template card are 2 actiuni
+  //   PRIMARY  : "Generează cu AI" — duce la Generator, AI generează conținut
+  //              pentru produsul user-ului folosind paleta + heroVariant din
+  //              template ca preset stil. Acesta e flow-ul recomandat.
+  //   SECONDARY: "Vezi exemplu" — deschide editor cu continutul placeholder
+  //              al template-ului (utilitar doar ca previzualizare).
   return (
     <Page
-      title="Template-uri"
-      subtitle="Alege un template optimizat pe nișa ta — editorul se deschide cu conținutul pre-completat."
+      title="Stiluri pre-făcute"
+      subtitle="Alege un stil — apoi AI-ul îl aplică pe produsul tău, generând conținut specific pentru tine."
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, gridAutoRows: '1fr' }}>
         {TEMPLATES.map((t) => (
@@ -658,7 +664,7 @@ function TemplatesView({ onUse }) {
             gap: 12
           }}>
             <div style={{
-              background: '#f6f6f7',
+              background: t.accent,
               borderRadius: 8,
               padding: 32,
               minHeight: 120,
@@ -666,16 +672,19 @@ function TemplatesView({ onUse }) {
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <span style={{ fontSize: 48, color: '#6d7175', lineHeight: 1 }}>{t.emoji}</span>
+              <span style={{ fontSize: 48, color: '#fff', lineHeight: 1 }}>{t.emoji}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Text as="span" variant="bodySm" tone="subdued">{t.name}</Text>
-              <Text as="h3" variant="headingMd">{t.data.headline}</Text>
+              <Text as="span" variant="bodySm" tone="subdued">Stil</Text>
+              <Text as="h3" variant="headingMd">{t.name}</Text>
               <Text as="p" variant="bodySm" tone="subdued">{t.description}</Text>
             </div>
             <div style={{ flex: 1, minHeight: 4 }} />
-            <Button onClick={() => onUse?.(t.data)} variant="primary" fullWidth icon={ChevronRightIcon}>
-              Folosește template
+            <Button onClick={() => onUseAsStyle?.(t)} variant="primary" fullWidth icon={ChevronRightIcon}>
+              Generează AI cu acest stil
+            </Button>
+            <Button onClick={() => onUse?.(t.data)} variant="plain" fullWidth size="slim">
+              Vezi exemplu
             </Button>
           </div>
         ))}

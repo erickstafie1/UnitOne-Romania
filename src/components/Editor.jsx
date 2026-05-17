@@ -201,11 +201,15 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
   // ─── beforeunload: salvare localStorage + flush la backend daca avem pageId ──
   // Cand user inchide tab-ul / navigheaza away, salvam DRAFT-ul:
-  //  - Mereu in localStorage (chiar daca nu are pageId Shopify inca)
+  //  - Mereu in localStorage daca avem identificator stabil (id sau aliUrl)
   //  - In Shopify metafield prin /api/publish daca avem pageId
   // La urmatoarea deschidere a editorului, draftul din localStorage e recuperat.
+  // IMPORTANT: nu salvam template-urile (fara id si aliUrl) sub cheie generica
+  // '_new' — altfel cross-contamination intre template-uri diferite.
   useEffect(() => {
-    const draftKey = 'unitone_draft_' + (data.id || data.aliUrl || 'new')
+    const stableId = data.id || data.aliUrl
+    if (!stableId) return  // Templates fara id => no draft save/restore
+    const draftKey = 'unitone_draft_' + stableId
 
     const saveLocal = () => {
       if (!gjsRef.current) return
@@ -817,9 +821,12 @@ function buildHTML(data) {
     `</details>`
   ].join('')).join('')
 
-  // 2 sectiuni image+text alternant (ca produsutil.ro): titlu CAPS + bullets cu icon galben
-  const featureSectionHtml = featureSections.map((fs, i) => {
-    const img = imgs[i + 1] || imgs[0]  // img[1] pentru prima sectiune, img[2] pentru a doua
+  // Render single feature section (image + text). Folosit separate pentru
+  // featureSection[0] si [1] ca sa le putem intercala in restul layout-ului
+  // si sa avem ritm imagine-text-imagine-text.
+  function renderFeatureSection(fs, i) {
+    if (!fs) return ''
+    const img = imgs[i + 1] || imgs[0]
     const reversed = i % 2 === 1
     const title = esc(fs.title || '')
     const bullets = (fs.bullets || []).map(b =>
@@ -834,7 +841,23 @@ function buildHTML(data) {
       `</div>`,
       `</div>`
     ].join('')
-  }).join('')
+  }
+
+  // Lifestyle banner cu imagine[3] (UGC) — apare intre testimoniale si urgency
+  // pentru ritm img-text-img-text in jumatatea de jos a paginii. Daca nu avem
+  // img[3], skip.
+  function renderLifestyleBanner() {
+    if (!imgs[3]) return ''
+    return [
+      `<div style="padding:0;background:#000;position:relative;overflow:hidden">`,
+      imgTag(imgs[3], 'width:100%;max-height:520px;object-fit:cover;display:block;opacity:0.95'),
+      `<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:32px 20px;text-align:center">`,
+      `<p style="color:#fff;font-size:16px;font-weight:700;margin:0 0 4px;letter-spacing:0.3px">&#10003; Folosit deja de ${reviewCount.toLocaleString()}+ clienți</p>`,
+      `<p style="color:rgba(255,255,255,0.85);font-size:13px;margin:0">Comandă la prețul redus — livrare în toată România</p>`,
+      `</div>`,
+      `</div>`
+    ].join('')
+  }
 
   // 3-card grid pentru top 3 beneficii (Section 5 din produsutil.ro)
   const topBenefitsHtml = topBenefits.length ? [
@@ -936,13 +959,13 @@ function buildHTML(data) {
       `</div>`
     ].join('') : '',
 
-    // ─── 5. Top 3 feature grid ────────────────────────────────────────
+    // ─── 5. Top 3 feature grid (TEXT) ─────────────────────────────────
     topBenefitsHtml,
 
-    // ─── 6. 2x image+text alternant ───────────────────────────────────
-    featureSectionHtml,
+    // ─── 6a. Feature section 1 (IMG + TEXT) ───────────────────────────
+    renderFeatureSection(featureSections[0], 0),
 
-    // ─── 7. Risk reversal box (cu border-left verde) ──────────────────
+    // ─── 7. Risk reversal box (TEXT) ──────────────────────────────────
     `<div style="padding:24px 20px;background:#fff">`,
     `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:20px 22px;border-radius:6px">`,
     `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 10px">&#10003; COMANZI FĂRĂ GRIJI!</h3>`,
@@ -950,7 +973,10 @@ function buildHTML(data) {
     `</div>`,
     `</div>`,
 
-    // ─── 8. Testimoniale "Comanda Livrata" ────────────────────────────
+    // ─── 6b. Feature section 2 (IMG + TEXT, alternant) ────────────────
+    renderFeatureSection(featureSections[1], 1),
+
+    // ─── 8. Testimoniale (TEXT) ────────────────────────────────────────
     testimonials.length ? [
       `<div style="padding:32px 20px;background:#f9fafb">`,
       `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center">Ce spun clienții noștri</h2>`,
@@ -958,6 +984,10 @@ function buildHTML(data) {
       tCards,
       `</div></div>`
     ].join('') : '',
+
+    // ─── 8b. Lifestyle banner cu imagine[3] (IMG) — ritm img-text in
+    //         jumatatea de jos a paginii ───────────────────────────────
+    renderLifestyleBanner(),
 
     // ─── 9. Urgency banner rosu + CTA bonus ───────────────────────────
     `<div style="background:#fef2f2;border-top:3px solid ${primary};border-bottom:3px solid ${primary};padding:24px 20px;text-align:center">`,

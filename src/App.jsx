@@ -43,6 +43,10 @@ function AppShell() {
   const [screen, setScreen] = useState('loading')
   const [generatedData, setGeneratedData] = useState(null)
   const [editingPage, setEditingPage] = useState(null)
+  // presetStyle: paleta + heroVariant alese dintr-un template, transmise la
+  // Generator AI ca preset (in loc de smart pick). User-ul intra in Generator
+  // cu stilul deja fixat, completeaza doar URL-ul AliExpress.
+  const [presetStyle, setPresetStyle] = useState(null)
   const [shop, setShop] = useState('')
   const [plan, setPlan] = useState('free')
   const [planLimit, setPlanLimit] = useState(3)
@@ -142,15 +146,25 @@ function AppShell() {
         section={dashboardSection}
         onSectionChange={(s) => setDashboardSection(s)}
         onPlanChange={(p, l, pl) => { setPlan(p); setPlanLimit(l); if (pl !== undefined) setPublishLimit(pl) }}
-        onNew={() => setScreen('generator')}
+        onNew={() => { setPresetStyle(null); setScreen('generator') }}
         onEdit={(pageData) => { setEditingPage(pageData); setScreen('editor') }}
         onUseTemplate={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
+        onUseStyle={(template) => {
+          // Extrage paleta + heroVariant din template.data.style si pune in preset.
+          // Util: aceleasi culori pe care le vede user-ul pe card, vor ajunge pe LP.
+          setPresetStyle({
+            style: template.data.style || { primaryColor: template.accent },
+            templateName: template.name
+          })
+          setScreen('generator')
+        }}
       />
     )
     if (screen === 'generator') return (
       <Generator
+        presetStyle={presetStyle}
         onGenerated={(data) => { setGeneratedData(data); setEditingPage(null); setScreen('editor') }}
-        onBack={() => setScreen('dashboard')}
+        onBack={() => { setPresetStyle(null); setScreen('dashboard') }}
       />
     )
     if (screen === 'editor' && (generatedData || editingPage)) return (
