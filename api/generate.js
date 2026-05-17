@@ -446,7 +446,11 @@ module.exports = async function handler(req, res) {
       console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant + ' (from desc=' + (styleDesc ? 'YES' : 'NO') + ')')
     }
 
-    console.log('=== DONE === Images:', copy.images.length)
+    // Save aliUrl in returned data so editor's auto-save can use it as
+    // a stable identifier for localStorage draft (otherwise drafts collide).
+    copy.aliUrl = aliUrl
+
+    console.log('=== DONE === Images:', copy.images.length, '/4 (', goodGemini.length, 'Gemini +', aliImages.length, 'Ali)')
     res.status(200).json({ success: true, data: copy })
   } catch(err) {
     console.error('Error:', err.message)

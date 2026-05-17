@@ -203,12 +203,23 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   // Cand user inchide tab-ul / navigheaza away, salvam DRAFT-ul:
   //  - Mereu in localStorage daca avem identificator stabil (id sau aliUrl)
   //  - In Shopify metafield prin /api/publish daca avem pageId
-  // La urmatoarea deschidere a editorului, draftul din localStorage e recuperat.
-  // IMPORTANT: nu salvam template-urile (fara id si aliUrl) sub cheie generica
-  // '_new' — altfel cross-contamination intre template-uri diferite.
+  //  - Pentru templates fara aliUrl, generam un sessionId unic in sessionStorage
+  //    ca sa nu cross-contamineze intre template-uri diferite (cheia '_new'
+  //    bug-ul vechi). Sessionul moare cand inchizi tab-ul, dar localStorage-ul
+  //    cu acelasi sessionId ramane → poate recupera dupa F5.
   useEffect(() => {
-    const stableId = data.id || data.aliUrl
-    if (!stableId) return  // Templates fara id => no draft save/restore
+    let stableId = data.id || data.aliUrl
+    if (!stableId) {
+      // Template flow → generate sessionId persisted in sessionStorage
+      try {
+        let sid = sessionStorage.getItem('unitone_template_session')
+        if (!sid) {
+          sid = 'tpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)
+          sessionStorage.setItem('unitone_template_session', sid)
+        }
+        stableId = sid
+      } catch (e) { return }  // private mode, no sessionStorage → skip drafts
+    }
     const draftKey = 'unitone_draft_' + stableId
 
     const saveLocal = () => {
@@ -547,6 +558,65 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           {publishing ? 'Se procesează...' : isEditing ? 'Salvează' : 'Publică'}
         </Button>
       </div>
+
+      {/* Warning daca generarea n-a produs imagini (Gemini fail + Ali fail) */}
+      {(!data.images || data.images.length === 0) && data.aliUrl && (
+        <div style={{ padding: '8px 16px', background: '#fff4e5', borderBottom: '1px solid #ffc453' }}>
+          <Text as="span" variant="bodySm">
+            ⚠ Generarea de imagini a eșuat. Verifică în Vercel logs sau încearcă cu alt link AliExpress. Poți adăuga imagini manual prin blocul "Imagine" din stânga.
+          </Text>
+        </div>
+      )}
+
+      {/* Product info strip — visible cand un produs Shopify e atasat sau cand
+          editezi un LP existent. Arata numele + pretul real ca user-ul stie ce
+          publica si poate aplica pretul pe LP printr-un click. */}
+      {(selectedProduct || data.productId || data.id) && (
+        <div style={{
+          padding: '8px 16px',
+          background: '#f6f6f7',
+          borderBottom: '1px solid #e1e3e5',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          fontSize: 13,
+          flexWrap: 'wrap'
+        }}>
+          <span style={{ color: '#6d7175' }}>Pagina pentru:</span>
+          <strong style={{ color: '#202223' }}>
+            {selectedProduct?.title || data.productName || pageTitle}
+          </strong>
+          {selectedProduct?.variants?.[0]?.price && (
+            <>
+              <span style={{ color: '#d2d5d8' }}>·</span>
+              <span style={{ color: '#008060', fontWeight: 600 }}>
+                {selectedProduct.variants[0].price} LEI
+              </span>
+              <Button
+                size="micro"
+                onClick={() => {
+                  // Aplica pretul produsului pe LP: regex replace al primei
+                  // aparitii de preț in HTML (hero priceBlock are formatul
+                  // distinct: <span ... font-size:42px ... >PRICE</span>)
+                  if (!gjsRef.current) return
+                  const newPrice = Math.round(parseFloat(selectedProduct.variants[0].price))
+                  const oldPriceVal = Math.round(newPrice * 1.6)
+                  let html = gjsRef.current.getHtml()
+                  // Inlocuieste preturile: pattern strict pe span-ul mare de pret + struck-through
+                  html = html.replace(/(<span[^>]*font-size:42px[^>]*>)(\d+)(<\/span>)/, `$1${newPrice}$3`)
+                  html = html.replace(/(<span[^>]*text-decoration:line-through[^>]*>)(\d+)( LEI<\/span>)/, `$1${oldPriceVal}$3`)
+                  // Economisesti X LEI
+                  html = html.replace(/Economise(s|ș)ti \d+ LEI/g, `Economise$1ti ${oldPriceVal - newPrice} LEI`)
+                  gjsRef.current.setComponents(html)
+                  dirtyRef.current = true
+                }}
+              >
+                Aplică preț pe LP
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="ue-tb-error">
