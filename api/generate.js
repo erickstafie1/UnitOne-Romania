@@ -92,7 +92,11 @@ function callClaude(productInfo, styleDesc) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
-  const styleInstruction = styleDesc ? `Context client: "${styleDesc}".` : ''
+  // styleDesc e brief-ul user-ului (poate fi enhanced cu /api/chat?action=enhance_prompt)
+  // — devine instructiunea AUTORITARA pentru AUDIENTA + TON + UNGHI, nu doar "context".
+  const briefBlock = styleDesc
+    ? `\n\nBRIEF AUTORITAR (deciziile user-ului — RESPECTA-LE EXACT):\n"""\n${styleDesc}\n"""\n\nFoloseşte brief-ul de mai sus pentru:\n- audiența țintă (nume, varsta, durere reflectate in testimoniale si headline)\n- tonul copy-ului (formal/casual/emotional asa cum cere brief-ul)\n- unghiul de vanzare (frica/dorinta/economie/aspiratie din brief)\n- elementele cheie (mentionate in brief sa apara in benefits + featureSections)`
+    : ''
   // Prompt scris pentru a produce copy în stilul produsutil.ro:
   // - frază "PROBLEMĂ → REZOLVARE" cu cuvinte CAPITALIZATE la început
   // - testimoniale cu detalii CONCRETE despre cum a folosit produsul (nu "excelent")
@@ -107,8 +111,7 @@ REGULI CRITICE:
    Exemplu: "FARA MIZERIE — baveta colectoare prinde tot ce cade"
 3. Testimoniale: nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti) + text 2-3 fraze cu detaliu CONCRET despre utilizare (cum, cand, ce s-a schimbat). NU "produs excelent recomand".
 4. FAQ exact 6 intrebari in ordinea: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
-5. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).
-${styleInstruction}
+5. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).${briefBlock}
 
 Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
 

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, ProgressBar, Box } from '@shopify/polaris'
-import { ArrowLeftIcon, ChevronRightIcon, MagicIcon } from '@shopify/polaris-icons'
+import { ArrowLeftIcon, ChevronRightIcon, MagicIcon, WandIcon } from '@shopify/polaris-icons'
 
 const STEPS = [
   { pct: 12, msg: 'Conectare la AliExpress', delay: 700 },
@@ -20,7 +20,37 @@ export default function Generator({ onGenerated, onBack }) {
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
   const [error, setError] = useState('')
+  const [enhancing, setEnhancing] = useState(false)
+  const [enhanceMsg, setEnhanceMsg] = useState('')
   const cancelRef = useRef(false)
+
+  // AI Enhance — ia textul vag al user-ului si returneaza un brief polished
+  // pe care Claude principal il poate folosi sa genereze copy mult mai bun.
+  async function enhancePrompt() {
+    const txt = styleDesc.trim()
+    if (!txt) return
+    setEnhancing(true); setEnhanceMsg(''); setError('')
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'enhance_prompt',
+          text: txt,
+          productContext: aliUrl.trim() ? `Link AliExpress: ${aliUrl.trim()}` : ''
+        })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Eroare AI')
+      if (json.enhanced) {
+        setStyleDesc(json.enhanced)
+        setEnhanceMsg('✓ Descrierea a fost îmbunătățită — poți edita mai departe sau apăsa Generează')
+      }
+    } catch (e) {
+      setError('AI Enhance: ' + e.message)
+    } finally {
+      setEnhancing(false)
+    }
+  }
 
   async function generate() {
     if (!aliUrl.trim()) return
@@ -119,14 +149,28 @@ export default function Generator({ onGenerated, onBack }) {
 
           <TextField
             label="Descriere stil"
-            helpText="Opțional — context despre target, ton, paleta de culori"
+            helpText='Opțional — context despre target, ton, paleta de culori. Apasă „Îmbunătățește cu AI” pentru un brief polished.'
             value={styleDesc}
             onChange={setStyleDesc}
             placeholder="Ex: Pagină pentru bărbați 25-45 ani, culori negru și roșu, ton direct, accent pe durabilitate..."
             multiline={3}
             autoComplete="off"
+            disabled={enhancing}
           />
 
+          <InlineStack align="end" gap="200">
+            <Button
+              icon={WandIcon}
+              onClick={enhancePrompt}
+              loading={enhancing}
+              disabled={!styleDesc.trim() || enhancing}
+              size="slim"
+            >
+              {enhancing ? 'Îmbunătățesc...' : 'Îmbunătățește cu AI'}
+            </Button>
+          </InlineStack>
+
+          {enhanceMsg && <Banner tone="success">{enhanceMsg}</Banner>}
           {error && <Banner tone="critical">{error}</Banner>}
 
           <Button

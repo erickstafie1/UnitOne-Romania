@@ -672,18 +672,39 @@ function buildCSS(data) {
 // 8. Testimoniale "Comanda Livrata" — 9. Urgency CTA — 10. FAQ accordion
 // 11. Phone contact banner — 12. Footer cu legal links
 function buildHTML(data) {
-  const price = data.price || 149
-  const oldPrice = data.oldPrice || Math.round(price * 1.6)
-  const disc = Math.round((1 - price / oldPrice) * 100)
-  const imgs = data.images || []
+  // Sanitize text for safe interpolation inside HTML text content (NOT attrs).
+  // Escapes < and > so user/AI text can't accidentally inject tags.
+  // For attribute values use esc(v) AND wrap in double quotes (since esc keeps " as &quot;).
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+  // Sanitize URL for CSS url() — only allow http/https + standard chars.
+  // Strips anything weird so we don't break inline CSS.
+  const safeUrl = (u) => {
+    if (!u || typeof u !== 'string') return ''
+    if (!/^(https?:|data:image\/)/i.test(u)) return ''
+    return u.replace(/['"\\]/g, '')
+  }
+
+  const price = Math.max(1, Number(data.price) || 149)
+  const oldPriceRaw = Number(data.oldPrice) || Math.round(price * 1.6)
+  // Forteaza oldPrice > price ca disc/savings sa fie pozitive (altfel pare bug)
+  const oldPrice = oldPriceRaw > price ? oldPriceRaw : Math.round(price * 1.4)
+  const disc = Math.max(0, Math.round((1 - price / oldPrice) * 100))
+  const savings = Math.max(0, oldPrice - price)
+  const imgs = (data.images || []).filter(Boolean)
   const primary = data.style?.primaryColor || '#e8000d'
-  const reviewCount = data.reviewCount || 1247
-  const imgTag = (src, style) => src ? `<img src="${src}" style="${style || 'width:100%;display:block'}" />` : ''
+  const reviewCount = Math.max(0, Number(data.reviewCount) || 1247)
+  // imgTag — pune src ca atribut quoted, escape valorile
+  const imgTag = (src, style) => src ? `<img src="${esc(src)}" style="${style || 'width:100%;display:block'}" alt="" />` : ''
   const benefits = (data.benefits || []).slice(0, 5)
   const testimonials = data.testimonials || []
   // New fields (with fallbacks pentru date generate inainte de schema noua)
-  const giftValue = data.giftValue || 25
-  const phoneNumber = data.phoneNumber || '0700 000 000'
+  const giftValue = Number(data.giftValue) || 0  // 0 = banner ascuns
+  const phoneNumber = String(data.phoneNumber || '0700 000 000')
+  const phoneClean = phoneNumber.replace(/[^\d+]/g, '')
   const topBenefits = (data.topBenefits && data.topBenefits.length ? data.topBenefits : benefits.slice(0, 3)).slice(0, 3)
   const featureSections = (data.featureSections || []).slice(0, 2)
   const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
@@ -701,24 +722,30 @@ function buildHTML(data) {
   const scrollBtn = `<a href="#unitone-cod-anchor" style="display:inline-block;background:${primary};color:#fff;padding:16px 36px;border-radius:8px;font-size:17px;font-weight:900;text-decoration:none;letter-spacing:0.5px">&#128722; COMANDĂ ACUM</a>`
 
   // Testimoniale: cu badge "Comanda Livrata" verde + nume RO + oras RO (stilul produsutil.ro)
-  const tCards = testimonials.map(t => [
-    `<div style="background:#fff;border-radius:8px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #e5e7eb">`,
-    `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">`,
-    `<div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,${primary},#666);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${(t.name || '?').charAt(0)}</div>`,
-    `<div><div style="font-size:14px;font-weight:700;color:#111">${t.name || 'Client'}</div>`,
-    `<div style="font-size:12px;color:#999">${t.city || 'România'}</div></div>`,
-    `</div>`,
-    `<div style="color:#f59e0b;font-size:15px;margin-bottom:8px">&#9733;&#9733;&#9733;&#9733;&#9733;</div>`,
-    `<p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 12px">${t.text || ''}</p>`,
-    `<span style="display:inline-block;font-size:11px;background:#e8f5e9;color:#16a34a;border-radius:4px;padding:4px 10px;font-weight:600">&#10003; Comandă Livrată</span>`,
-    `</div>`
-  ].join('')).join('')
+  const tCards = testimonials.map(t => {
+    const name = esc(t.name || 'Client')
+    const city = esc(t.city || 'România')
+    const text = esc(t.text || '')
+    const initial = (t.name || '?').charAt(0).toUpperCase()
+    return [
+      `<div style="background:#fff;border-radius:8px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #e5e7eb">`,
+      `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">`,
+      `<div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,${primary},#666);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${esc(initial)}</div>`,
+      `<div><div style="font-size:14px;font-weight:700;color:#111">${name}</div>`,
+      `<div style="font-size:12px;color:#999">${city}</div></div>`,
+      `</div>`,
+      `<div style="color:#f59e0b;font-size:15px;margin-bottom:8px">&#9733;&#9733;&#9733;&#9733;&#9733;</div>`,
+      `<p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 12px">${text}</p>`,
+      `<span style="display:inline-block;font-size:11px;background:#e8f5e9;color:#16a34a;border-radius:4px;padding:4px 10px;font-weight:600">&#10003; Comandă Livrată</span>`,
+      `</div>`
+    ].join('')
+  }).join('')
 
   // FAQ accordion (HTML <details> nativ — fara JS)
   const faqHtml = (data.faq || []).map(f => [
     `<details style="margin-bottom:8px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:#fff">`,
-    `<summary style="padding:16px 18px;font-size:15px;font-weight:700;cursor:pointer;color:#111">${f.q}</summary>`,
-    `<div style="padding:0 18px 16px;font-size:14px;color:#555;line-height:1.7">${f.a}</div>`,
+    `<summary style="padding:16px 18px;font-size:15px;font-weight:700;cursor:pointer;color:#111">${esc(f.q)}</summary>`,
+    `<div style="padding:0 18px 16px;font-size:14px;color:#555;line-height:1.7">${esc(f.a)}</div>`,
     `</details>`
   ].join('')).join('')
 
@@ -726,15 +753,16 @@ function buildHTML(data) {
   const featureSectionHtml = featureSections.map((fs, i) => {
     const img = imgs[i + 1] || imgs[0]  // img[1] pentru prima sectiune, img[2] pentru a doua
     const reversed = i % 2 === 1
+    const title = esc(fs.title || '')
     const bullets = (fs.bullets || []).map(b =>
-      `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px"><span style="color:#facc15;font-size:18px;flex-shrink:0;line-height:1">&#9679;</span><span style="font-size:14px;color:#333;line-height:1.55">${b}</span></div>`
+      `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px"><span style="color:#facc15;font-size:18px;flex-shrink:0;line-height:1">&#9679;</span><span style="font-size:14px;color:#333;line-height:1.55">${esc(b)}</span></div>`
     ).join('')
     return [
       `<div class="unitone-feature-row" style="padding:28px 20px;background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">`,
       `<div class="unitone-feature-grid" style="display:grid;grid-template-columns:1fr;gap:20px;align-items:center">`,
       reversed
-        ? `<div>${bullets ? `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.3px">${fs.title || ''}</h3>${bullets}` : ''}</div>${img ? `<div>${imgTag(img, 'width:100%;border-radius:8px;display:block')}</div>` : ''}`
-        : `${img ? `<div>${imgTag(img, 'width:100%;border-radius:8px;display:block')}</div>` : ''}<div>${bullets ? `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.3px">${fs.title || ''}</h3>${bullets}` : ''}</div>`,
+        ? `<div>${bullets ? `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.3px">${title}</h3>${bullets}` : ''}</div>${img ? `<div>${imgTag(img, 'width:100%;border-radius:8px;display:block')}</div>` : ''}`
+        : `${img ? `<div>${imgTag(img, 'width:100%;border-radius:8px;display:block')}</div>` : ''}<div>${bullets ? `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.3px">${title}</h3>${bullets}` : ''}</div>`,
       `</div>`,
       `</div>`
     ].join('')
@@ -748,7 +776,7 @@ function buildHTML(data) {
     topBenefits.map(b => [
       `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px 18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)">`,
       `<div style="font-size:32px;line-height:1;margin-bottom:12px">&#127775;</div>`,
-      `<p style="font-size:15px;font-weight:600;color:#111;line-height:1.5;margin:0">${b}</p>`,
+      `<p style="font-size:15px;font-weight:600;color:#111;line-height:1.5;margin:0">${esc(b)}</p>`,
       `</div>`
     ].join('')).join(''),
     `</div></div>`
@@ -781,11 +809,16 @@ function buildHTML(data) {
     #unitone-lp details[open] > summary::after{content:"−"}
   </style>`
 
-  // Hero content blocks — reused across variants
+  // Hero content blocks — reused across variants (cu esc pe textul user-controlled)
+  const headlineText = esc(data.headline || data.productName || '')
+  const subText = esc(data.subheadline || '')
   const ratingBlock = `<div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px"><span style="color:#f59e0b;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-size:13px;color:#555;font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span></div>`
-  const headlineBlock = `<h1 class="unitone-hero-headline" style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 12px;color:#111;text-align:center">${data.headline || data.productName || ''}</h1>`
-  const subBlock = `<p class="unitone-hero-sub" style="font-size:15px;color:#555;line-height:1.6;margin:0 0 18px;text-align:center">${data.subheadline || ''}</p>`
-  const priceBlock = `<div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:18px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span><span style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:${primary}">LEI</span><span style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span></div><p style="font-size:12px;color:#999;text-align:center;margin:0 0 16px">Economisești ${oldPrice - price} LEI</p>`
+  const headlineBlock = `<h1 class="unitone-hero-headline" style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 12px;color:#111;text-align:center">${headlineText}</h1>`
+  const subBlock = subText ? `<p class="unitone-hero-sub" style="font-size:15px;color:#555;line-height:1.6;margin:0 0 18px;text-align:center">${subText}</p>` : ''
+  const savingsBlock = savings > 0 ? `<p style="font-size:12px;color:#999;text-align:center;margin:0 0 16px">Economisești ${savings} LEI</p>` : `<p style="margin:0 0 16px"></p>`
+  const oldPriceSpan = savings > 0 ? `<span style="font-size:18px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span>` : ''
+  const discBadge = disc > 0 ? `<span style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span>` : ''
+  const priceBlock = `<div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">${oldPriceSpan}<span style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:${primary}">LEI</span>${discBadge}</div>${savingsBlock}`
   const trustRowBlock = `<div style="display:flex;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap"><span style="font-size:12px;color:#16a34a;font-weight:700">&#10003; Livrare 24-48h</span><span style="font-size:12px;color:#16a34a;font-weight:700">&#128666; Plata ramburs</span><span style="font-size:12px;color:#16a34a;font-weight:700">&#8617; Retur 30 zile</span></div>`
   const heroImgFallback = '<div style="background:#f0f0f0;aspect-ratio:1;border-radius:8px;width:100%"></div>'
 
@@ -797,8 +830,12 @@ function buildHTML(data) {
     heroHtml = `<div class="unitone-hero-centered" style="padding:28px 20px;background:${bgAccent};text-align:center">${imgs[0] ? `<div class="unitone-hero-img" style="margin:0 auto 18px">${imgTag(imgs[0], 'width:100%;max-height:420px;object-fit:contain;display:block;border-radius:8px')}</div>` : ''}${ratingBlock}${headlineBlock}${subBlock}${priceBlock}${relBtn}${trustRowBlock}</div>`
   } else if (heroVariant === 'overlay') {
     // Overlay: image as background with darkened gradient, text on top
-    const bgImg = imgs[0] || ''
-    heroHtml = `<div class="unitone-hero-overlay" style="position:relative;min-height:480px;padding:40px 20px;background:${bgImg ? `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.75)),url('${bgImg}')` : secondary};background-size:cover;background-position:center;color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center"><div style="max-width:640px;margin:0 auto"><div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px"><span style="color:#facc15;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-size:13px;color:rgba(255,255,255,0.9);font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span></div><h1 class="unitone-hero-headline" style="font-size:28px;font-weight:900;line-height:1.2;margin:0 0 14px;color:#fff">${data.headline || data.productName || ''}</h1><p class="unitone-hero-sub" style="font-size:15px;color:rgba(255,255,255,0.9);line-height:1.6;margin:0 0 22px">${data.subheadline || ''}</p><div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:18px;color:rgba(255,255,255,0.55);text-decoration:line-through">${oldPrice} LEI</span><span style="font-size:42px;font-weight:900;color:#fff;line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:#fff">LEI</span><span style="background:#fff;color:${primary};font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span></div><p style="font-size:12px;color:rgba(255,255,255,0.7);text-align:center;margin:0 0 20px">Economisești ${oldPrice - price} LEI</p>${relBtn}<div style="display:flex;justify-content:center;gap:14px;margin-top:16px;flex-wrap:wrap"><span style="font-size:12px;color:#fff;font-weight:700">&#10003; Livrare 24-48h</span><span style="font-size:12px;color:#fff;font-weight:700">&#128666; Plata ramburs</span><span style="font-size:12px;color:#fff;font-weight:700">&#8617; Retur 30 zile</span></div></div></div>`
+    // CSS url() needs safeUrl to strip apostrophes/backslashes that would break inline style
+    const bgImg = safeUrl(imgs[0])
+    const overlayOldPrice = savings > 0 ? `<span style="font-size:18px;color:rgba(255,255,255,0.55);text-decoration:line-through">${oldPrice} LEI</span>` : ''
+    const overlayDiscBadge = disc > 0 ? `<span style="background:#fff;color:${primary};font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span>` : ''
+    const overlaySavings = savings > 0 ? `<p style="font-size:12px;color:rgba(255,255,255,0.7);text-align:center;margin:0 0 20px">Economisești ${savings} LEI</p>` : '<div style="margin:0 0 20px"></div>'
+    heroHtml = `<div class="unitone-hero-overlay" style="position:relative;min-height:480px;padding:40px 20px;background:${bgImg ? `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.75)),url("${bgImg}")` : secondary};background-size:cover;background-position:center;color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center"><div style="max-width:640px;margin:0 auto"><div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px"><span style="color:#facc15;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-size:13px;color:rgba(255,255,255,0.9);font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span></div><h1 class="unitone-hero-headline" style="font-size:28px;font-weight:900;line-height:1.2;margin:0 0 14px;color:#fff">${headlineText}</h1>${subText ? `<p class="unitone-hero-sub" style="font-size:15px;color:rgba(255,255,255,0.9);line-height:1.6;margin:0 0 22px">${subText}</p>` : ''}<div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">${overlayOldPrice}<span style="font-size:42px;font-weight:900;color:#fff;line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:#fff">LEI</span>${overlayDiscBadge}</div>${overlaySavings}${relBtn}<div style="display:flex;justify-content:center;gap:14px;margin-top:16px;flex-wrap:wrap"><span style="font-size:12px;color:#fff;font-weight:700">&#10003; Livrare 24-48h</span><span style="font-size:12px;color:#fff;font-weight:700">&#128666; Plata ramburs</span><span style="font-size:12px;color:#fff;font-weight:700">&#8617; Retur 30 zile</span></div></div></div>`
   } else {
     // Split (default): image left / details right (2-col on desktop)
     heroHtml = `<div class="unitone-hero-split" style="display:grid;grid-template-columns:1fr;gap:20px;padding:20px;background:#fff"><div>${imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto;border-radius:8px') : heroImgFallback}</div><div>${ratingBlock}${headlineBlock}${subBlock}${priceBlock}${relBtn}${trustRowBlock}</div></div>`
@@ -825,12 +862,14 @@ function buildHTML(data) {
     `<span style="font-size:12px;color:#333;font-weight:700">&#127775; Garanție 24 luni</span>`,
     `</div>`,
 
-    // ─── 4. Gift banner (cu pulse animation, palette accent) ──────────
-    `<div style="padding:18px 20px;text-align:center;background:#fff">`,
-    `<div class="unitone-gift" style="display:inline-block;background:${bgAccent};border:2px solid ${bgAccentBorder};border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:${secondary}">`,
-    `&#127873; Primești Cadou în valoare de ${giftValue} LEI!`,
-    `</div>`,
-    `</div>`,
+    // ─── 4. Gift banner (cu pulse animation, palette accent) — ascuns daca giftValue<=0
+    giftValue > 0 ? [
+      `<div style="padding:18px 20px;text-align:center;background:#fff">`,
+      `<div class="unitone-gift" style="display:inline-block;background:${bgAccent};border:2px solid ${bgAccentBorder};border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:${secondary}">`,
+      `&#127873; Primești Cadou în valoare de ${giftValue} LEI!`,
+      `</div>`,
+      `</div>`
+    ].join('') : '',
 
     // ─── 5. Top 3 feature grid ────────────────────────────────────────
     topBenefitsHtml,
@@ -842,7 +881,7 @@ function buildHTML(data) {
     `<div style="padding:24px 20px;background:#fff">`,
     `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:20px 22px;border-radius:6px">`,
     `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 10px">&#10003; COMANZI FĂRĂ GRIJI!</h3>`,
-    `<p style="font-size:14px;color:#444;line-height:1.65;margin:0">${riskReversalText}</p>`,
+    `<p style="font-size:14px;color:#444;line-height:1.65;margin:0">${esc(riskReversalText)}</p>`,
     `</div>`,
     `</div>`,
 
@@ -857,7 +896,7 @@ function buildHTML(data) {
 
     // ─── 9. Urgency banner rosu + CTA bonus ───────────────────────────
     `<div style="background:#fef2f2;border-top:3px solid ${primary};border-bottom:3px solid ${primary};padding:24px 20px;text-align:center">`,
-    `<div style="font-size:18px;font-weight:900;color:${primary};margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">&#9888; ${urgencyMessage}</div>`,
+    `<div style="font-size:18px;font-weight:900;color:${primary};margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">&#9888; ${esc(urgencyMessage)}</div>`,
     `<p style="font-size:14px;color:#666;margin:0 0 18px">Comandă Acum, Primești și Cadou Surpriză &#127873;</p>`,
     `<div style="display:inline-block">${scrollBtn}</div>`,
     `</div>`,
@@ -873,13 +912,13 @@ function buildHTML(data) {
     // ─── 11. Phone contact banner ─────────────────────────────────────
     `<div style="padding:20px 16px;background:#fffbeb;text-align:center;border-top:1px solid #fde68a;border-bottom:1px solid #fde68a">`,
     `<p style="font-size:14px;color:#333;margin:0">`,
-    `Ai nevoie de ajutor? Ne poți contacta la <a href="tel:${phoneNumber.replace(/\s/g, '')}" style="color:${primary};font-weight:800;text-decoration:none">${phoneNumber}</a>`,
+    `Ai nevoie de ajutor? Ne poți contacta la <a href="tel:${esc(phoneClean)}" style="color:${primary};font-weight:800;text-decoration:none">${esc(phoneNumber)}</a>`,
     `</p>`,
     `</div>`,
 
     // ─── 12. Footer ───────────────────────────────────────────────────
     `<div style="background:#1a1a1a;color:#999;padding:28px 20px;text-align:center;font-size:12px;line-height:1.8">`,
-    `<p style="margin:0 0 6px;color:#fff;font-weight:700;font-size:14px">${data.productName || 'Magazinul tău'}</p>`,
+    `<p style="margin:0 0 6px;color:#fff;font-weight:700;font-size:14px">${esc(data.productName || 'Magazinul tău')}</p>`,
     `<p style="margin:0 0 12px;color:#777">Comandă rapidă, plată ramburs, livrare în toată România</p>`,
     `<p style="margin:0 0 8px"><a href="#" style="color:#999;text-decoration:none">Termeni și Condiții</a> &middot; <a href="#" style="color:#999;text-decoration:none">Politica de Confidențialitate</a> &middot; <a href="#" style="color:#999;text-decoration:none">Politica Returnare</a> &middot; <a href="#" style="color:#999;text-decoration:none">Contact</a></p>`,
     `<p style="margin:0;font-size:11px;color:#666">&copy; ${new Date().getFullYear()} &middot; <a href="https://anpc.ro/ce-este-sal/" style="color:#666">ANPC SAL</a> &middot; <a href="https://ec.europa.eu/consumers/odr/" style="color:#666">SOL</a></p>`,
