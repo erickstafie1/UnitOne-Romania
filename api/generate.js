@@ -160,12 +160,13 @@ function callClaude(productInfo, styleDesc) {
 
 REGULI CRITICE:
 1. ZERO fraze generic-AI gen "transforma-ti viata", "descopera magia", "revolutioneaza", "ultimate experience".
-2. Fiecare beneficiu in format PROBLEMA->REZOLVARE: incepi cu 1-2 cuvinte CAPITALIZATE care nominalizeaza problema, urmat de "—" si rezolvarea concreta.
+2. quickBullets: EXACT 4 bullets sub imaginea principala. Fiecare MAXIM 8 cuvinte. Beneficiu CONCRET si specific produsului (NU "calitate premium" generic). Exemple bune: "Prinde 5+ soareci la o singura activare", "Bateria tine 40 ore continuu", "Pielea naturala 100%, nu se crapa". Exemple proaste: "Calitate superioara garantata", "Confort si eleganta".
+3. topBenefits si benefits in format PROBLEMA->REZOLVARE: incepi cu 1-2 cuvinte CAPITALIZATE care nominalizeaza problema, urmat de "—" si rezolvarea concreta.
    Exemplu: "NU SE RASTOARNA — 4 ventuze tin farfuria fixa de masa"
    Exemplu: "FARA MIZERIE — baveta colectoare prinde tot ce cade"
-3. Testimoniale: nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti) + text 2-3 fraze cu detaliu CONCRET despre utilizare (cum, cand, ce s-a schimbat). NU "produs excelent recomand".
-4. FAQ exact 6 intrebari in ordinea: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
-5. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).${briefBlock}
+4. Testimoniale: nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti) + text 2-3 fraze cu detaliu CONCRET despre utilizare (cum, cand, ce s-a schimbat). NU "produs excelent recomand".
+5. FAQ exact 6 intrebari in ordinea: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
+6. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).${briefBlock}
 
 Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
 
@@ -184,6 +185,12 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
   "urgencyMessage": "STOC LIMITAT - SE EPUIZEAZA RAPID",
   "riskReversalText": "Iti oferim 30 de zile sa incerci produsul. Daca nu esti multumit, iti facem rambursul integral, fara intrebari.",
   "style": {"primaryColor": "#dc2626", "secondaryColor": "#111111"},
+  "quickBullets": [
+    "MAXIM 8 CUVINTE — beneficiu concret scurt",
+    "MAXIM 8 CUVINTE — alt beneficiu",
+    "MAXIM 8 CUVINTE — al treilea",
+    "MAXIM 8 CUVINTE — al patrulea"
+  ],
   "topBenefits": [
     "PROBLEMA1 — rezolvarea concreta scurta",
     "PROBLEMA2 — rezolvarea concreta scurta",

@@ -878,6 +878,7 @@ function buildHTML(data) {
   const giftValue = Number(data.giftValue) || 0  // 0 = banner ascuns
   const phoneNumber = String(data.phoneNumber || '0700 000 000')
   const phoneClean = phoneNumber.replace(/[^\d+]/g, '')
+  const quickBullets = (data.quickBullets || []).slice(0, 4)
   const topBenefits = (data.topBenefits && data.topBenefits.length ? data.topBenefits : benefits.slice(0, 3)).slice(0, 3)
   const featureSections = (data.featureSections || []).slice(0, 2)
   const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
@@ -960,6 +961,21 @@ function buildHTML(data) {
     ].join('')
   }
 
+  // Quick bullets — 3-4 beneficii scurte (max 8 cuvinte fiecare) afisate
+  // imediat sub hero, inainte de orice alta sectiune. Layout: 2-col grid pe
+  // desktop, 1-col pe mobile. Iconite check verzi pentru efect "checklist".
+  const quickBulletsHtml = quickBullets.length ? [
+    `<div style="padding:20px;background:#fff;border-bottom:1px solid #f0f0f0">`,
+    `<div class="unitone-quickbullets" style="display:grid;grid-template-columns:1fr;gap:10px;max-width:720px;margin:0 auto">`,
+    quickBullets.map(b => [
+      `<div style="display:flex;gap:10px;align-items:center;padding:10px 14px;background:#f9fafb;border-radius:8px;border-left:3px solid ${primary}">`,
+      `<span style="color:#16a34a;font-size:16px;font-weight:900;flex-shrink:0">&#10003;</span>`,
+      `<span style="font-size:14px;color:#222;font-weight:600;line-height:1.4">${esc(b)}</span>`,
+      `</div>`
+    ].join('')).join(''),
+    `</div></div>`
+  ].join('') : ''
+
   // 3-card grid pentru top 3 beneficii (Section 5 din produsutil.ro)
   const topBenefitsHtml = topBenefits.length ? [
     `<div style="padding:32px 20px;background:#fff">`,
@@ -992,6 +1008,7 @@ function buildHTML(data) {
       #unitone-lp .unitone-topben-grid{grid-template-columns:repeat(3,1fr) !important;gap:20px !important}
       #unitone-lp .unitone-test-grid{grid-template-columns:repeat(3,1fr) !important;gap:18px !important}
       #unitone-lp .unitone-feature-row{padding:48px 32px !important}
+      #unitone-lp .unitone-quickbullets{grid-template-columns:1fr 1fr !important;gap:14px !important}
     }
     @keyframes unitone-gift-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
     #unitone-lp .unitone-gift{animation:unitone-gift-pulse 2.5s ease-in-out infinite}
@@ -1048,6 +1065,9 @@ function buildHTML(data) {
 
     // ─── 2. Hero (3 variante: split / centered / overlay) ─────────────
     heroHtml,
+
+    // ─── 2b. Quick bullets — 3-4 beneficii scurte sub imaginea principala ─
+    quickBulletsHtml,
 
     // ─── 3. (Trust microstrip eliminat — duplicat cu cel din hero) ────
     // ─── 4. (Gift banner eliminat by default — apare doar daca user

@@ -35,15 +35,16 @@ function buildHideScript() {
 
 // Forteaza LP-ul sa fie full-width PESTE constrangerile de theme.liquid (Dawn,
 // Horizon, etc). Necesar pentru cazurile in care templeturile noastre nu se
-// instaleaza (teme Shopify-generate "test-data" rejected silent) si LP-ul cade
-// pe theme.liquid care impune max-width via .page-width / .container.
+// instaleaza si LP-ul cade pe theme.liquid care impune max-width via
+// .page-width / .container.
+// SAFER: doar max-width override, fara display:none care risca sa ascunda
+// elemente din LP cand theme-ul wrapezza body_html in aceste clase.
 function buildFullWidthOverride() {
   return '<style>\n' +
     '#unitone-lp,#unitone-lp *{box-sizing:border-box}\n' +
-    /* Cancel theme width constraints around our LP */
-    '.product,.product__main,.product-section,.page-width,.container,.main-content,#MainContent,main,.shopify-section,.section-template--main{max-width:100%!important;padding-left:0!important;padding-right:0!important;margin-left:0!important;margin-right:0!important;width:100%!important}\n' +
-    /* Hide native Shopify product header (title, price, add-to-cart) that some themes auto-render on product pages — our LP has its own */
-    '.product__title,.product__info-container > h1,.product-form,.product__price,.price--listing,.product-form__buttons,.product__view-details,.product__pickup-availabilities,.product__media-wrapper,.product__media-list,.shopify-payment-button{display:none!important}\n' +
+    /* Cancel theme width constraints — only specific container classes */
+    '.page-width,.shopify-section .page-width,.container > .container,main.main-content,#MainContent .page-width{max-width:100%!important;padding-left:0!important;padding-right:0!important}\n' +
+    '#unitone-lp{max-width:100%!important;width:100%!important;margin:0!important}\n' +
     '</style>'
 }
 
