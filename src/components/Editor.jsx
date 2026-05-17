@@ -199,6 +199,69 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
     return () => clearInterval(interval)
   }, [autosaveOn, publishing, saving])
 
+  // ─── beforeunload: salvare localStorage + flush la backend daca avem pageId ──
+  // Cand user inchide tab-ul / navigheaza away, salvam DRAFT-ul:
+  //  - Mereu in localStorage (chiar daca nu are pageId Shopify inca)
+  //  - In Shopify metafield prin /api/publish daca avem pageId
+  // La urmatoarea deschidere a editorului, draftul din localStorage e recuperat.
+  useEffect(() => {
+    const draftKey = 'unitone_draft_' + (data.id || data.aliUrl || 'new')
+
+    const saveLocal = () => {
+      if (!gjsRef.current) return
+      try {
+        const html = gjsRef.current.getHtml()
+        const css = gjsRef.current.getCss()
+        const draft = { html, css, title: pageTitle, savedAt: Date.now() }
+        localStorage.setItem(draftKey, JSON.stringify(draft))
+      } catch (e) { /* localStorage quota / private mode — ignore */ }
+    }
+
+    const onBeforeUnload = () => {
+      if (!dirtyRef.current) return
+      saveLocal()
+      // Trimite sync POST la backend pentru pagini cu pageId (best-effort)
+      const pid = pageIdRef.current || data.id
+      if (pid && gjsRef.current && navigator.sendBeacon) {
+        try {
+          const html = gjsRef.current.getHtml()
+          const css = gjsRef.current.getCss()
+          const body = JSON.stringify({
+            action: 'update', shop, pageId: pid, title: pageTitle,
+            html: `<style>${css}</style>${html}`, hideHeaderFooter,
+            codFormApp: 'universal', editorHtml: html, editorCss: css
+          })
+          navigator.sendBeacon('/api/publish', new Blob([body], { type: 'application/json' }))
+        } catch (e) { /* swallow */ }
+      }
+    }
+
+    // Recuperare draft local la mount (daca exista si e mai recent decat data)
+    try {
+      const stored = localStorage.getItem(draftKey)
+      if (stored && !data.editorHtml) {
+        const draft = JSON.parse(stored)
+        if (draft.html && (Date.now() - draft.savedAt) < 30 * 24 * 60 * 60 * 1000) {  // max 30 zile
+          console.log('[UnitOne] Recovered draft from localStorage, saved at:', new Date(draft.savedAt).toISOString())
+          // Note: recovery aplicat doar daca nu vine data.editorHtml din Shopify
+          // (Shopify e sursa primara cand exista). Editor.setComponents face restul.
+          if (gjsRef.current) {
+            gjsRef.current.setComponents(draft.html)
+            if (draft.css) gjsRef.current.setStyle(draft.css)
+          }
+        }
+      }
+    } catch (e) { /* corrupt JSON — skip */ }
+
+    // Salvare locala continua (la fiecare 15 sec daca s-a modificat)
+    const localInterval = setInterval(() => { if (dirtyRef.current) saveLocal() }, 15000)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      clearInterval(localInterval)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [data.id, data.aliUrl, pageTitle, shop, hideHeaderFooter])
+
   async function autoSave() {
     if (!gjsRef.current) return
     setSaving(true)
@@ -343,6 +406,11 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         if (json.pageId) pageIdRef.current = json.pageId
         setLastSaved(new Date())
         dirtyRef.current = false
+        // Clear draft din localStorage — publish reusit, nu mai e nevoie de fallback
+        try {
+          const draftKey = 'unitone_draft_' + (data.id || data.aliUrl || 'new')
+          localStorage.removeItem(draftKey)
+        } catch (e) { /* ignore */ }
         setPublishedUrl(json.pageUrl)
         setPublishedDemoted(!!json.demoted)
         setPublished(true)
@@ -824,11 +892,14 @@ function buildHTML(data) {
 
   // 3 hero variants — same content, completely different visual structure.
   // Picked at generation time, persisted in data.heroVariant.
+  // Force fallback: 'overlay' fara imagine arata buguit (text pe culoare solida)
+  // — daca nu avem imagine, alegem 'centered' care e safe cu sau fara.
+  const effectiveHeroVariant = (heroVariant === 'overlay' && !imgs[0]) ? 'centered' : heroVariant
   let heroHtml
-  if (heroVariant === 'centered') {
+  if (effectiveHeroVariant === 'centered') {
     // Centered: image top full-width, all details below center-aligned
     heroHtml = `<div class="unitone-hero-centered" style="padding:28px 20px;background:${bgAccent};text-align:center">${imgs[0] ? `<div class="unitone-hero-img" style="margin:0 auto 18px">${imgTag(imgs[0], 'width:100%;max-height:420px;object-fit:contain;display:block;border-radius:8px')}</div>` : ''}${ratingBlock}${headlineBlock}${subBlock}${priceBlock}${relBtn}${trustRowBlock}</div>`
-  } else if (heroVariant === 'overlay') {
+  } else if (effectiveHeroVariant === 'overlay') {
     // Overlay: image as background with darkened gradient, text on top
     // CSS url() needs safeUrl to strip apostrophes/backslashes that would break inline style
     const bgImg = safeUrl(imgs[0])
@@ -854,15 +925,9 @@ function buildHTML(data) {
     // ─── 2. Hero (3 variante: split / centered / overlay) ─────────────
     heroHtml,
 
-    // ─── 3. Trust microstrip ──────────────────────────────────────────
-    `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 16px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap;text-align:center">`,
-    `<span style="font-size:12px;color:#333;font-weight:700">&#128666; Livrare 2-4 zile</span>`,
-    `<span style="font-size:12px;color:#333;font-weight:700">&#128179; Plată ramburs</span>`,
-    `<span style="font-size:12px;color:#333;font-weight:700">&#8617; Retur 30 zile</span>`,
-    `<span style="font-size:12px;color:#333;font-weight:700">&#127775; Garanție 24 luni</span>`,
-    `</div>`,
-
-    // ─── 4. Gift banner (cu pulse animation, palette accent) — ascuns daca giftValue<=0
+    // ─── 3. (Trust microstrip eliminat — duplicat cu cel din hero) ────
+    // ─── 4. (Gift banner eliminat by default — apare doar daca user
+    //         seteaza explicit giftValue > 0 si confirma in setari) ────
     giftValue > 0 ? [
       `<div style="padding:18px 20px;text-align:center;background:#fff">`,
       `<div class="unitone-gift" style="display:inline-block;background:${bgAccent};border:2px solid ${bgAccentBorder};border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:${secondary}">`,

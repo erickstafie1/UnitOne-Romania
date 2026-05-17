@@ -157,7 +157,7 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
   "price": ${rp},
   "oldPrice": ${Math.round(rp*1.6)},
   "bumpPrice": ${Math.round(rp*0.2)},
-  "giftValue": 33,
+  "giftValue": 0,
   "stock": 7,
   "timerMinutes": 14,
   "reviewCount": 1247,
@@ -362,23 +362,28 @@ module.exports = async function handler(req, res) {
     console.log('=== GENERATE v5 ===')
     console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
 
-    // Claude + AliExpress in paralel - mai intai aflam produsul
-    const [html, copy] = await Promise.all([
-      fetchWithScraper(aliUrl).catch(() => ''),
-      callClaude({ title: '', priceUSD: 0 }, styleDesc || '')
-    ])
-
+    // STEP 1: Scrape AliExpress PRIMUL — fara nume + pret, Claude genereaza orb
+    // testimoniale despre "produs bun" care apoi nu se potrivesc cu produsul real.
+    const html = await fetchWithScraper(aliUrl).catch(() => '')
     let aliImages = []
+    let productInfo = { title: '', priceUSD: 0 }
     if (html.length > 1000) {
       aliImages = extractImages(html)
       const meta = extractMeta(html)
-      if (meta.title?.length > 5) copy.productName = meta.title.substring(0, 60)
-      if (meta.priceUSD > 0) {
-        const rp = Math.round(meta.priceUSD * 5 * 2.5 / 10) * 10
-        copy.price = rp; copy.oldPrice = Math.round(rp*1.6); copy.bumpPrice = Math.round(rp*0.2)
-      }
+      if (meta.title?.length > 5) productInfo.title = meta.title.substring(0, 100)
+      if (meta.priceUSD > 0) productInfo.priceUSD = meta.priceUSD
     }
-    console.log('Ali images:', aliImages.length, 'Product:', copy.productName)
+    console.log('Ali scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length })
+
+    // STEP 2: Claude cu produsul REAL — toate textele (benefits, testimoniale,
+    // featureSections, FAQ) sunt despre produsul efectiv, nu generic.
+    const copy = await callClaude(productInfo, styleDesc || '')
+    // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
+    if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
+    if (productInfo.priceUSD > 0) {
+      const rp = Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10
+      copy.price = rp; copy.oldPrice = Math.round(rp * 1.6); copy.bumpPrice = Math.round(rp * 0.2)
+    }
 
     // Combinam: AliExpress (pozele reale) + Gemini (lifestyle + UGC)
     const pName = copy.productName || 'produs'
