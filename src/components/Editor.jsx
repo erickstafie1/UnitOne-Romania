@@ -666,6 +666,11 @@ function buildCSS(data) {
 }
 
 // ─── buildHTML ────────────────────────────────────────────────────────────────
+// Layout clonat dupa produsutil.ro/products/diversificare:
+// 1. Topbar — 2. Hero 2-col desktop — 3. Trust microstrip — 4. Gift banner
+// 5. Top 3 feature grid — 6. 2x image+text alternant — 7. Risk reversal
+// 8. Testimoniale "Comanda Livrata" — 9. Urgency CTA — 10. FAQ accordion
+// 11. Phone contact banner — 12. Footer cu legal links
 function buildHTML(data) {
   const price = data.price || 149
   const oldPrice = data.oldPrice || Math.round(price * 1.6)
@@ -676,173 +681,201 @@ function buildHTML(data) {
   const imgTag = (src, style) => src ? `<img src="${src}" style="${style || 'width:100%;display:block'}" />` : ''
   const benefits = (data.benefits || []).slice(0, 5)
   const testimonials = data.testimonials || []
+  // New fields (with fallbacks pentru date generate inainte de schema noua)
+  const giftValue = data.giftValue || 25
+  const phoneNumber = data.phoneNumber || '0700 000 000'
+  const topBenefits = (data.topBenefits && data.topBenefits.length ? data.topBenefits : benefits.slice(0, 3)).slice(0, 3)
+  const featureSections = (data.featureSections || []).slice(0, 2)
+  const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
+  const riskReversalText = data.riskReversalText || 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.'
 
   // Universal COD hook (multi-app + multi-button) — see relBtn() in addBlocks()
   const relBtn = `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:8px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real</span></div>`
   // CTA scroll target: the publish pipeline adds id="unitone-cod-anchor" to the FIRST hook
   const scrollBtn = `<a href="#unitone-cod-anchor" style="display:inline-block;background:${primary};color:#fff;padding:16px 36px;border-radius:8px;font-size:17px;font-weight:900;text-decoration:none;letter-spacing:0.5px">&#128722; COMANDĂ ACUM</a>`
 
+  // Testimoniale: cu badge "Comanda Livrata" verde + nume RO + oras RO (stilul produsutil.ro)
   const tCards = testimonials.map(t => [
-    `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #f0f0f0;margin-bottom:14px">`,
-    `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">`,
-    `<span style="color:#f59e0b;font-size:17px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
-    `<span style="font-size:11px;background:#f0fdf4;color:#16a34a;border-radius:20px;padding:3px 10px;font-weight:700">&#10003; Cumpărător verificat</span>`,
+    `<div style="background:#fff;border-radius:8px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #e5e7eb">`,
+    `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">`,
+    `<div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,${primary},#666);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">${(t.name || '?').charAt(0)}</div>`,
+    `<div><div style="font-size:14px;font-weight:700;color:#111">${t.name || 'Client'}</div>`,
+    `<div style="font-size:12px;color:#999">${t.city || 'România'}</div></div>`,
     `</div>`,
-    `<p style="font-size:14px;color:#333;line-height:1.65;margin:0 0 12px;font-style:italic">"${t.text}"</p>`,
-    `<strong style="font-size:13px;color:#555">— ${t.name}</strong>`,
+    `<div style="color:#f59e0b;font-size:15px;margin-bottom:8px">&#9733;&#9733;&#9733;&#9733;&#9733;</div>`,
+    `<p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 12px">${t.text || ''}</p>`,
+    `<span style="display:inline-block;font-size:11px;background:#e8f5e9;color:#16a34a;border-radius:4px;padding:4px 10px;font-weight:600">&#10003; Comandă Livrată</span>`,
     `</div>`
   ].join('')).join('')
 
+  // FAQ accordion (HTML <details> nativ — fara JS)
   const faqHtml = (data.faq || []).map(f => [
-    `<details style="margin-bottom:8px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">`,
-    `<summary style="padding:15px 18px;font-size:15px;font-weight:700;cursor:pointer;background:#f9fafb">${f.q}</summary>`,
-    `<div style="padding:14px 18px;font-size:14px;color:#555;line-height:1.7;background:#fff">${f.a}</div>`,
+    `<details style="margin-bottom:8px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:#fff">`,
+    `<summary style="padding:16px 18px;font-size:15px;font-weight:700;cursor:pointer;color:#111">${f.q}</summary>`,
+    `<div style="padding:0 18px 16px;font-size:14px;color:#555;line-height:1.7">${f.a}</div>`,
     `</details>`
   ].join('')).join('')
 
-  const howItWorksHtml = (data.howItWorks || []).map((s, i) => [
-    `<div style="display:flex;gap:14px;margin-bottom:18px;align-items:flex-start">`,
-    `<div style="width:36px;height:36px;background:${primary};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0">${i + 1}</div>`,
-    `<div style="padding-top:4px"><strong style="font-size:15px;display:block;margin-bottom:4px;color:#111">${s.title}</strong><span style="font-size:14px;color:#555;line-height:1.6">${s.desc}</span></div>`,
-    `</div>`
-  ].join('')).join('')
+  // 2 sectiuni image+text alternant (ca produsutil.ro): titlu CAPS + bullets cu icon galben
+  const featureSectionHtml = featureSections.map((fs, i) => {
+    const img = imgs[i + 1] || imgs[0]  // img[1] pentru prima sectiune, img[2] pentru a doua
+    const reversed = i % 2 === 1
+    const bullets = (fs.bullets || []).map(b =>
+      `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px"><span style="color:#facc15;font-size:18px;flex-shrink:0;line-height:1">&#9679;</span><span style="font-size:14px;color:#333;line-height:1.55">${b}</span></div>`
+    ).join('')
+    return [
+      `<div class="unitone-feature-row" style="padding:28px 20px;background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">`,
+      `<div class="unitone-feature-grid" style="display:grid;grid-template-columns:1fr;gap:20px;align-items:center">`,
+      reversed
+        ? `<div>${bullets ? `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.3px">${fs.title || ''}</h3>${bullets}` : ''}</div>${img ? `<div>${imgTag(img, 'width:100%;border-radius:8px;display:block')}</div>` : ''}`
+        : `${img ? `<div>${imgTag(img, 'width:100%;border-radius:8px;display:block')}</div>` : ''}<div>${bullets ? `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.3px">${fs.title || ''}</h3>${bullets}` : ''}</div>`,
+      `</div>`,
+      `</div>`
+    ].join('')
+  }).join('')
+
+  // 3-card grid pentru top 3 beneficii (Section 5 din produsutil.ro)
+  const topBenefitsHtml = topBenefits.length ? [
+    `<div style="padding:32px 20px;background:#fff">`,
+    `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center;text-transform:uppercase;letter-spacing:0.5px">Top 3 motive să comanzi acum</h2>`,
+    `<div class="unitone-topben-grid" style="display:grid;grid-template-columns:1fr;gap:14px">`,
+    topBenefits.map(b => [
+      `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px 18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)">`,
+      `<div style="font-size:32px;line-height:1;margin-bottom:12px">&#127775;</div>`,
+      `<p style="font-size:15px;font-weight:600;color:#111;line-height:1.5;margin:0">${b}</p>`,
+      `</div>`
+    ].join('')).join(''),
+    `</div></div>`
+  ].join('') : ''
+
+  // Inline CSS pentru media queries — pe desktop: hero 2-col, feature 2-col, top-benefits 3-col, testimonials 3-col
+  // Gift banner pulse animation pentru atragere atentie
+  const styleBlock = `<style>
+    @media(min-width:768px){
+      #unitone-lp .unitone-hero-grid{grid-template-columns:1fr 1fr !important;gap:40px !important;padding:48px 32px !important;align-items:center}
+      #unitone-lp .unitone-hero-headline{font-size:32px !important;text-align:left !important}
+      #unitone-lp .unitone-hero-sub{text-align:left !important;font-size:16px !important}
+      #unitone-lp .unitone-hero-rating{justify-content:flex-start !important}
+      #unitone-lp .unitone-feature-grid{grid-template-columns:1fr 1fr !important;gap:40px !important}
+      #unitone-lp .unitone-topben-grid{grid-template-columns:repeat(3,1fr) !important;gap:20px !important}
+      #unitone-lp .unitone-test-grid{grid-template-columns:repeat(3,1fr) !important;gap:18px !important}
+      #unitone-lp .unitone-feature-row{padding:48px 32px !important}
+    }
+    @keyframes unitone-gift-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+    #unitone-lp .unitone-gift{animation:unitone-gift-pulse 2.5s ease-in-out infinite}
+    #unitone-lp details > summary{list-style:none}
+    #unitone-lp details > summary::-webkit-details-marker{display:none}
+    #unitone-lp details > summary::after{content:"+";float:right;font-size:20px;font-weight:900;color:#999;transition:transform 0.2s}
+    #unitone-lp details[open] > summary::after{content:"−"}
+  </style>`
 
   return [
     `<div id="unitone-lp">`,
-    `<div style="font-family:Arial,sans-serif;width:100%;background:#fff;color:#111">`,
+    styleBlock,
+    `<div style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;width:100%;background:#fff;color:#111;line-height:1.5">`,
 
-    // 1. Topbar
-    `<div style="background:#111;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:700;letter-spacing:0.3px">`,
-    `&#128222; 0700 000 000 &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDĂ &middot; PLATĂ LA LIVRARE`,
+    // ─── 1. Topbar ────────────────────────────────────────────────────
+    `<div style="background:#111;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:0.3px">`,
+    `&#128222; ${phoneNumber} &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDĂ &middot; PLATĂ LA LIVRARE`,
     `</div>`,
 
-    // 2. Hero
-    `<div style="padding:24px 20px 16px;background:#fff;border-bottom:3px solid ${primary}">`,
-    `<div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-bottom:10px">`,
-    `<span style="color:#f59e0b;font-size:15px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
-    `<span style="font-size:13px;color:#555;font-weight:600">${reviewCount.toLocaleString()}+ clienți mulțumiți</span>`,
+    // ─── 2. Hero 2-col desktop (imagine stanga / detalii dreapta) ─────
+    `<div class="unitone-hero-grid" style="display:grid;grid-template-columns:1fr;gap:20px;padding:20px;background:#fff">`,
+    // Coloana stanga: imagine principala
+    `<div>`,
+    imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto;border-radius:8px') : '<div style="background:#f0f0f0;aspect-ratio:1;border-radius:8px"></div>',
     `</div>`,
-    `<h1 style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 10px;color:#111;text-align:center">${data.headline || data.productName}</h1>`,
-    `<p style="font-size:15px;color:#555;line-height:1.6;margin:0;text-align:center">${data.subheadline || 'Comandă acum cu livrare rapidă și plată la livrare!'}</p>`,
+    // Coloana dreapta: rating + titlu + pret + CTA + trust
+    `<div>`,
+    `<div class="unitone-hero-rating" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px">`,
+    `<span style="color:#f59e0b;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
+    `<span style="font-size:13px;color:#555;font-weight:600">${reviewCount.toLocaleString()}+ Clienți Mulțumiți</span>`,
     `</div>`,
+    `<h1 class="unitone-hero-headline" style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 12px;color:#111;text-align:center">${data.headline || data.productName || ''}</h1>`,
+    `<p class="unitone-hero-sub" style="font-size:15px;color:#555;line-height:1.6;margin:0 0 18px;text-align:center">${data.subheadline || ''}</p>`,
+    // Pret cu reducere
+    `<div style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">`,
+    `<span style="font-size:18px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span>`,
+    `<span style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span>`,
+    `<span style="font-size:18px;font-weight:900;color:${primary}">LEI</span>`,
+    `<span style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span>`,
+    `</div>`,
+    `<p style="font-size:12px;color:#999;text-align:center;margin:0 0 16px">Economisești ${oldPrice - price} LEI</p>`,
+    relBtn,
+    `<div style="display:flex;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap">`,
+    `<span style="font-size:12px;color:#16a34a;font-weight:700">&#10003; Livrare 24-48h</span>`,
+    `<span style="font-size:12px;color:#16a34a;font-weight:700">&#128666; Plata ramburs</span>`,
+    `<span style="font-size:12px;color:#16a34a;font-weight:700">&#8617; Retur 30 zile</span>`,
+    `</div>`,
+    `</div>`, // /coloana dreapta
+    `</div>`, // /hero-grid
 
-    // 3. Imagine principală
-    imgs[0] ? `<div style="background:#f8f8f8">${imgTag(imgs[0], 'width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto')}</div>` : '',
-
-    // 4. Trust microstrip
-    `<div style="background:#f9fafb;border-bottom:2px solid ${primary};padding:10px 16px;display:flex;justify-content:center;gap:16px;flex-wrap:wrap;text-align:center">`,
+    // ─── 3. Trust microstrip ──────────────────────────────────────────
+    `<div style="background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 16px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap;text-align:center">`,
     `<span style="font-size:12px;color:#333;font-weight:700">&#128666; Livrare 2-4 zile</span>`,
     `<span style="font-size:12px;color:#333;font-weight:700">&#128179; Plată ramburs</span>`,
     `<span style="font-size:12px;color:#333;font-weight:700">&#8617; Retur 30 zile</span>`,
     `<span style="font-size:12px;color:#333;font-weight:700">&#127775; Garanție 24 luni</span>`,
     `</div>`,
 
-    // 5. Beneficii
-    benefits.length ? [
-      `<div style="padding:28px 20px;background:#fff">`,
-      `<div style="background:${primary};color:#fff;text-align:center;padding:10px 16px;border-radius:6px;font-size:13px;font-weight:900;letter-spacing:1px;margin-bottom:20px;text-transform:uppercase">&#128293; Top ${benefits.length} motive să comanzi acum</div>`,
-      benefits.map(b => `<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f3f4f6"><span style="width:26px;height:26px;background:${primary};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0;margin-top:1px">&#10003;</span><span style="font-size:15px;color:#222;line-height:1.55;font-weight:500">${b}</span></div>`).join(''),
-      `</div>`
-    ].join('') : '',
-
-    // 6. Preț + CTA #1
-    `<div style="padding:24px 20px;background:#fff8f0;border-top:1px solid #fed7aa;border-bottom:3px solid ${primary};text-align:center">`,
-    `<div style="background:${primary};color:#fff;display:inline-block;padding:4px 14px;border-radius:4px;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:14px">OFERTĂ SPECIALĂ — ${disc}% REDUCERE</div>`,
-    `<div style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">`,
-    `<span style="font-size:16px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span>`,
-    `<span style="font-size:52px;font-weight:900;color:${primary};line-height:1">${price}</span>`,
-    `<span style="font-size:20px;font-weight:900;color:${primary}">LEI</span>`,
-    `</div>`,
-    `<p style="font-size:12px;color:#888;margin:0 0 16px">Preț valabil doar pentru comenzile online</p>`,
-    relBtn,
-    `<div style="display:flex;justify-content:center;gap:16px;margin-top:12px;flex-wrap:wrap">`,
-    `<span style="font-size:12px;color:#555;font-weight:600">&#10003; Plată la livrare</span>`,
-    `<span style="font-size:12px;color:#555;font-weight:600">&#128666; Livrare 2-4 zile</span>`,
-    `<span style="font-size:12px;color:#555;font-weight:600">&#8617; Retur 30 zile</span>`,
+    // ─── 4. Gift banner (cu pulse animation) ──────────────────────────
+    `<div style="padding:18px 20px;text-align:center;background:#fff">`,
+    `<div class="unitone-gift" style="display:inline-block;background:#fffbeb;border:2px solid #facc15;border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:#92400e">`,
+    `&#127873; Primești Cadou în valoare de ${giftValue} LEI!`,
     `</div>`,
     `</div>`,
 
-    // 7. img[1] + How it works intercalat
-    imgs[1] ? `<div style="background:#f0f0f0">${imgTag(imgs[1], 'width:100%;display:block')}</div>` : '',
+    // ─── 5. Top 3 feature grid ────────────────────────────────────────
+    topBenefitsHtml,
 
-    howItWorksHtml ? [
-      `<div style="padding:28px 20px;background:#fff;border-bottom:1px solid #f0f0f0">`,
-      `<h2 style="font-size:19px;font-weight:900;color:#111;margin:0 0 20px;text-align:center">Cum funcționează?</h2>`,
-      howItWorksHtml,
-      `</div>`
-    ].join('') : '',
+    // ─── 6. 2x image+text alternant ───────────────────────────────────
+    featureSectionHtml,
 
-    // 8. img[2] + testimoniale 1-2
-    imgs[2] ? `<div style="background:#f8f8f8">${imgTag(imgs[2], 'width:100%;display:block')}</div>` : '',
-
-    testimonials.length >= 1 ? [
-      `<div style="padding:24px 20px;background:#fff;border-bottom:1px solid #f0f0f0">`,
-      `<div style="font-size:12px;font-weight:800;color:${primary};letter-spacing:1px;text-align:center;margin-bottom:16px;text-transform:uppercase">Ce spun clienții noștri</div>`,
-      tCards.split('</div>').slice(0, testimonials.length >= 2 ? 2 : 1).map((c, i) => i < (testimonials.length >= 2 ? 2 : 1) ? c + '</div>' : '').join(''),
-      `</div>`
-    ].join('') : '',
-
-    // 9. CTA #2 urgenta + img[3]
-    `<div style="background:#111;padding:20px;text-align:center">`,
-    `<div style="color:#fff;font-size:13px;font-weight:700;margin-bottom:4px">&#9889; STOC LIMITAT — Nu rata oferta!</div>`,
-    `<div style="color:${primary};font-size:28px;font-weight:900;margin-bottom:12px">${price} LEI <span style="font-size:14px;color:#888;text-decoration:line-through">${oldPrice} LEI</span></div>`,
-    scrollBtn,
+    // ─── 7. Risk reversal box (cu border-left verde) ──────────────────
+    `<div style="padding:24px 20px;background:#fff">`,
+    `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:20px 22px;border-radius:6px">`,
+    `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 10px">&#10003; COMANZI FĂRĂ GRIJI!</h3>`,
+    `<p style="font-size:14px;color:#444;line-height:1.65;margin:0">${riskReversalText}</p>`,
+    `</div>`,
     `</div>`,
 
-    imgs[3] ? `<div style="background:#f0f0f0">${imgTag(imgs[3], 'width:100%;display:block')}</div>` : '',
-
-    // 10. Testimoniale 3+
-    testimonials.length >= 3 ? [
-      `<div style="padding:24px 20px;background:#f9fafb;border-bottom:1px solid #f0f0f0">`,
-      `<div style="font-size:12px;font-weight:800;color:${primary};letter-spacing:1px;text-align:center;margin-bottom:16px;text-transform:uppercase">Clienți verificați — recenzii reale</div>`,
-      testimonials.slice(2).map(t => [
-        `<div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1px solid #f0f0f0;margin-bottom:12px">`,
-        `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">`,
-        `<span style="color:#f59e0b;font-size:15px">&#9733;&#9733;&#9733;&#9733;&#9733;</span>`,
-        `<span style="font-size:11px;background:#f0fdf4;color:#16a34a;border-radius:20px;padding:3px 10px;font-weight:700">&#10003; Verificat</span>`,
-        `</div>`,
-        `<p style="font-size:14px;color:#333;line-height:1.65;margin:0 0 10px;font-style:italic">"${t.text}"</p>`,
-        `<strong style="font-size:13px;color:#666">— ${t.name}</strong>`,
-        `</div>`
-      ].join('')).join(''),
-      `</div>`
+    // ─── 8. Testimoniale "Comanda Livrata" ────────────────────────────
+    testimonials.length ? [
+      `<div style="padding:32px 20px;background:#f9fafb">`,
+      `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center">Ce spun clienții noștri</h2>`,
+      `<div class="unitone-test-grid" style="display:grid;grid-template-columns:1fr;gap:14px">`,
+      tCards,
+      `</div></div>`
     ].join('') : '',
 
-    // 11. img[4] + trust badges
-    imgs[4] ? `<div style="background:#f8f8f8">${imgTag(imgs[4], 'width:100%;display:block')}</div>` : '',
+    // ─── 9. Urgency banner rosu + CTA bonus ───────────────────────────
+    `<div style="background:#fef2f2;border-top:3px solid ${primary};border-bottom:3px solid ${primary};padding:24px 20px;text-align:center">`,
+    `<div style="font-size:18px;font-weight:900;color:${primary};margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">&#9888; ${urgencyMessage}</div>`,
+    `<p style="font-size:14px;color:#666;margin:0 0 18px">Comandă Acum, Primești și Cadou Surpriză &#127873;</p>`,
+    `<div style="display:inline-block">${scrollBtn}</div>`,
+    `</div>`,
 
-    `<div style="padding:24px 20px;background:#fff;border-top:1px solid #f0f0f0">`,
-    `<div style="font-size:13px;font-weight:800;color:#111;text-align:center;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px">De ce aleg clienții să cumpere de la noi?</div>`,
-    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">`,
-    `<div style="display:flex;gap:10px;align-items:flex-start;padding:14px;background:#f9fafb;border-radius:10px"><span style="font-size:22px;flex-shrink:0">&#128179;</span><div><div style="font-size:13px;font-weight:800;color:#111">Plată ramburs</div><div style="font-size:12px;color:#666;margin-top:2px;line-height:1.4">Plătești doar când primești coletul</div></div></div>`,
-    `<div style="display:flex;gap:10px;align-items:flex-start;padding:14px;background:#f9fafb;border-radius:10px"><span style="font-size:22px;flex-shrink:0">&#127775;</span><div><div style="font-size:13px;font-weight:800;color:#111">Produs original</div><div style="font-size:12px;color:#666;margin-top:2px;line-height:1.4">Garanție 24 luni inclusă</div></div></div>`,
-    `<div style="display:flex;gap:10px;align-items:flex-start;padding:14px;background:#f9fafb;border-radius:10px"><span style="font-size:22px;flex-shrink:0">&#128666;</span><div><div style="font-size:13px;font-weight:800;color:#111">Livrare rapidă</div><div style="font-size:12px;color:#666;margin-top:2px;line-height:1.4">Fan Courier / Sameday 2-4 zile</div></div></div>`,
-    `<div style="display:flex;gap:10px;align-items:flex-start;padding:14px;background:#f9fafb;border-radius:10px"><span style="font-size:22px;flex-shrink:0">&#8617;</span><div><div style="font-size:13px;font-weight:800;color:#111">Retur 30 zile</div><div style="font-size:12px;color:#666;margin-top:2px;line-height:1.4">Banii înapoi dacă nu ești mulțumit</div></div></div>`,
-    `</div></div>`,
-
-    // 12. FAQ
+    // ─── 10. FAQ accordion ────────────────────────────────────────────
     (data.faq || []).length ? [
-      `<div style="padding:28px 20px;background:#f9fafb;border-top:1px solid #f0f0f0">`,
-      `<h3 style="font-size:18px;font-weight:900;margin:0 0 16px;text-align:center;color:#111">Întrebări frecvente</h3>`,
+      `<div style="padding:32px 20px;background:#fff">`,
+      `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center">Întrebări Frecvente</h2>`,
       faqHtml,
       `</div>`
     ].join('') : '',
 
-    // 13. Final CTA
-    `<div style="padding:32px 20px;background:${primary};text-align:center">`,
-    `<div style="color:rgba(255,255,255,0.85);font-size:13px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">&#9889; Comandă acum și primești în 2-4 zile</div>`,
-    `<div style="color:#fff;font-size:34px;font-weight:900;margin-bottom:4px">${price} LEI</div>`,
-    `<div style="color:rgba(255,255,255,0.6);font-size:14px;text-decoration:line-through;margin-bottom:20px">${oldPrice} LEI</div>`,
-    `<div style="margin-bottom:14px">${scrollBtn}</div>`,
-    `<div style="font-size:12px;color:rgba(255,255,255,0.75)">&#10003; Plată la livrare &nbsp;&middot;&nbsp; &#128666; Livrare rapidă &nbsp;&middot;&nbsp; &#8617; Retur 30 zile gratuit</div>`,
+    // ─── 11. Phone contact banner ─────────────────────────────────────
+    `<div style="padding:20px 16px;background:#fffbeb;text-align:center;border-top:1px solid #fde68a;border-bottom:1px solid #fde68a">`,
+    `<p style="font-size:14px;color:#333;margin:0">`,
+    `Ai nevoie de ajutor? Ne poți contacta la <a href="tel:${phoneNumber.replace(/\s/g, '')}" style="color:${primary};font-weight:800;text-decoration:none">${phoneNumber}</a>`,
+    `</p>`,
     `</div>`,
 
-    // 14. (Built-in form removed — COD button blocks from the editor handle this via Releasit hook)
-
-    // 15. Footer
-    `<div style="background:#111;color:#777;padding:20px;text-align:center;font-size:12px;line-height:1.8">`,
-    `<p style="margin:0 0 4px;color:#bbb;font-weight:700;font-size:13px">&copy; 2025 ${data.productName}</p>`,
-    `<p style="margin:0">Termeni și Condiții &middot; Politica de Confidențialitate &middot; ANPC</p>`,
+    // ─── 12. Footer ───────────────────────────────────────────────────
+    `<div style="background:#1a1a1a;color:#999;padding:28px 20px;text-align:center;font-size:12px;line-height:1.8">`,
+    `<p style="margin:0 0 6px;color:#fff;font-weight:700;font-size:14px">${data.productName || 'Magazinul tău'}</p>`,
+    `<p style="margin:0 0 12px;color:#777">Comandă rapidă, plată ramburs, livrare în toată România</p>`,
+    `<p style="margin:0 0 8px"><a href="#" style="color:#999;text-decoration:none">Termeni și Condiții</a> &middot; <a href="#" style="color:#999;text-decoration:none">Politica de Confidențialitate</a> &middot; <a href="#" style="color:#999;text-decoration:none">Politica Returnare</a> &middot; <a href="#" style="color:#999;text-decoration:none">Contact</a></p>`,
+    `<p style="margin:0;font-size:11px;color:#666">&copy; ${new Date().getFullYear()} &middot; <a href="https://anpc.ro/ce-este-sal/" style="color:#666">ANPC SAL</a> &middot; <a href="https://ec.europa.eu/consumers/odr/" style="color:#666">SOL</a></p>`,
     `</div>`,
 
     `</div>`,

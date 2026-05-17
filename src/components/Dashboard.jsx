@@ -517,6 +517,10 @@ function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, de
 }
 
 /* ─── TEMPLATES ─────────────────────────────────────────────────────── */
+// Template-uri pre-populate cu noile cimpuri din schema produsutil.ro:
+// - topBenefits (3 elemente in format PROBLEMA -> REZOLVARE, capitalizate)
+// - featureSections (2 elemente cu title + bullets pentru image+text alternant)
+// - giftValue, phoneNumber, urgencyMessage, riskReversalText
 const TEMPLATES = [
   {
     id: 'beauty', name: 'Beauty & Cosmetice', emoji: '✦', accent: '#e879c5',
@@ -526,11 +530,23 @@ const TEMPLATES = [
       headline: 'Pielea Ta — Cu 10 Ani Mai Tânără în 30 Zile',
       subheadline: 'Cu colagen marin și vitamina C concentrată',
       price: 149, oldPrice: 299, reviewCount: 2847,
-      benefits: ['Reduce ridurile în 14 zile', 'Hidratare profundă 24h', 'Ingrediente naturale premium', 'Aprobat dermatologic', 'Rezultate garantate'],
+      giftValue: 49, phoneNumber: '0700 000 000',
+      urgencyMessage: 'STOC LIMITAT — Doar 50 buc din lotul nou',
+      riskReversalText: 'Îți oferim 30 de zile să încerci serul. Dacă pielea ta nu arată vizibil mai bine, îți facem rambursul integral, fără întrebări.',
+      topBenefits: [
+        'PIELE FERMĂ — colagen marin tip 1 + 3, vizibil în 14 zile',
+        'HIDRATARE 24H — acid hialuronic și vitamina E reține apa',
+        'PETE & RIDURI — vitamina C 15% reduce pigmentarea'
+      ],
+      benefits: ['Reduce ridurile fine în 14 zile', 'Hidratare profundă 24h', 'Ingrediente naturale premium', 'Aprobat dermatologic', 'Rezultate garantate'],
+      featureSections: [
+        { title: 'PIELE STRĂLUCITOARE DE DIMINEAȚA', bullets: ['Vitamina C concentrată 15% pătrunde în straturile profunde', 'Reduce vizibil petele și uniformizează tonul pielii', 'Activează regenerarea celulară peste noapte'] },
+        { title: 'FĂRĂ RIDURI VIZIBILE', bullets: ['Colagen marin tip I și III restructurează țesutul', 'Acid hialuronic umple liniile fine', 'Efect cumulativ — rezultate mai bune după 30 zile'] }
+      ],
       howItWorks: [
         { title: 'Curăță fața', desc: 'Spală-te cu apă caldă și usucă tamponând' },
         { title: 'Aplică serul', desc: '2-3 picături pe față și gât, dimineața și seara' },
-        { title: 'Vezi rezultate', desc: 'În 14-30 zile pielea ta va străluci' }
+        { title: 'Vezi rezultate', desc: 'În 14-30 zile pielea ta va străluci vizibil' }
       ],
       style: { primaryColor: '#e879c5' }
     }
@@ -543,9 +559,21 @@ const TEMPLATES = [
       headline: 'Sunetul Perfect, Libertatea Totală',
       subheadline: 'Bluetooth 5.3 — 40 ore autonomie',
       price: 199, oldPrice: 399, reviewCount: 1523,
-      benefits: ['Sunet Hi-Fi cu bass profund', '40 ore autonomie', 'Anulare zgomot ANC', 'Rezistente la apă IPX5', 'Bluetooth 5.3 instant'],
+      giftValue: 35, phoneNumber: '0700 000 000',
+      urgencyMessage: 'OFERTĂ LIMITATĂ — Ultimele 80 buc',
+      riskReversalText: 'Îți oferim 30 de zile să testezi căștile. Dacă nu ești 100% mulțumit de sunet și autonomie, returnezi pachetul și primești banii înapoi integral.',
+      topBenefits: [
+        'BASS PROFUND — drivere de 13mm cu cameră de rezonanță',
+        '40 ORE MUZICĂ — carcasă-baterie + 3 încărcări complete',
+        'FĂRĂ ZGOMOT — ANC activ blochează 95% din zgomotul ambiental'
+      ],
+      benefits: ['Sunet Hi-Fi cu bass profund', '40 ore autonomie totală', 'Anulare zgomot ANC activ', 'Rezistente la apă IPX5', 'Bluetooth 5.3 instant'],
+      featureSections: [
+        { title: 'SUNET DE STUDIO ÎN URECHE', bullets: ['Drivere dinamice 13mm cu diafragmă din titaniu', 'Codec aptX HD pentru calitate fără pierdere', 'Egalizator personalizabil din aplicație'] },
+        { title: 'LIBER 40 ORE DIN COFRET', bullets: ['8h pe o singură încărcare + 32h din carcasă', 'Încărcare rapidă: 10 min = 2h muzică', 'Tip-C universal, fără cabluri proprietare'] }
+      ],
       howItWorks: [
-        { title: 'Despachetare', desc: 'Carcasă elegantă + cabluri + manual' },
+        { title: 'Despachetare', desc: 'Carcasă elegantă + cabluri Type-C + manual' },
         { title: 'Conectare', desc: 'Bluetooth instant la telefon sau laptop' },
         { title: 'Bucură-te', desc: 'Sunet de studio oriunde te-ai afla' }
       ],
@@ -560,11 +588,23 @@ const TEMPLATES = [
       headline: 'Eleganța Care Te Definește',
       subheadline: 'Piele naturală — design atemporal',
       price: 249, oldPrice: 499, reviewCount: 892,
-      benefits: ['Piele naturală 100%', 'Design modern și elegant', 'Compartimente practice', 'Garanție 2 ani', 'Ediție limitată'],
+      giftValue: 45, phoneNumber: '0700 000 000',
+      urgencyMessage: 'EDIȚIE LIMITATĂ — Mai sunt doar 12 buc',
+      riskReversalText: 'Îți oferim 30 de zile să probezi geanta acasă. Dacă nu îți place sau nu se potrivește cu stilul tău, o returnezi gratuit și primești banii înapoi.',
+      topBenefits: [
+        'PIELE NATURALĂ 100% — vegetabil-tăbăcită, fără chimicale',
+        'CUSĂTURI MANUALE — fiecare geantă durează 8 ore de muncă',
+        'GARANȚIE 2 ANI — orice defect, înlocuim gratuit'
+      ],
+      benefits: ['Piele naturală 100% premium', 'Design modern și elegant', 'Compartimente practice', 'Garanție 2 ani inclusă', 'Ediție limitată'],
+      featureSections: [
+        { title: 'GEANTĂ CARE REZISTĂ ANI ÎNTREGI', bullets: ['Piele full-grain tăbăcită vegetal (nu se crăpă)', 'Cusături manuale dublate pe punctele de stres', 'Fund consolidat cu bază solidă — nu se deformează'] },
+        { title: 'ORGANIZARE PERFECTĂ ÎN INTERIOR', bullets: ['3 compartimente principale + 2 buzunare cu fermoar', 'Suport laptop integrat (până la 15")', 'Buzunar securizat pe spate pentru portofel'] }
+      ],
       howItWorks: [
-        { title: 'Comandă azi', desc: 'Alege culoarea preferată' },
-        { title: 'Livrare rapidă', desc: 'În 2-4 zile la ușa ta' },
-        { title: 'Iubește-o', desc: 'Sau primești banii înapoi' }
+        { title: 'Comandă azi', desc: 'Alege culoarea preferată (negru / coniac / bordo)' },
+        { title: 'Livrare rapidă', desc: 'În 2-4 zile la ușa ta, ambalată premium' },
+        { title: 'Iubește-o', desc: 'Sau primești banii înapoi integral în 30 zile' }
       ],
       style: { primaryColor: '#a855f7' }
     }
@@ -574,14 +614,26 @@ const TEMPLATES = [
     description: 'Pentru suplimente, fitness, wellness',
     data: {
       productName: 'Bandă Elastică Premium Set 5',
-      headline: 'Transformă-ți Corpul Acasă',
+      headline: 'Transformă-ți Corpul Acasă în 30 Zile',
       subheadline: '5 niveluri rezistență — antrenament complet',
       price: 89, oldPrice: 179, reviewCount: 3421,
-      benefits: ['5 benzi pentru orice nivel', 'Material premium durabil', 'Ghid de antrenamente', 'Compact — oriunde', 'Garanție 30 zile'],
+      giftValue: 29, phoneNumber: '0700 000 000',
+      urgencyMessage: 'PROMO ACTIVĂ — Doar până la epuizarea stocului',
+      riskReversalText: 'Îți oferim 30 de zile să folosești setul acasă. Dacă nu vezi rezultate vizibile sau nu îți place programul, primești banii înapoi integral, fără întrebări.',
+      topBenefits: [
+        'ORICÂND ACASĂ — fără sală, fără echipament greu',
+        '5 NIVELURI — de la începător la avansat, evoluezi cu setul',
+        'GHID INCLUS — program 30 zile cu video și exerciții explicate'
+      ],
+      benefits: ['5 benzi pentru orice nivel', 'Material premium TPE durabil', 'Ghid de antrenamente PDF + video', 'Compact — îl iei oriunde', 'Garanție 30 zile satisfacție'],
+      featureSections: [
+        { title: 'ANTRENAMENT COMPLET ÎN 15 MINUTE', bullets: ['Lucrezi tot corpul fără să schimbi echipamentul', 'Combinație push-pull pentru ardere maximă', 'Compatibil cu orice spațiu — sufragerie, dormitor, parc'] },
+        { title: 'EVOLUEZI FĂRĂ SĂ CUMPERI ECHIPAMENT NOU', bullets: ['5 benzi: 10/20/30/40/50 lbs rezistență', 'Combini benzi pentru rezistențe intermediare', 'Suport pentru picior + 2 mânere ergonomice incluse'] }
+      ],
       howItWorks: [
-        { title: 'Primești setul', desc: '5 benzi + ghid + săculeț' },
-        { title: 'Antrenează-te', desc: '15-30 min/zi, oriunde' },
-        { title: 'Vezi transformarea', desc: 'În 30 zile corpul tău se schimbă' }
+        { title: 'Primești setul', desc: '5 benzi + ghid PDF + săculeț de transport' },
+        { title: 'Antrenează-te', desc: '15-30 min/zi după ghidul livrat, fără echipament' },
+        { title: 'Vezi transformarea', desc: 'În 30 zile corpul tău se schimbă vizibil' }
       ],
       style: { primaryColor: '#10b981' }
     }

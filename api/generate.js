@@ -62,13 +62,97 @@ function callClaude(productInfo, styleDesc) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
-  const styleInstruction = styleDesc ? `Clientul vrea: "${styleDesc}".` : 'Stil rosu/negru optimizat COD.'
+  const styleInstruction = styleDesc ? `Context client: "${styleDesc}".` : ''
+  // Prompt scris pentru a produce copy în stilul produsutil.ro:
+  // - frază "PROBLEMĂ → REZOLVARE" cu cuvinte CAPITALIZATE la început
+  // - testimoniale cu detalii CONCRETE despre cum a folosit produsul (nu "excelent")
+  // - FAQ standard COD RO (plată, livrare, courier, garanție, telefon, retur)
+  // - feature sections sunt mini-articole image+bullets care explică un beneficiu cheie
+  const system = `Esti copywriter expert pentru landing page-uri COD din Romania. Scrii ca pentru produsutil.ro, nu ca un AI.
+
+REGULI CRITICE:
+1. ZERO fraze generic-AI gen "transforma-ti viata", "descopera magia", "revolutioneaza", "ultimate experience".
+2. Fiecare beneficiu in format PROBLEMA->REZOLVARE: incepi cu 1-2 cuvinte CAPITALIZATE care nominalizeaza problema, urmat de "—" si rezolvarea concreta.
+   Exemplu: "NU SE RASTOARNA — 4 ventuze tin farfuria fixa de masa"
+   Exemplu: "FARA MIZERIE — baveta colectoare prinde tot ce cade"
+3. Testimoniale: nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti) + text 2-3 fraze cu detaliu CONCRET despre utilizare (cum, cand, ce s-a schimbat). NU "produs excelent recomand".
+4. FAQ exact 6 intrebari in ordinea: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
+5. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).
+${styleInstruction}
+
+Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
+
+  const schema = `{
+  "productName": "Nume scurt produs (max 60 char)",
+  "headline": "Titlu mare cu PROMISIUNEA pentru client (max 70 char). Ex: 'Copilul Mananca Singur, Fara Mizerie La Masa'",
+  "subheadline": "1 fraza scurta sub titlu cu UVP (max 100 char)",
+  "price": ${rp},
+  "oldPrice": ${Math.round(rp*1.6)},
+  "bumpPrice": ${Math.round(rp*0.2)},
+  "giftValue": 33,
+  "stock": 7,
+  "timerMinutes": 14,
+  "reviewCount": 1247,
+  "phoneNumber": "0700 000 000",
+  "urgencyMessage": "STOC LIMITAT - SE EPUIZEAZA RAPID",
+  "riskReversalText": "Iti oferim 30 de zile sa incerci produsul. Daca nu esti multumit, iti facem rambursul integral, fara intrebari.",
+  "style": {"primaryColor": "#dc2626", "secondaryColor": "#111111"},
+  "topBenefits": [
+    "PROBLEMA1 — rezolvarea concreta scurta",
+    "PROBLEMA2 — rezolvarea concreta scurta",
+    "PROBLEMA3 — rezolvarea concreta scurta"
+  ],
+  "benefits": [
+    "BENEFICIU 1 cu detaliu",
+    "BENEFICIU 2 cu detaliu",
+    "BENEFICIU 3 cu detaliu",
+    "BENEFICIU 4 cu detaliu",
+    "BENEFICIU 5 cu detaliu"
+  ],
+  "featureSections": [
+    {
+      "title": "TITLU SCURT CU CAPS (max 40 char) — descrie UN beneficiu",
+      "bullets": ["punct 1 concret", "punct 2 concret", "punct 3 concret"]
+    },
+    {
+      "title": "TITLU SCURT 2 CU CAPS — alt beneficiu",
+      "bullets": ["punct 1", "punct 2", "punct 3"]
+    }
+  ],
+  "howItWorks": [
+    {"title": "Pas 1 (3-5 cuvinte)", "desc": "1 fraza cu actiunea concreta"},
+    {"title": "Pas 2", "desc": "1 fraza"},
+    {"title": "Pas 3", "desc": "1 fraza"}
+  ],
+  "testimonials": [
+    {"text": "2-3 fraze cu detaliu concret. Cum am folosit, ce s-a schimbat, recomandare scurta.", "name": "Nume RO", "city": "Oras RO", "stars": 5},
+    {"text": "...", "name": "...", "city": "...", "stars": 5},
+    {"text": "...", "name": "...", "city": "...", "stars": 5},
+    {"text": "...", "name": "...", "city": "...", "stars": 5}
+  ],
+  "faq": [
+    {"q": "Ce metoda de plata acceptati?", "a": "Plata se face ramburs la curier, la livrare. Verifici produsul si apoi platesti."},
+    {"q": "Cat dureaza livrarea?", "a": "Livrarea se face in 2-4 zile lucratoare in toata Romania."},
+    {"q": "Cine livreaza?", "a": "Livrarea se face prin Fan Courier / Sameday in toata tara."},
+    {"q": "Am garantie?", "a": "Da, produsul are garantie de 24 luni. In caz de defect, il inlocuim gratuit."},
+    {"q": "Pot comanda prin telefon?", "a": "Da, suni la numarul afisat pe pagina si plasezi comanda direct."},
+    {"q": "Pot returna produsul?", "a": "Ai 30 de zile pentru retur fara intrebari. Banii inapoi integral."}
+  ]
+}`
+
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 3000,
-    system: `Expert marketing COD Romania. ${styleInstruction} Returneaza DOAR JSON valid, fara backtick-uri.`,
-    messages: [{ role: 'user', content: `JSON pentru pagina COD produs: "${productInfo.title || 'produs'}" pret ~${productInfo.priceUSD} USD:
-{"productName":"","headline":"","subheadline":"","price":${rp},"oldPrice":${Math.round(rp*1.6)},"bumpPrice":${Math.round(rp*0.2)},"stock":7,"timerMinutes":14,"reviewCount":1247,"style":{"primaryColor":"#dc2626","secondaryColor":"#111111","fontFamily":"Inter,system-ui,sans-serif","borderRadius":"12px"},"benefits":["b1","b2","b3","b4","b5","b6"],"howItWorks":[{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"bumpProduct":"","testimonials":[{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5},{"text":"","name":"","city":"","stars":5}],"faq":[{"q":"","a":""},{"q":"Cum se face plata?","a":"La livrare direct curierului."},{"q":"Cat dureaza livrarea?","a":"2-4 zile in toata Romania."},{"q":"Pot returna?","a":"Da, 30 zile retur gratuit."}]}` }]
+    max_tokens: 4000,
+    system: system,
+    messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru produsul: "${productInfo.title || 'produs'}" (pret AliExpress ~${productInfo.priceUSD} USD, pret RO final ~${rp} LEI).
+
+Studiaza numele produsului si gandeste-te:
+- Ce PROBLEMA rezolva? (nu "ofera comoditate" — fii specific: "copilul varsa mancarea pe haine", "podeaua e plina de matase de la curatat", "spatele te doare cand stai pe scaun", etc.)
+- Cine cumpara? (mama tanara, batran, sportiv, etc.) — adapteaza copy-ul
+- Care e momentul cheie cand il foloseste? (descrie in featureSections)
+
+Returneaza EXACT acest JSON schema completat:
+${schema}` }]
   })
   return new Promise((resolve, reject) => {
     const req = https.request({
