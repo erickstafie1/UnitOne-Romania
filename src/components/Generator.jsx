@@ -148,12 +148,12 @@ export default function Generator({ onGenerated, onBack }) {
           />
 
           <TextField
-            label="Descriere stil"
-            helpText='Opțional — context despre target, ton, paleta de culori. Apasă „Îmbunătățește cu AI” pentru un brief polished.'
+            label="Descrie produsul tău"
+            helpText='Spune ce e, pentru cine, ce probleme rezolvă, ce-l face special. Apasă „Îmbunătățește cu AI” ca să adauge detalii comerciale peste ce ai scris.'
             value={styleDesc}
             onChange={setStyleDesc}
-            placeholder="Ex: Pagină pentru bărbați 25-45 ani, culori negru și roșu, ton direct, accent pe durabilitate..."
-            multiline={3}
+            placeholder="Ex: Set de tacâmuri ergonomice pentru copii 1-3 ani care învață să mănânce singuri. Au ventuze să nu se răstoarne farfuria și bavețică colectoare. Mamele scapă de mizeria de pe haine."
+            multiline={4}
             autoComplete="off"
             disabled={enhancing}
           />
@@ -166,7 +166,7 @@ export default function Generator({ onGenerated, onBack }) {
               disabled={!styleDesc.trim() || enhancing}
               size="slim"
             >
-              {enhancing ? 'Îmbunătățesc...' : 'Îmbunătățește cu AI'}
+              {enhancing ? 'Îmbunătățesc descrierea...' : 'Îmbunătățește cu AI'}
             </Button>
           </InlineStack>
 

@@ -17,27 +17,33 @@ Raspunde scurt si direct, in romana. Foloseste bullet points cand listezi idei.
 Daca utilizatorul cere sa creezi o pagina, spune-i sa apese "Pagina noua" din meniu.
 Nu folosi emoji decat foarte rar (max 1-2 pe raspuns).`
 
-// System prompt pentru AI Enhance — primeste o descriere brut de la user si o
-// face complete + specifica + actionabila pentru pipeline-ul de LP generation.
-// Output-ul devine `styleDesc` in api/generate.js care influenteaza Claude
-// principala (text + ton + culori + target audience).
+// System prompt pentru AI Enhance — primeste DESCRIEREA PRODUSULUI scrisa de
+// user (poate fi scurta/incompleta) si o EXTINDE cu detalii comerciale. NU
+// inventeaza alt produs. NU schimba ce a zis user-ul. Doar adauga detalii
+// care lipsesc: durerea exacta, audienta tinta, unghi de vanzare, ton.
+// Output-ul devine `styleDesc` in api/generate.js si serveste ca SURSA DE
+// ADEVAR pentru AI principal (peste ce scrape-uieste de pe AliExpress).
 const ENHANCE_SYSTEM_PROMPT = `Esti un expert in copywriting pentru landing page-uri COD din Romania.
 
-User-ul are un PRODUS si o IDEE VAGA despre cum vrea sa arate pagina. Tu primesti ideea vaga si o transformi intr-un brief STRUCTURAT pe care un alt AI il va folosi sa genereze pagina.
+User-ul ti-a scris o DESCRIERE A PRODUSULUI sau (uneori) doar cateva fraze. Tu primesti acea descriere si o EXTINZI cu detalii comerciale pe care un alt AI le va folosi sa genereze landing page-ul.
 
-Output-ul tau trebuie sa includa, in 4-7 propozitii max:
-1. AUDIENTA TINTA — cine cumpara (varsta, sex, situatie viata, durere principala)
-2. TON — formal/casual/emotional/direct/profesional
-3. PALETA CULORI — sugereaza o atmosfera (cald/rece/luxos/energic/calm)
-4. UNGHI DE VANZARE — care e angle-ul principal (frica/dorinta/aspiratie/economie)
-5. ELEMENTE CHEIE — ce sa scoata in evidenta in copy
+REGULI ABSOLUTE — NU INCALCA:
+1. PASTREAZA TOATE FAPTELE pe care le-a scris user-ul despre produs. NU schimba ce produs e. NU schimba ce face. NU contrazice ce a scris.
+2. EXTINDE cu detalii care lipsesc, deduse logic din ce a scris:
+   - Cine cumpara (audienta tinta: varsta, sex, situatie viata)
+   - Ce durere/problema concreta rezolva produsul
+   - Ce moment al zilei/saptamanii il foloseste cumparatorul
+   - Unghiul principal de vanzare (frica/dorinta/economie/aspiratie)
+   - Tonul (emotional/profesional/direct) potrivit audientei
+   - Atmosfera de culori sugerata (cald/rece/luxos/energic)
+3. Daca user-ul a scris ceva VAG (ex: "produs bun pt acasa"), pui intrebari implicit doar atunci cand nu poti deduce — DAR nu cere user-ului sa raspunda. Adaugi o presupunere realista marcata clar (gen "Probabil pentru...").
 
-Reguli stricte:
+OUTPUT:
+- Maxim 800 caractere total — brief pentru alt AI, nu eseu.
 - Romana cu diacritice.
-- Concret, ZERO blabla generic-AI.
-- Maxim 600 caractere total — nu un eseu, e brief pentru alt AI.
-- NU mentiona ca esti AI. NU spune "Brief:" sau "Iata:". Returneaza DOAR continutul, in proza, fara liste.
-- Daca user-ul a dat ceva foarte vag (gen "produs bun"), inventezi context realist bazat pe nume produs.`
+- Proza fluenta — nu liste cu bullets.
+- NU prefatare ("Iata:" / "Brief:"). NU mentiona ca esti AI.
+- Incepe direct cu descrierea extinsa a produsului.`
 
 function anthropicCall(messages, apiKey, systemPromptOverride) {
   return new Promise((resolve, reject) => {
@@ -85,16 +91,17 @@ module.exports = async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return res.status(500).json({ error: 'AI nu este configurat (lipseste ANTHROPIC_API_KEY)' })
 
-    // Mode: enhance_prompt — takes rough user text + optional product context
-    // and returns a polished brief for LP generation.
+    // Mode: enhance_prompt — takes user's product description (whatever they
+    // wrote about the product) and EXTENDS it with commercial details for LP
+    // generation. Preserves all user facts, adds audience/pain/angle/tone.
     if (body.action === 'enhance_prompt') {
       const userText = (body.text || '').trim()
       const productContext = (body.productContext || '').trim()
       if (!userText) return res.status(400).json({ error: 'text required' })
 
       const userMessage = productContext
-        ? `Produs: "${productContext}"\n\nIdeea user-ului despre cum sa arate pagina: "${userText}"\n\nTransforma in brief structurat.`
-        : `Ideea user-ului despre cum sa arate pagina: "${userText}"\n\nTransforma in brief structurat.`
+        ? `Context produs (link sau alta info): ${productContext}\n\nDESCRIEREA SCRISA DE USER (extinde-o, NU o schimba):\n"""\n${userText}\n"""\n\nReturneaza descrierea extinsa, in proza.`
+        : `DESCRIEREA SCRISA DE USER (extinde-o, NU o schimba):\n"""\n${userText}\n"""\n\nReturneaza descrierea extinsa, in proza.`
 
       const response = await anthropicCall(
         [{ role: 'user', content: userMessage.slice(0, 3000) }],

@@ -32,6 +32,37 @@ const HERO_VARIANTS = ['split', 'centered', 'overlay']
 // 'centered' - image full-width on top, all details centered below (more emotional)
 // 'overlay'  - image as background with darkened overlay + text on top (bold/luxury)
 
+// Detecteaza tematica produsului din descriere si returneaza paleta+heroVariant
+// potrivite. Daca descrierea e generica/lipsa, returneaza random ca fallback.
+// Mapping: PALETTES[0]=Red, 1=Blue, 2=Green, 3=Orange, 4=Purple, 5=Pink, 6=Teal, 7=Gold
+function pickVariantsByDescription(desc) {
+  const txt = (desc || '').toLowerCase()
+  // Categorii cu cuvinte cheie + indici paleta corespunzatoare + variante hero recomandate
+  const matchers = [
+    { kw: ['femei', 'beauty', 'cosmetic', 'skincare', 'machiaj', 'parfum', 'serum', 'crema'], palettes: [5, 4], hero: ['centered', 'overlay'] },
+    { kw: ['barbati', 'sportiv', 'fitness', 'antrenament', 'forta', 'masculin'], palettes: [0, 3], hero: ['overlay', 'split'] },
+    { kw: ['copii', 'bebe', 'parinti', 'mame', 'familie', 'jucarie', 'gradinita'], palettes: [3, 5], hero: ['centered', 'split'] },
+    { kw: ['tehnologie', 'tech', 'gadget', 'electronic', 'wireless', 'bluetooth', 'smart', 'usb'], palettes: [1, 7], hero: ['split', 'overlay'] },
+    { kw: ['sanatate', 'natural', 'eco', 'organic', 'wellness', 'supliment', 'vitamine', 'detox'], palettes: [2, 6], hero: ['centered', 'split'] },
+    { kw: ['luxury', 'luxos', 'premium', 'elegant', 'piele', 'lemn', 'aur', 'argint'], palettes: [7, 4], hero: ['overlay', 'split'] },
+    { kw: ['bucatarie', 'casa', 'mancare', 'gatit', 'curatenie', 'menaj'], palettes: [3, 2], hero: ['split', 'centered'] },
+    { kw: ['fashion', 'haine', 'imbracaminte', 'geanta', 'pantofi', 'bijuterii', 'accesori'], palettes: [4, 5], hero: ['overlay', 'centered'] }
+  ]
+  for (const m of matchers) {
+    if (m.kw.some(k => txt.includes(k))) {
+      return {
+        palette: PALETTES[m.palettes[Math.floor(Math.random() * m.palettes.length)]],
+        heroVariant: m.hero[Math.floor(Math.random() * m.hero.length)]
+      }
+    }
+  }
+  // Fallback: full random (descriere generica sau lipsa)
+  return {
+    palette: PALETTES[Math.floor(Math.random() * PALETTES.length)],
+    heroVariant: HERO_VARIANTS[Math.floor(Math.random() * HERO_VARIANTS.length)]
+  }
+}
+
 function fetchWithScraper(url) {
   const apiKey = process.env.SCRAPER_API_KEY
   if (!apiKey) return fetchDirect(url)
@@ -92,10 +123,12 @@ function callClaude(productInfo, styleDesc) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
-  // styleDesc e brief-ul user-ului (poate fi enhanced cu /api/chat?action=enhance_prompt)
-  // — devine instructiunea AUTORITARA pentru AUDIENTA + TON + UNGHI, nu doar "context".
+  // styleDesc e DESCRIEREA PRODUSULUI scrisa de user (poate fi enhanced cu
+  // /api/chat?action=enhance_prompt). E SURSA DE ADEVAR — peste ce a fost
+  // scrape-uit de pe AliExpress. Daca user-ul spune "set tacamuri pentru
+  // copii", asta e produsul, chiar daca AliExpress zice altceva.
   const briefBlock = styleDesc
-    ? `\n\nBRIEF AUTORITAR (deciziile user-ului — RESPECTA-LE EXACT):\n"""\n${styleDesc}\n"""\n\nFoloseşte brief-ul de mai sus pentru:\n- audiența țintă (nume, varsta, durere reflectate in testimoniale si headline)\n- tonul copy-ului (formal/casual/emotional asa cum cere brief-ul)\n- unghiul de vanzare (frica/dorinta/economie/aspiratie din brief)\n- elementele cheie (mentionate in brief sa apara in benefits + featureSections)`
+    ? `\n\n=== DESCRIEREA PRODUSULUI (SURSA DE ADEVAR — folosita peste orice altceva) ===\n"""\n${styleDesc}\n"""\n\nIntreaga pagina (productName, headline, subheadline, benefits, topBenefits, featureSections, testimoniale, FAQ) trebuie sa fie despre acest produs SPECIFIC asa cum l-a descris user-ul:\n- productName/headline reflecta exact ce e produsul (NU schimba in alt produs)\n- topBenefits si benefits sunt PROBLEMELE pe care produsul le rezolva, din descriere\n- featureSections explica EXACT functionalitatile mentionate de user\n- testimoniale sunt din partea audientei tinta mentionate in descriere (varsta, sex, situatie)\n- tonul copy-ului se potriveste cu audienta din descriere (parinti = cald/protectiv, sportivi = direct/energic, etc.)\n- featureSections.bullets si benefits CITEAZA caracteristici concrete din descriere\n\nDACA descrierea user-ului contrazice numele scrape-uit din AliExpress, CREDE-l pe USER.`
     : ''
   // Prompt scris pentru a produce copy în stilul produsutil.ro:
   // - frază "PROBLEMĂ → REZOLVARE" cu cuvinte CAPITALIZATE la început
@@ -386,19 +419,19 @@ module.exports = async function handler(req, res) {
     ].filter(Boolean)
     copy.aliImages = aliImages
 
-    // Inject random palette + hero variant — each LP gets a unique "signature"
-    // so two merchants generating from same product never get identical pages.
-    // Saved with the LP so re-edits preserve the chosen look.
-    const palette = PALETTES[Math.floor(Math.random() * PALETTES.length)]
-    const heroVariant = HERO_VARIANTS[Math.floor(Math.random() * HERO_VARIANTS.length)]
+    // Smart palette + hero pick — bazat pe descrierea user-ului (categorie
+    // produs) ca sa nu primesti Classic Red la beauty sau Hot Pink la gadgets.
+    // Daca descrierea e generica/lipsa, cade pe random pentru diversitate.
+    // Saved cu LP-ul ca re-edit sa preserve look-ul.
+    const variants = pickVariantsByDescription(styleDesc)
     copy.style = Object.assign({}, copy.style || {}, {
-      primaryColor: palette.primary,
-      secondaryColor: palette.secondary,
-      bgAccent: palette.bgAccent,
-      bgAccentBorder: palette.bgAccentBorder
+      primaryColor: variants.palette.primary,
+      secondaryColor: variants.palette.secondary,
+      bgAccent: variants.palette.bgAccent,
+      bgAccentBorder: variants.palette.bgAccentBorder
     })
-    copy.heroVariant = heroVariant
-    console.log('Variant signature: palette=' + palette.primary + ' hero=' + heroVariant)
+    copy.heroVariant = variants.heroVariant
+    console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant + ' (from desc=' + (styleDesc ? 'YES' : 'NO') + ')')
 
     console.log('=== DONE === Images:', copy.images.length)
     res.status(200).json({ success: true, data: copy })
