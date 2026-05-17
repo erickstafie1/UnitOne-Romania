@@ -158,24 +158,40 @@ ${schema}` }]
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 25000
+      timeout: 45000
     }, (res) => {
       const chunks = []
       res.on('data', c => chunks.push(c))
       res.on('end', () => {
         try {
-          const data = JSON.parse(Buffer.concat(chunks).toString())
-          if (data.error) throw new Error(data.error.message)
+          const rawResponse = Buffer.concat(chunks).toString()
+          console.log('Claude HTTP:', res.statusCode)
+          const data = JSON.parse(rawResponse)
+          if (data.error) {
+            console.log('Claude API error:', JSON.stringify(data.error))
+            throw new Error('Claude API: ' + data.error.message)
+          }
           const text = (data.content || []).map(c => c.text || '').join('')
+          console.log('Claude text length:', text.length, 'stop_reason:', data.stop_reason)
           const start = text.indexOf('{')
           const end = text.lastIndexOf('}')
-          if (start === -1 || end === -1) throw new Error('No JSON')
-          resolve(JSON.parse(text.substring(start, end + 1)))
+          if (start === -1 || end === -1) {
+            console.log('Claude raw text (no JSON found):', text.substring(0, 300))
+            throw new Error('Claude returned no JSON')
+          }
+          const jsonStr = text.substring(start, end + 1)
+          try {
+            resolve(JSON.parse(jsonStr))
+          } catch (parseErr) {
+            console.log('Claude JSON parse failed. First 500 chars of extracted:', jsonStr.substring(0, 500))
+            console.log('Parse error:', parseErr.message)
+            throw new Error('Claude JSON malformed: ' + parseErr.message)
+          }
         } catch(e) { reject(e) }
       })
     })
     req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout')) })
+    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout after 45s')) })
     req.write(body)
     req.end()
   })
