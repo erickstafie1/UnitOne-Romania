@@ -244,7 +244,7 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
 
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4000,
+    max_tokens: 6000,
     system: system,
     messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru ACEST produs concret:
 
