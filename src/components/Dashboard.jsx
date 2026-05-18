@@ -47,16 +47,30 @@ export default function Dashboard({
     } catch {}
   }
 
-  async function loadPages() {
-    setLoading(true)
+  // Retry pe eroare tranzitorie — token Shopify in curs de exchange dupa
+  // auth, rate limit micro, sau race condition la prima incarcare. Pana la
+  // 3 incercari cu backoff 1.5s/3s/4.5s ca user-ul sa nu vada lista goala.
+  async function loadPages(attempt = 0) {
+    if (attempt === 0) setLoading(true)
+    let success = false
     try {
       const res = await apiFetch('/api/pages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'list', shop })
       })
-      const data = await res.json()
-      setPages(data.pages || [])
-    } catch {}
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success && Array.isArray(data.pages)) {
+          setPages(data.pages)
+          success = true
+        }
+      }
+    } catch (e) { /* fall through to retry */ }
+    if (!success && attempt < 2) {
+      // Retry cu backoff incremental
+      setTimeout(() => loadPages(attempt + 1), 1500 * (attempt + 1))
+      return
+    }
     setLoading(false)
   }
 
