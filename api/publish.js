@@ -28,22 +28,34 @@ function buildOverlay(html) { return ensureCloseMarker(applyWrapper(html, 'overl
 function buildEmbed(html) { return ensureCloseMarker(applyWrapper(html, 'embed')) }
 
 function buildHideScript() {
-  // Pentru OVERLAY mode (hideHeaderFooter=true): ascunde TOT inafara LP-ului
-  // nostru. Asta merge chiar daca template-urile pagecod/pagecodfull nu s-au
-  // instalat in tema (Shopify-managed themes refuza .liquid templates silent).
-  // CSS direct in body_html prinde orice header/footer/nav din orice tema.
+  // Pentru OVERLAY mode (hideHeaderFooter=true): ascunde HEADER + FOOTER ale temei
+  // PLUS elementele native produs (titlu/pret/form) care s-ar rendar alaturi de LP.
+  // ATENTIE: NU ascundem .product__info-container, .product, .product__main —
+  // acestea sunt WRAPPER-ele in care tema pune body_html (=LP-ul nostru). Daca
+  // le ascundem, ascundem si LP-ul!
   return '<style>\n' +
     'html,body{margin:0!important;padding:0!important;background:#fff!important}\n' +
-    /* Hide every typical theme header/footer/nav across Dawn, Horizon, Debut, OS2 themes */
-    'header,footer,nav,.header,.footer,.site-header,.site-footer,.shopify-section-header,.shopify-section-footer,' +
-    '#shopify-section-header,#shopify-section-footer,.announcement-bar,.sticky-header,' +
-    '.section-header,.section-footer,.site-nav,.site-header__wrapper,.header-wrapper,' +
-    '[class*="section-template--"][class*="-header"],[class*="section-template--"][class*="-footer"]' +
-    '{display:none!important;height:0!important;visibility:hidden!important}\n' +
-    /* Also hide native Shopify product info that might render alongside our LP */
-    '.product__media-wrapper,.product__info-container,.product__title,.product__view-details,' +
-    '.product__pickup-availabilities,.product-form,.shopify-payment-button,.price--listing,' +
-    '.product__media-list,.product-form__buttons{display:none!important}\n' +
+    /* Header / footer / nav theme — selectori specifici (NU container wrappers) */
+    'header[role="banner"],footer[role="contentinfo"],' +
+    'nav.site-nav,.site-header,.site-footer,' +
+    '.shopify-section-header,.shopify-section-footer,' +
+    '#shopify-section-header,#shopify-section-footer,' +
+    'div.announcement-bar,div.sticky-header,' +
+    '.header-wrapper,.footer-wrapper,' +
+    '.section-header-wrapper,.section-footer-wrapper' +
+    '{display:none!important}\n' +
+    /* Native product page elements (DOAR cele care apar ca peers la body_html,
+       NU containerul de body_html in sine). Restrictie cu selector copil pentru
+       siguranta — daca theme-ul wrapezza body_html intr-un .product__info,
+       elementele lui directe se ascund dar restul wrappers raman intacte. */
+    '.product__title,h1.product-single__title,h1.product__heading,' +
+    '.product__view-details,.product__pickup-availabilities,' +
+    '.product-form__buttons,.shopify-payment-button,' +
+    '.price--listing,.product__price--listing' +
+    '{display:none!important}\n' +
+    /* Hide native product MEDIA only if NOT inside our LP wrapper */
+    '.product__media-list:not(#unitone-lp *),.product__media-wrapper:not(#unitone-lp *)' +
+    '{display:none!important}\n' +
     '</style>'
 }
 
