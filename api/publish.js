@@ -351,7 +351,7 @@ module.exports = async function handler(req, res) {
     if (!html) return res.status(400).json({ error: 'Missing html' })
     if (!productId) return res.status(400).json({ error: 'Selecteaza un produs!' })
 
-    const plan = await getPlan(auth.call)
+    const plan = await getPlan(auth.call, auth.shop)
     const counts = await countLPs(auth.call)
     if (counts.total >= plan.limit) {
       return res.status(402).json({ error: 'limit_reached', plan: plan.plan, limit: plan.limit })

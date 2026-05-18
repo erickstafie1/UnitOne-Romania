@@ -1,7 +1,17 @@
 // Helpers care primesc o functie `call` (de la prepareShopifyAuth) pentru a face
 // apeluri Shopify cu auto-refresh de token la fiecare cerere.
 
-async function getPlan(call) {
+// Dev/owner shops — au automat plan Pro pentru testing fara billing real.
+// Adaugi prin env PLAN_OVERRIDE_SHOPS="shop1.myshopify.com,shop2.myshopify.com"
+// SAU folosesti lista hardcodata aici pentru dev stores cunoscute.
+const FREE_PRO_SHOPS = (process.env.PLAN_OVERRIDE_SHOPS || 'unitone-test.myshopify.com')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+
+async function getPlan(call, shop) {
+  // Whitelist instant — dev stores ale owner-ului primesc Pro fara billing
+  if (shop && FREE_PRO_SHOPS.includes(String(shop).toLowerCase())) {
+    return { plan: 'pro', limit: 9999, publishLimit: 9999 }
+  }
   try {
     const data = await call('/recurring_application_charges.json')
     const charges = data.recurring_application_charges || []

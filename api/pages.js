@@ -73,7 +73,7 @@ module.exports = async function handler(req, res) {
 
     if (action === 'toggle') {
       if (published) {
-        const plan = await getPlan(auth.call)
+        const plan = await getPlan(auth.call, auth.shop)
         if (plan.publishLimit < 9999) {
           const counts = await countLPs(auth.call)
           if (counts.active >= plan.publishLimit) {

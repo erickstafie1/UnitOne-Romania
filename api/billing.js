@@ -25,6 +25,14 @@ module.exports = async function handler(req, res) {
     const auth = await prepareShopifyAuth(req, res)
 
     if (action === 'get_status') {
+      // Whitelist dev/owner shops — primesc Pro automat, fara billing real.
+      // Mereu sincronizat cu _plan.js getPlan(). Configurabil via env:
+      //   PLAN_OVERRIDE_SHOPS=shop1.myshopify.com,shop2.myshopify.com
+      const overrideShops = (process.env.PLAN_OVERRIDE_SHOPS || 'unitone-test.myshopify.com')
+        .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      if (auth.shop && overrideShops.includes(String(auth.shop).toLowerCase())) {
+        return res.status(200).json({ plan: 'pro', limit: 9999, publishLimit: 9999, dev: true })
+      }
       const data = await auth.call('/recurring_application_charges.json')
       const charges = data.recurring_application_charges || []
       const active = charges.find(c => c.status === 'active')
