@@ -277,24 +277,13 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
     }
   }, [data.id, data.aliUrl, pageTitle, shop, hideHeaderFooter])
 
-  // Auto-apply pretul produsului Shopify cand user-ul selecteaza unul.
-  // Inlocuieste pretul placeholder AI cu cel real fara sa fie nevoie de click pe buton.
-  useEffect(() => {
-    if (!selectedProduct?.variants?.[0]?.price || !gjsRef.current) return
-    const realPrice = Math.round(parseFloat(selectedProduct.variants[0].price))
-    if (!realPrice) return
-    const newOldPrice = Math.round(realPrice * 1.6)
-    let html = gjsRef.current.getHtml()
-    const before = html
-    // Hero priceblock are font-size:42px (split/centered) sau in overlay
-    html = html.replace(/(<span[^>]*font-size:42px[^>]*>)(\d+)(<\/span>)/g, `$1${realPrice}$3`)
-    html = html.replace(/(<span[^>]*text-decoration:line-through[^>]*>)(\d+)( LEI<\/span>)/g, `$1${newOldPrice}$3`)
-    html = html.replace(/Economise(s|ș)ti \d+ LEI/g, `Economise$1ti ${newOldPrice - realPrice} LEI`)
-    if (html !== before) {
-      gjsRef.current.setComponents(html)
-      dirtyRef.current = true
-    }
-  }, [selectedProduct?.id])
+  // NOTE: Auto-apply de pret prin setComponents era distructiv — re-parsa
+  // tot HTML-ul prin GrapesJS si strica layout-ul. Acum sync-ul se face
+  // SERVER-SIDE in api/publish.js, unde HTML-ul e doar string replace
+  // (regex direct pe finalHtml inainte de PUT la Shopify). Editor canvas
+  // ramane intact, user-ul nu vede flicker.
+  // Butonul manual "Aplica pret pe LP" ramane in product info strip ca
+  // optiune locala (face setComponents dar user-ul a cerut-o constient).
 
   async function autoSave() {
     if (!gjsRef.current) return

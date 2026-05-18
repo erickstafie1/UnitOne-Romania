@@ -157,6 +157,30 @@ async function buildProductJsonScript(call, productId) {
   }
 }
 
+// Server-side price sync — la publish, citim pretul real al produsului si
+// inlocuim placeholder-ul AI din body_html. String replace pur, fara DOM
+// parsing, deci NU strica layout-ul GrapesJS. Identic cu butonul manual
+// "Aplica pret pe LP" din editor, dar automat la publish.
+async function syncPriceToProduct(html, call, productId) {
+  try {
+    const data = await call('/products/' + productId + '.json')
+    const variantPrice = data.product?.variants?.[0]?.price
+    if (!variantPrice) return html
+    const realPrice = Math.round(parseFloat(variantPrice))
+    if (!realPrice || isNaN(realPrice)) return html
+    const newOldPrice = Math.round(realPrice * 1.6)
+    const savings = newOldPrice - realPrice
+    // Pattern strict pe span-ul mare de pret (font-size:42px folosit in hero)
+    return html
+      .replace(/(<span[^>]*font-size:42px[^>]*>)(\d+)(<\/span>)/g, `$1${realPrice}$3`)
+      .replace(/(<span[^>]*text-decoration:line-through[^>]*>)(\d+)( LEI<\/span>)/g, `$1${newOldPrice}$3`)
+      .replace(/Economise(s|ș)ti \d+ LEI/g, `Economise$1ti ${savings} LEI`)
+  } catch (e) {
+    console.log('syncPriceToProduct error:', e.message)
+    return html
+  }
+}
+
 // Detects whether the page has any COD button hook (either app, either marker).
 function hasCodHook(html) {
   return html.includes('_rsi-cod-form-gempages-button-hook')
@@ -223,6 +247,8 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
+      // Sync pret produs Shopify -> LP, inainte de orice alta transformare
+      finalHtml = await syncPriceToProduct(finalHtml, auth.call, pageId)
       if (codFormApp || hasCodHook(finalHtml)) {
         finalHtml = addProductIdToAllHooks(finalHtml, pageId)
         finalHtml = addAnchorToFirstHook(finalHtml)
@@ -277,6 +303,8 @@ module.exports = async function handler(req, res) {
     const newStatus = counts.active >= plan.publishLimit ? 'draft' : 'active'
 
     let finalHtml = html
+    // Sync pret produs Shopify -> LP, inainte de orice alta transformare
+    finalHtml = await syncPriceToProduct(finalHtml, auth.call, productId)
 
     if (codFormApp || hasCodHook(finalHtml)) {
       finalHtml = addProductIdToAllHooks(finalHtml, productId)
