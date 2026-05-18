@@ -26,6 +26,27 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   const [showProductModal, setShowProductModal] = useState(false)
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
+  // GemPages-style tabs in left sidebar: Sections vs Elements
+  const [blocksTab, setBlocksTab] = useState('section')
+  const [blocksSearch, setBlocksSearch] = useState('')
+
+  // Filtru pe textul de search — ascunde block-urile care nu match-uiesc
+  useEffect(() => {
+    const panel = document.getElementById('blocks-panel')
+    if (!panel) return
+    const q = blocksSearch.trim().toLowerCase()
+    panel.querySelectorAll('.gjs-block').forEach(b => {
+      const label = b.querySelector('.gjs-block-label')?.textContent?.toLowerCase() || ''
+      const matches = !q || label.includes(q)
+      b.style.display = matches ? '' : 'none'
+    })
+    // Daca o categorie nu mai are block-uri vizibile, ascunde-o
+    panel.querySelectorAll('.gjs-block-category').forEach(cat => {
+      const anyVisible = Array.from(cat.querySelectorAll('.gjs-block'))
+        .some(b => b.style.display !== 'none')
+      cat.style.opacity = anyVisible ? '' : '0.3'
+    })
+  }, [blocksSearch])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [productsError, setProductsError] = useState('')
   const [hideHeaderFooter, setHideHeaderFooter] = useState(data.template_suffix !== 'pagecodfull')
@@ -688,9 +709,29 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
       {/* EDITOR LAYOUT */}
       <div className="ue-layout">
-        <div className="ue-panel ue-panel-left">
-          <div className="ue-panel-title">Blocuri</div>
-          <div id="blocks-panel" />
+        <div className={`ue-panel ue-panel-left blocks-mode-${blocksTab}`}>
+          {/* GemPages-style tabs: Sections / Elements */}
+          <div className="ue-blocks-tabs">
+            <button
+              className={'ue-blocks-tab' + (blocksTab === 'section' ? ' is-active' : '')}
+              onClick={() => setBlocksTab('section')}
+              type="button"
+            >Secțiuni</button>
+            <button
+              className={'ue-blocks-tab' + (blocksTab === 'element' ? ' is-active' : '')}
+              onClick={() => setBlocksTab('element')}
+              type="button"
+            >Elemente</button>
+          </div>
+          <div className="ue-blocks-search">
+            <input
+              type="text"
+              placeholder="Caută blocuri..."
+              value={blocksSearch}
+              onChange={(e) => setBlocksSearch(e.target.value.toLowerCase())}
+            />
+          </div>
+          <div id="blocks-panel" data-search={blocksSearch} />
         </div>
 
         <div className="ue-canvas">
@@ -1348,15 +1389,33 @@ function addBlocks(editor, data) {
       content: `<div style="padding:16px 20px;background:#1e1e2e;border-radius:8px;margin:16px 20px"><code style="font-size:13px;color:#a5f3fc;font-family:monospace;display:block">&lt;div&gt;Codul tău HTML&lt;/div&gt;</code></div>` },
   ]
 
+  // Category → kind map (Sections vs Elements) — defineste ce tab apare in
+  // sidebar pentru fiecare categorie. SECTIONS = block-uri mari complete care
+  // adauga un section intreg pe pagina; ELEMENTS = atomice (buton, text, imagine).
+  // Inspirat din GemPages UI: tabs "Section" vs "Element".
+  const ELEMENT_CATS = ['COD Form', 'Layout', 'Text', 'Media', 'Navigare', 'Avansat']
+  const kindFor = (cat) => ELEMENT_CATS.includes(cat) ? 'element' : 'section'
+
   blocks.forEach(b => {
     editor.Blocks.add(b.id, {
       label: b.label,
-      category: { id: b.cat, label: b.cat, open: b.cat === 'COD Form' },
+      category: { id: b.cat, label: b.cat, open: b.cat === 'Hero' || b.cat === 'Produs' },
       content: b.content,
       media: b.media,
-      attributes: { class: 'gjs-block-section' }
+      attributes: { class: 'gjs-block-section', 'data-kind': kindFor(b.cat) }
     })
   })
+
+  // Dupa ce GrapesJS a randat block-urile, marchezam fiecare categorie cu kind
+  // (citim din primul block din ea). Asta permite CSS-ul sa filtreze per tab.
+  setTimeout(() => {
+    const panel = document.getElementById('blocks-panel')
+    if (!panel) return
+    panel.querySelectorAll('.gjs-block-category').forEach(cat => {
+      const firstBlock = cat.querySelector('.gjs-block[data-kind]')
+      if (firstBlock) cat.setAttribute('data-kind', firstBlock.getAttribute('data-kind'))
+    })
+  }, 50)
 }
 
 /* ─── Editor outer UI styles (theme-adaptive) ─────────────────────────────── */
@@ -1406,6 +1465,57 @@ function EditorStyles() {
         text-transform: uppercase; letter-spacing: 0.06em;
         padding: 6px 0 14px;
       }
+
+      /* ── GemPages-style tabs (Sections / Elements) in left sidebar ─────── */
+      .ue-blocks-tabs {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        background: #f1f2f4;
+        border-radius: 8px;
+        padding: 4px;
+        margin: 0 0 12px;
+      }
+      .ue-blocks-tab {
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 600;
+        color: #6d7175;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        font-family: inherit;
+      }
+      .ue-blocks-tab:hover { color: #202223; }
+      .ue-blocks-tab.is-active {
+        background: #ffffff;
+        color: #202223;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      }
+      .ue-blocks-search {
+        margin: 0 0 12px;
+      }
+      .ue-blocks-search input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #e1e3e5;
+        border-radius: 6px;
+        font-size: 13px;
+        outline: none;
+        background: #fafbfb;
+        font-family: inherit;
+      }
+      .ue-blocks-search input:focus {
+        border-color: #2c6ecb;
+        background: #fff;
+      }
+      /* Filtreaza categoriile per tab activ (data-kind set in addBlocks) */
+      .blocks-mode-section .gjs-block-category[data-kind="element"] { display: none !important; }
+      .blocks-mode-element .gjs-block-category[data-kind="section"] { display: none !important; }
+      /* Forteaza categoriile sa fie deschise in tab-ul activ pentru a vedea
+         block-urile direct, fara click pe titlu de categorie */
+      .ue-panel-left .gjs-block-category .gjs-blocks-c { display: block !important; }
 
       /* ── Canvas: studio-grey stage, LP rendered as a centered "device frame" ─── */
       .ue-canvas {
