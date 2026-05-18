@@ -278,13 +278,50 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
     }
   }, [data.id, data.aliUrl, pageTitle, shop, hideHeaderFooter])
 
-  // NOTE: Auto-apply de pret prin setComponents era distructiv — re-parsa
-  // tot HTML-ul prin GrapesJS si strica layout-ul. Acum sync-ul se face
-  // SERVER-SIDE in api/publish.js, unde HTML-ul e doar string replace
-  // (regex direct pe finalHtml inainte de PUT la Shopify). Editor canvas
-  // ramane intact, user-ul nu vede flicker.
-  // Butonul manual "Aplica pret pe LP" ramane in product info strip ca
-  // optiune locala (face setComponents dar user-ul a cerut-o constient).
+  // SURGICAL data-bind in editor — cand user-ul alege un produs din toolbar,
+  // gasim toate componentele cu data-unitone-bind="X" si le actualizam in-place
+  // prin GrapesJS API (NU setComponents care reparseaza tot si strica layout).
+  // Asa user-ul vede DATELE REALE in editor preview, identic cu ce va aparea
+  // pe LP live, fara flicker / breakage.
+  useEffect(() => {
+    if (!selectedProduct?.id || !gjsRef.current) return
+    try {
+      const wrapper = gjsRef.current.getWrapper()
+      if (!wrapper) return
+      const v0 = selectedProduct.variants?.[0] || {}
+      const realPrice = Math.round(parseFloat(v0.price || 0)) || 0
+      if (!realPrice) return
+      const compareAt = parseFloat(v0.compare_at_price || 0)
+      const oldPrice = compareAt > realPrice ? Math.round(compareAt) : Math.round(realPrice * 1.6)
+      const savings = oldPrice - realPrice
+      const discount = oldPrice > 0 ? Math.round((1 - realPrice / oldPrice) * 100) : 0
+      const imgSrc = selectedProduct.image?.src || selectedProduct.images?.[0]?.src || ''
+      const title = selectedProduct.title || ''
+
+      const updates = [
+        { sel: '[data-unitone-bind="title"]', text: title },
+        { sel: '[data-unitone-bind="price"]', text: String(realPrice) },
+        { sel: '[data-unitone-bind="compareAt"]', text: oldPrice + ' LEI' },
+        { sel: '[data-unitone-bind="discount"]', text: '-' + discount + '%' },
+        { sel: '[data-unitone-bind="savings"]', text: 'Economisești ' + savings + ' LEI' }
+      ]
+      let touched = 0
+      updates.forEach(u => {
+        wrapper.find(u.sel).forEach(c => { c.components(u.text); touched++ })
+      })
+      if (imgSrc) {
+        wrapper.find('[data-unitone-bind="image"]').forEach(c => {
+          const attrs = c.getAttributes ? c.getAttributes() : {}
+          c.setAttributes({ ...attrs, src: imgSrc })
+          touched++
+        })
+      }
+      if (touched > 0) {
+        dirtyRef.current = true
+        console.log('[UnitOne] Bound', touched, 'elements to product', selectedProduct.id)
+      }
+    } catch (e) { console.log('Editor bind error:', e.message) }
+  }, [selectedProduct?.id])
 
   async function autoSave() {
     if (!gjsRef.current) return
