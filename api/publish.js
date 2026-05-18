@@ -181,6 +181,46 @@ async function syncPriceToProduct(html, call, productId) {
   }
 }
 
+// Data-bound product block sync — gaseste elementele cu data-unitone-bind="X"
+// si le inlocuieste cu valorile reale din produsul Shopify. Astea sunt block-uri
+// "Produs (auto)" pe care user-ul le pune in editor — vor afisa mereu datele
+// curente ale produsului (imagine, titlu, pret, comparare), nu placeholder-uri.
+async function bindProductBlocks(html, call, productId) {
+  // Skip rapid daca nu sunt block-uri data-bound in HTML
+  if (!html.includes('data-unitone-bind')) return html
+  try {
+    const data = await call('/products/' + productId + '.json')
+    const p = data.product
+    if (!p) return html
+    const realPrice = Math.round(parseFloat(p.variants?.[0]?.price || 0))
+    const compareAt = parseFloat(p.variants?.[0]?.compare_at_price || 0)
+    const oldPrice = compareAt > realPrice ? Math.round(compareAt) : Math.round(realPrice * 1.6)
+    const savings = oldPrice - realPrice
+    const discount = oldPrice > 0 ? Math.round((1 - realPrice / oldPrice) * 100) : 0
+    const imgSrc = p.image?.src || p.images?.[0]?.src || ''
+    const title = (p.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+    let out = html
+    // Inlocuieste IMG src — atributul src dintr-un <img data-unitone-bind="image" src="...">
+    if (imgSrc) {
+      out = out.replace(/(<img[^>]*data-unitone-bind="image"[^>]*\ssrc=")[^"]*(")/g, `$1${imgSrc}$2`)
+    }
+    // Inlocuieste textul dintr-un <h1 data-unitone-bind="title">...</h1> (sau alt tag)
+    out = out.replace(/(<(?:h1|h2|h3|span|div|p)[^>]*data-unitone-bind="title"[^>]*>)[^<]*(<\/(?:h1|h2|h3|span|div|p)>)/g, `$1${title}$2`)
+    if (realPrice > 0) {
+      out = out.replace(/(<(?:span|div)[^>]*data-unitone-bind="price"[^>]*>)[^<]*(<\/(?:span|div)>)/g, `$1${realPrice}$2`)
+      out = out.replace(/(<(?:span|div)[^>]*data-unitone-bind="compareAt"[^>]*>)[^<]*(<\/(?:span|div)>)/g, `$1${oldPrice} LEI$2`)
+      out = out.replace(/(<(?:span|div)[^>]*data-unitone-bind="discount"[^>]*>)[^<]*(<\/(?:span|div)>)/g, `$1-${discount}%$2`)
+      out = out.replace(/(<(?:span|div|p)[^>]*data-unitone-bind="savings"[^>]*>)[^<]*(<\/(?:span|div|p)>)/g, `$1Economisești ${savings} LEI$2`)
+    }
+    console.log('bindProductBlocks: applied real data for product', p.id, 'price', realPrice)
+    return out
+  } catch (e) {
+    console.log('bindProductBlocks error:', e.message)
+    return html
+  }
+}
+
 // Detects whether the page has any COD button hook (either app, either marker).
 function hasCodHook(html) {
   return html.includes('_rsi-cod-form-gempages-button-hook')
@@ -247,7 +287,9 @@ module.exports = async function handler(req, res) {
       const { pageId } = body
       if (!pageId) return res.status(400).json({ error: 'Missing pageId' })
       let finalHtml = html
-      // Sync pret produs Shopify -> LP, inainte de orice alta transformare
+      // Data-bind: inlocuieste data-unitone-bind="X" cu valorile reale ale produsului
+      finalHtml = await bindProductBlocks(finalHtml, auth.call, pageId)
+      // Sync pret AI placeholder (font-size:42px hero) -> pretul produsului
       finalHtml = await syncPriceToProduct(finalHtml, auth.call, pageId)
       if (codFormApp || hasCodHook(finalHtml)) {
         finalHtml = addProductIdToAllHooks(finalHtml, pageId)
@@ -303,7 +345,9 @@ module.exports = async function handler(req, res) {
     const newStatus = counts.active >= plan.publishLimit ? 'draft' : 'active'
 
     let finalHtml = html
-    // Sync pret produs Shopify -> LP, inainte de orice alta transformare
+    // Data-bind product blocks (Produs (auto)) cu valorile reale ale produsului
+    finalHtml = await bindProductBlocks(finalHtml, auth.call, productId)
+    // Sync pret AI placeholder (font-size:42px hero) -> pretul produsului
     finalHtml = await syncPriceToProduct(finalHtml, auth.call, productId)
 
     if (codFormApp || hasCodHook(finalHtml)) {

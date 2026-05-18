@@ -1003,6 +1003,7 @@ function buildHTML(data) {
       #unitone-lp .unitone-test-grid{grid-template-columns:repeat(3,1fr) !important;gap:18px !important}
       #unitone-lp .unitone-feature-row{padding:48px 32px !important}
       #unitone-lp .unitone-quickbullets{grid-template-columns:1fr 1fr !important;gap:14px !important}
+      #unitone-lp .unitone-product-block,.unitone-product-block{grid-template-columns:1fr 1fr !important;gap:40px !important;padding:48px 32px !important;align-items:center !important}
     }
     @keyframes unitone-gift-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
     #unitone-lp .unitone-gift{animation:unitone-gift-pulse 2.5s ease-in-out infinite}
@@ -1251,6 +1252,29 @@ function addBlocks(editor, data) {
       content: `<div style="padding:20px 20px 0"><div style="padding:20px;background:#f9fafb;border-radius:12px;border-left:4px solid ${p};margin-bottom:12px"><div style="color:#f39c12;margin-bottom:8px;font-size:16px">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p style="color:#333;margin-bottom:12px;font-style:italic;font-size:15px;line-height:1.6">"Produs excelent! L-am primit în 5 zile."</p><strong style="color:#111;font-size:14px">— Maria D., București</strong></div></div>` },
 
     // PRODUS
+    // PRODUCT AUTO-SYNC — block data-bound la produsul Shopify selectat in toolbar.
+    // La publish, server-side se inlocuiesc data-unitone-bind="X" placeholders cu
+    // valorile reale: imagine produs, titlu, pret, comparare. Functioneaza ca
+    // GemPages "Product Source": user-ul nu trebuie sa hardcoded-eze nimic.
+    { id:'product-auto', label:'Produs (auto)', cat:'Produs', media: T.productCard,
+      content: `<div data-unitone-bind="product" class="unitone-product-block" style="display:grid;grid-template-columns:1fr;gap:20px;padding:20px;background:#fff;align-items:center">
+        <div><img data-unitone-bind="image" src="https://placehold.co/600x600/f9fafb/999?text=Imagine+produs" style="width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto;border-radius:8px;background:#f9fafb"/></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="color:#f59e0b;font-size:16px">★★★★★</span><span style="font-size:13px;color:#555;font-weight:600">1,247+ Clienți Mulțumiți</span></div>
+          <h1 data-unitone-bind="title" style="font-size:24px;font-weight:900;line-height:1.25;margin:0 0 12px;color:#111">Numele Produsului</h1>
+          <p style="font-size:14px;color:#555;margin:0 0 16px;line-height:1.55">Descriere scurtă produs — se editează aici sau lasă-l să fie completat de AI.</p>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap">
+            <span data-unitone-bind="compareAt" style="font-size:18px;color:#aaa;text-decoration:line-through">238 LEI</span>
+            <span data-unitone-bind="price" style="font-size:42px;font-weight:900;color:${p};line-height:1">149</span>
+            <span style="font-size:18px;font-weight:900;color:${p}">LEI</span>
+            <span data-unitone-bind="discount" style="background:${p};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px">-37%</span>
+          </div>
+          <p data-unitone-bind="savings" style="font-size:12px;color:#999;margin:0 0 16px">Economisești 89 LEI</p>
+          ${relBtn('margin:8px 0')}
+          <div style="display:flex;gap:14px;margin-top:14px;flex-wrap:wrap"><span style="font-size:12px;color:#16a34a;font-weight:700">✓ Livrare 24-48h</span><span style="font-size:12px;color:#16a34a;font-weight:700">🚚 Plata ramburs</span><span style="font-size:12px;color:#16a34a;font-weight:700">↩ Retur 30 zile</span></div>
+        </div>
+      </div>`
+    },
     { id:'product-card', label:'Card Produs', cat:'Produs', media: T.productCard,
       content: `<div style="padding:20px;border:1px solid #e5e7eb;border-radius:10px;margin:16px 20px"><img src="https://placehold.co/400x300/f9fafb/999?text=Produs" style="width:100%;border-radius:8px;display:block;margin-bottom:14px"/><h3 style="font-size:18px;font-weight:800;margin:0 0 6px">Numele Produsului</h3><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><span style="font-size:26px;font-weight:900;color:${p}">149 RON</span><span style="text-decoration:line-through;color:#999;font-size:16px">249 RON</span></div>${relBtn()}</div>` },
     { id:'bundle', label:'Bundle', cat:'Produs', media: T.bundle,
