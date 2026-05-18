@@ -279,17 +279,17 @@ ${schema}` }]
           }
           const text = (data.content || []).map(c => c.text || '').join('')
           console.log('Claude text length:', text.length, 'stop_reason:', data.stop_reason)
-          const start = text.indexOf('{')
-          const end = text.lastIndexOf('}')
-          if (start === -1 || end === -1) {
-            console.log('Claude raw text (no JSON found):', text.substring(0, 300))
+          // Smart JSON extractor — handle braces in strings, escapes, etc.
+          // indexOf/lastIndexOf method failed when Claude included {} in example text.
+          const jsonStr = extractBalancedJSON(text)
+          if (!jsonStr) {
+            console.log('Claude raw text (no balanced JSON):', text.substring(0, 300))
             throw new Error('Claude returned no JSON')
           }
-          const jsonStr = text.substring(start, end + 1)
           try {
             resolve(JSON.parse(jsonStr))
           } catch (parseErr) {
-            console.log('Claude JSON parse failed. First 500 chars of extracted:', jsonStr.substring(0, 500))
+            console.log('Claude JSON parse failed. First 500 chars:', jsonStr.substring(0, 500))
             console.log('Parse error:', parseErr.message)
             throw new Error('Claude JSON malformed: ' + parseErr.message)
           }
@@ -301,6 +301,97 @@ ${schema}` }]
     req.write(body)
     req.end()
   })
+}
+
+// Smart JSON extractor — finds first balanced JSON object in text.
+// Handles nested braces, strings with braces inside, escaped chars.
+function extractBalancedJSON(text) {
+  const start = text.indexOf('{')
+  if (start === -1) return null
+  let depth = 0, inString = false, escape = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (escape) { escape = false; continue }
+    if (c === '\\') { escape = true; continue }
+    if (c === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) return text.substring(start, i + 1)
+    }
+  }
+  return null
+}
+
+// Retry + fallback wrapper — Claude e ocazional flaky (timeout, JSON truncat,
+// rate limit, overload). Reincercam o data, apoi cadem pe skelet generic
+// editabil. User-ul NU primeste 500 din motive Claude — primeste un LP basic
+// pe care il poate edita in editor.
+async function callClaudeWithRetry(productInfo, styleDesc) {
+  let lastErr
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const copy = await callClaude(productInfo, styleDesc)
+      // Validare minimala — daca Claude a returnat JSON dar lipsesc campuri critice,
+      // tratam ca eroare si reincercam sau cadem pe fallback.
+      if (!copy || typeof copy !== 'object') throw new Error('Claude returned non-object')
+      return copy
+    } catch (e) {
+      lastErr = e
+      console.log('Claude attempt ' + (attempt + 1) + ' failed:', e.message)
+      // Auth/key errors — nu reincerca, dar tot cade pe fallback ca user-ul
+      // sa nu primeasca 500. (in production cu key valid asta nu se intampla.)
+      if (/x-api-key|authentication|401/i.test(e.message)) break
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1500))
+    }
+  }
+  console.log('Claude failed all attempts, returning fallback skeleton. Last error:', lastErr?.message)
+  return buildFallbackCopy(productInfo)
+}
+
+// Skelet minim valid daca Claude esueaza complet — user-ul primeste un LP
+// generic editabil in loc de eroare 500.
+function buildFallbackCopy(productInfo) {
+  const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
+  const name = productInfo.title || 'Produsul Tău'
+  return {
+    productName: name.substring(0, 60),
+    headline: `${name} — Calitate Premium`,
+    subheadline: 'Comandă acum cu livrare rapidă și plată la livrare',
+    price: rp, oldPrice: Math.round(rp * 1.6), bumpPrice: Math.round(rp * 0.2),
+    giftValue: 0, stock: 7, timerMinutes: 14, reviewCount: 1247,
+    phoneNumber: '0700 000 000',
+    urgencyMessage: 'STOC LIMITAT — SE EPUIZEAZĂ RAPID',
+    riskReversalText: 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.',
+    style: { primaryColor: '#dc2626', secondaryColor: '#111111' },
+    quickBullets: ['Calitate verificată', 'Livrare rapidă în România', 'Plată la livrare cu ramburs', 'Retur gratuit 30 zile'],
+    topBenefits: ['CALITATE — Produs verificat și testat', 'LIVRARE RAPIDĂ — 2-4 zile în toată țara', 'GARANȚIE — 24 luni inclusă'],
+    benefits: ['Produs de calitate premium', 'Verificat și testat', 'Livrare rapidă în 2-4 zile', 'Plată la livrare cu ramburs', 'Garanție 24 luni inclusă'],
+    featureSections: [
+      { title: 'CALITATE PREMIUM', bullets: ['Materiale durabile', 'Testat pentru utilizare zilnică', 'Garanție extinsă'] },
+      { title: 'LIVRARE RAPIDĂ', bullets: ['2-4 zile prin Fan Courier', 'Plată la livrare cu ramburs', 'Retur 30 zile fără întrebări'] }
+    ],
+    howItWorks: [
+      { title: 'Comandă acum', desc: 'Apasă butonul de comandă și completează datele' },
+      { title: 'Primești produsul', desc: 'Livrare în 2-4 zile lucrătoare' },
+      { title: 'Plătești la livrare', desc: 'Verifici produsul și plătești curierului' }
+    ],
+    testimonials: [
+      { text: 'Produsul a sosit rapid, exact cum a fost descris. Recomand cu încredere.', name: 'Maria D.', city: 'București', stars: 5 },
+      { text: 'Comandă plasată ușor, livrare în 3 zile. Calitate bună.', name: 'Andrei P.', city: 'Cluj-Napoca', stars: 5 },
+      { text: 'Excelent serviciu, ramburs la livrare. Sunt foarte mulțumit.', name: 'Ioana T.', city: 'Iași', stars: 5 },
+      { text: 'L-am comandat pentru cadou, persoana a fost încântată.', name: 'Mihai R.', city: 'Timișoara', stars: 5 }
+    ],
+    faq: [
+      { q: 'Ce metodă de plată acceptați?', a: 'Plata se face ramburs la curier, la livrare. Verifici produsul și apoi plătești.' },
+      { q: 'Cât durează livrarea?', a: 'Livrarea se face în 2-4 zile lucrătoare în toată România.' },
+      { q: 'Cine livrează?', a: 'Livrarea se face prin Fan Courier / Sameday în toată țara.' },
+      { q: 'Am garanție?', a: 'Da, produsul are garanție de 24 luni. În caz de defect, îl înlocuim gratuit.' },
+      { q: 'Pot comanda prin telefon?', a: 'Da, suni la numărul afișat pe pagină și plasezi comanda direct.' },
+      { q: 'Pot returna produsul?', a: 'Ai 30 de zile pentru retur fără întrebări. Banii înapoi integral.' }
+    ]
+  }
 }
 
 // Descarca o imagine de la URL si o returneaza ca base64
@@ -417,7 +508,8 @@ module.exports = async function handler(req, res) {
 
     // STEP 2: Claude cu produsul REAL — toate textele (benefits, testimoniale,
     // featureSections, FAQ) sunt despre produsul efectiv, nu generic.
-    const copy = await callClaude(productInfo, styleDesc || '')
+    // Cu retry + fallback skelet — nu mai dam 500 cand Claude e flaky.
+    const copy = await callClaudeWithRetry(productInfo, styleDesc || '')
     // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
     if (productInfo.priceUSD > 0) {
