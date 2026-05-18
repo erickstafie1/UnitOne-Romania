@@ -319,12 +319,17 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       const imgSrc = selectedProduct.image?.src || selectedProduct.images?.[0]?.src || ''
       const title = selectedProduct.title || ''
 
+      // Description din body_html al produsului (plain text scurt pentru editor preview)
+      const rawDesc = (selectedProduct.body_html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      const descText = rawDesc.length > 400 ? rawDesc.substring(0, 400) + '...' : (rawDesc || 'Descrierea produsului se va afișa aici.')
+
       const updates = [
         { sel: '[data-unitone-bind="title"]', text: title },
         { sel: '[data-unitone-bind="price"]', text: String(realPrice) },
         { sel: '[data-unitone-bind="compareAt"]', text: oldPrice + ' LEI' },
         { sel: '[data-unitone-bind="discount"]', text: '-' + discount + '%' },
-        { sel: '[data-unitone-bind="savings"]', text: 'Economisești ' + savings + ' LEI' }
+        { sel: '[data-unitone-bind="savings"]', text: 'Economisești ' + savings + ' LEI' },
+        { sel: '[data-unitone-bind="description"]', text: descText }
       ]
       let touched = 0
       updates.forEach(u => {
@@ -1272,6 +1277,18 @@ function addBlocks(editor, data) {
     newsletter: `<svg viewBox="0 0 60 36"><rect x="4" y="14" width="36" height="10" rx="2" fill="#fff" stroke="#e1e3e5"/><rect x="42" y="14" width="14" height="10" rx="2" fill="${p}"/><rect x="14" y="6" width="32" height="3" rx="1" fill="#202223"/></svg>`,
     arrowUp: `<svg viewBox="0 0 60 36"><circle cx="48" cy="22" r="8" fill="${p}"/><polygon points="48,18 44,24 52,24" fill="#fff"/></svg>`,
     code: `<svg viewBox="0 0 60 36"><rect x="2" y="6" width="56" height="24" rx="2" fill="#1e1e2e"/><text x="10" y="22" font-size="9" fill="#a5f3fc" font-family="monospace">&lt;/&gt;</text></svg>`,
+    productImage: `<svg viewBox="0 0 60 36"><rect x="14" y="4" width="32" height="28" rx="3" fill="#e1e3e5"/><circle cx="22" cy="14" r="3" fill="#898f94"/><path d="M14 28 L22 18 L30 26 L46 12 L46 32 L14 32 Z" fill="#898f94"/></svg>`,
+    productTitle: `<svg viewBox="0 0 60 36"><rect x="6" y="10" width="48" height="6" rx="1" fill="#202223"/><rect x="6" y="20" width="32" height="3" rx="1" fill="#c9cccf"/></svg>`,
+    productPrice: `<svg viewBox="0 0 60 36"><rect x="18" y="12" width="24" height="14" rx="2" fill="${p}"/><text x="20" y="22" font-size="9" fill="#fff" font-family="sans-serif">$19</text></svg>`,
+    productDesc: `<svg viewBox="0 0 60 36"><rect x="6" y="9" width="48" height="2" rx="1" fill="#898f94"/><rect x="6" y="14" width="48" height="2" rx="1" fill="#898f94"/><rect x="6" y="19" width="36" height="2" rx="1" fill="#898f94"/><rect x="6" y="24" width="42" height="2" rx="1" fill="#898f94"/></svg>`,
+    addToCart: `<svg viewBox="0 0 60 36"><rect x="6" y="10" width="48" height="16" rx="3" fill="${p}"/><circle cx="18" cy="18" r="2" fill="#fff"/><rect x="24" y="17" width="22" height="2" rx="1" fill="#fff"/></svg>`,
+    stickyCart: `<svg viewBox="0 0 60 36"><rect x="2" y="24" width="56" height="10" rx="2" fill="#202223"/><rect x="40" y="26" width="14" height="6" rx="2" fill="${p}"/></svg>`,
+    trustGuarantee: `<svg viewBox="0 0 60 36"><circle cx="14" cy="18" r="6" fill="#dcfce7" stroke="#16a34a"/><polyline points="11,18 13,20 17,16" stroke="#16a34a" fill="none" stroke-width="1.5"/><circle cx="30" cy="18" r="6" fill="#dcfce7" stroke="#16a34a"/><polyline points="27,18 29,20 33,16" stroke="#16a34a" fill="none" stroke-width="1.5"/><circle cx="46" cy="18" r="6" fill="#dcfce7" stroke="#16a34a"/><polyline points="43,18 45,20 49,16" stroke="#16a34a" fill="none" stroke-width="1.5"/></svg>`,
+    howToUse: `<svg viewBox="0 0 60 36"><circle cx="10" cy="18" r="4" fill="${p}"/><text x="8" y="20" font-size="6" fill="#fff" font-family="sans-serif">1</text><rect x="16" y="17" width="6" height="2" rx="1" fill="#898f94"/><circle cx="26" cy="18" r="4" fill="${p}"/><text x="24" y="20" font-size="6" fill="#fff">2</text><rect x="32" y="17" width="6" height="2" rx="1" fill="#898f94"/><circle cx="42" cy="18" r="4" fill="${p}"/><text x="40" y="20" font-size="6" fill="#fff">3</text></svg>`,
+    brandStory: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="22" height="28" rx="2" fill="#e1e3e5"/><rect x="30" y="6" width="26" height="3" rx="1" fill="#202223"/><rect x="30" y="13" width="22" height="2" rx="1" fill="#898f94"/><rect x="30" y="18" width="24" height="2" rx="1" fill="#898f94"/><rect x="30" y="23" width="20" height="2" rx="1" fill="#898f94"/></svg>`,
+    comparison: `<svg viewBox="0 0 60 36"><rect x="4" y="4" width="24" height="28" rx="2" fill="#fee2e2" stroke="#fca5a5"/><rect x="32" y="4" width="24" height="28" rx="2" fill="#dcfce7" stroke="#86efac"/><line x1="30" y1="4" x2="30" y2="32" stroke="#898f94"/></svg>`,
+    volumeBundle: `<svg viewBox="0 0 60 36"><rect x="4" y="8" width="16" height="20" rx="2" fill="#fff" stroke="#e1e3e5"/><rect x="22" y="8" width="16" height="20" rx="2" fill="${p}" opacity="0.15" stroke="${p}"/><rect x="40" y="8" width="16" height="20" rx="2" fill="#fff" stroke="#e1e3e5"/></svg>`,
+    brandList: `<svg viewBox="0 0 60 36"><rect x="2" y="14" width="10" height="8" rx="1" fill="#c9cccf"/><rect x="16" y="14" width="10" height="8" rx="1" fill="#c9cccf"/><rect x="30" y="14" width="10" height="8" rx="1" fill="#c9cccf"/><rect x="44" y="14" width="10" height="8" rx="1" fill="#c9cccf"/></svg>`,
   }
 
   const blocks = [
@@ -1387,13 +1404,69 @@ function addBlocks(editor, data) {
     // AVANSAT
     { id:'custom-code', label:'HTML Custom', cat:'Avansat', media: T.code,
       content: `<div style="padding:16px 20px;background:#1e1e2e;border-radius:8px;margin:16px 20px"><code style="font-size:13px;color:#a5f3fc;font-family:monospace;display:block">&lt;div&gt;Codul tău HTML&lt;/div&gt;</code></div>` },
+
+    // ───────── DATA-BOUND ELEMENTE (sync automat din produsul Shopify) ─────────
+    // Fiecare are data-unitone-bind="X" — server-side bindProductBlocks la publish
+    // + surgical bind in editor cand se asigneaza produsul inlocuiesc cu valori reale.
+    { id:'product-image', label:'Imagine Produs', cat:'Produs Auto', media: T.productImage,
+      content: `<div style="padding:20px;text-align:center"><img data-unitone-bind="image" src="https://placehold.co/500x500/f9fafb/999?text=Imagine+Produs" style="max-width:500px;width:100%;height:auto;display:block;margin:0 auto;border-radius:8px;background:#f9fafb"/></div>` },
+    { id:'product-title', label:'Titlu Produs', cat:'Produs Auto', media: T.productTitle,
+      content: `<div style="padding:14px 20px"><h1 data-unitone-bind="title" style="font-size:28px;font-weight:900;color:#111;margin:0;line-height:1.25">Numele Produsului</h1></div>` },
+    { id:'product-price-el', label:'Preț Produs', cat:'Produs Auto', media: T.productPrice,
+      content: `<div style="padding:14px 20px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span data-unitone-bind="compareAt" style="font-size:18px;color:#aaa;text-decoration:line-through">238 LEI</span><span data-unitone-bind="price" style="font-size:42px;font-weight:900;color:${p};line-height:1">149</span><span style="font-size:18px;font-weight:900;color:${p}">LEI</span><span data-unitone-bind="discount" style="background:${p};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px">-37%</span></div>` },
+    { id:'product-description', label:'Descriere Produs', cat:'Produs Auto', media: T.productDesc,
+      content: `<div data-unitone-bind="description" style="padding:14px 20px;font-size:15px;color:#444;line-height:1.7">Descrierea produsului se va completa automat la publicare cu textul produsului tău din Shopify.</div>` },
+    { id:'add-to-cart-cod', label:'Buton Comandă COD', cat:'Produs Auto', media: T.addToCart,
+      content: `<div style="padding:16px 20px">${relBtn('width:100%;box-sizing:border-box;')}</div>` },
+    { id:'sticky-cta-bar', label:'Sticky CTA Bottom', cat:'Produs Auto', media: T.stickyCart,
+      content: `<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;padding:10px 16px;display:flex;align-items:center;gap:12px;z-index:999;box-shadow:0 -2px 12px rgba(0,0,0,0.08)"><div style="flex:1;display:flex;align-items:center;gap:10px"><img data-unitone-bind="image" src="https://placehold.co/50x50/f9fafb/999" style="width:48px;height:48px;border-radius:6px;object-fit:cover"/><div><div data-unitone-bind="title" style="font-size:13px;font-weight:700;color:#111;line-height:1.3">Numele Produsului</div><div style="display:flex;gap:6px;align-items:baseline"><span data-unitone-bind="price" style="font-size:16px;font-weight:900;color:${p}">149</span><span style="font-size:11px;color:${p}">LEI</span></div></div></div><a href="#unitone-cod-anchor" style="background:${p};color:#fff;padding:12px 22px;border-radius:6px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap">COMANDĂ</a></div>` },
+
+    // ───────── SECȚIUNI ADIȚIONALE (block-uri complete pentru LP-uri) ─────────
+    { id:'trusted-guarantee', label:'Garanții Verificate', cat:'Trust', media: T.trustGuarantee,
+      content: `<div style="padding:36px 20px;background:#f9fafb"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 24px;text-align:center">De ce să cumperi de la noi?</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;max-width:900px;margin:0 auto">
+        <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px">✓</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Plată Ramburs</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">Plătești curierului la livrare</p></div>
+        <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px">🚚</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Livrare Rapidă</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">2-4 zile prin Fan Courier</p></div>
+        <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px">↩</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Retur 30 Zile</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">Banii înapoi fără întrebări</p></div>
+        <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px">🌟</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Garanție 24 Luni</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">Inclusă cu fiecare comandă</p></div>
+      </div></div>` },
+    { id:'how-to-use', label:'Cum Se Folosește', cat:'Educație', media: T.howToUse,
+      content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 28px;text-align:center">Cum funcționează — 3 pași simpli</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
+        <div style="text-align:center"><div style="width:64px;height:64px;background:${p};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;margin:0 auto 16px">1</div><h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 10px">Pasul 1</h3><p style="font-size:14px;color:#555;margin:0;line-height:1.6">Descrie primul pas concret aici.</p></div>
+        <div style="text-align:center"><div style="width:64px;height:64px;background:${p};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;margin:0 auto 16px">2</div><h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 10px">Pasul 2</h3><p style="font-size:14px;color:#555;margin:0;line-height:1.6">Descrie al doilea pas concret.</p></div>
+        <div style="text-align:center"><div style="width:64px;height:64px;background:${p};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;margin:0 auto 16px">3</div><h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 10px">Pasul 3</h3><p style="font-size:14px;color:#555;margin:0;line-height:1.6">Descrie pasul final concret.</p></div>
+      </div></div>` },
+    { id:'brand-story', label:'Povestea Brandului', cat:'Educație', media: T.brandStory,
+      content: `<div style="padding:36px 20px;background:#fff"><div style="display:grid;grid-template-columns:1fr;gap:32px;max-width:1000px;margin:0 auto;align-items:center">
+        <div><img src="https://placehold.co/500x400/f9fafb/999?text=Despre+Noi" style="width:100%;max-width:500px;border-radius:12px;display:block;margin:0 auto"/></div>
+        <div><h2 style="font-size:24px;font-weight:900;color:#111;margin:0 0 16px">Povestea noastră</h2><p style="font-size:15px;color:#444;line-height:1.75;margin:0 0 12px">Am început cu o problemă simplă pe care am vrut să o rezolvăm pentru clienții din România. După luni de testare și îmbunătățiri, am creat soluția care chiar funcționează.</p><p style="font-size:15px;color:#444;line-height:1.75;margin:0">Astăzi, mii de clienți mulțumiți folosesc produsul nostru zilnic.</p></div>
+      </div></div>` },
+    { id:'comparison-table', label:'Tabel Comparativ', cat:'Conversie', media: T.comparison,
+      content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 24px;text-align:center">De ce produsul nostru?</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px;margin:0 auto">
+        <div style="background:#fff;border:2px solid #fca5a5;border-radius:10px;padding:20px"><div style="text-align:center;font-size:13px;font-weight:700;color:#dc2626;margin-bottom:14px;text-transform:uppercase">Concurența</div><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#666"><span style="color:#dc2626;font-weight:900">✗</span>Calitate îndoielnică</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#666"><span style="color:#dc2626;font-weight:900">✗</span>Livrare lentă (1-2 săpt)</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#666"><span style="color:#dc2626;font-weight:900">✗</span>Fără retur</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#666"><span style="color:#dc2626;font-weight:900">✗</span>Fără garanție</div></div></div>
+        <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:20px"><div style="text-align:center;font-size:13px;font-weight:700;color:#16a34a;margin-bottom:14px;text-transform:uppercase">Produsul Nostru</div><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#111;font-weight:600"><span style="color:#16a34a;font-weight:900">✓</span>Calitate premium</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#111;font-weight:600"><span style="color:#16a34a;font-weight:900">✓</span>Livrare 24-48h</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#111;font-weight:600"><span style="color:#16a34a;font-weight:900">✓</span>Retur 30 zile</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#111;font-weight:600"><span style="color:#16a34a;font-weight:900">✓</span>Garanție 24 luni</div></div></div>
+      </div></div>` },
+    { id:'volume-bundle', label:'Bundle Cantitativ', cat:'Produs', media: T.volumeBundle,
+      content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 24px;text-align:center">Alege cantitatea avantajoasă</h2><div class="unitone-vol-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;max-width:780px;margin:0 auto">
+        <div style="background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:18px;text-align:center;cursor:pointer"><div style="font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:8px">1 Bucată</div><div style="font-size:24px;font-weight:900;color:#111;margin-bottom:4px">149 LEI</div><div style="font-size:12px;color:#999">149 LEI / buc</div></div>
+        <div style="background:#fef3c7;border:2px solid ${p};border-radius:10px;padding:18px;text-align:center;cursor:pointer;position:relative"><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:${p};color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:0.5px">CEL MAI POPULAR</div><div style="font-size:12px;font-weight:700;color:${p};text-transform:uppercase;margin-bottom:8px">2 Bucăți</div><div style="font-size:24px;font-weight:900;color:#111;margin-bottom:4px">249 LEI</div><div style="font-size:12px;color:#16a34a;font-weight:700">125 LEI / buc · Economisești 49 LEI</div></div>
+        <div style="background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:18px;text-align:center;cursor:pointer"><div style="font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:8px">3 Bucăți</div><div style="font-size:24px;font-weight:900;color:#111;margin-bottom:4px">339 LEI</div><div style="font-size:12px;color:#16a34a;font-weight:700">113 LEI / buc · Economisești 108 LEI</div></div>
+      </div></div>` },
+    { id:'brand-list', label:'Logo-uri Branduri', cat:'Trust', media: T.brandList,
+      content: `<div style="padding:28px 20px;background:#f9fafb"><p style="text-align:center;font-size:13px;color:#666;font-weight:600;margin:0 0 18px;text-transform:uppercase;letter-spacing:1px">Apreciat de</p><div style="display:flex;justify-content:center;align-items:center;gap:32px;flex-wrap:wrap;opacity:0.6"><div style="font-size:20px;font-weight:900;color:#666">BRAND</div><div style="font-size:20px;font-weight:900;color:#666;font-style:italic">Magazin</div><div style="font-size:20px;font-weight:900;color:#666;letter-spacing:2px">SHOP</div><div style="font-size:20px;font-weight:900;color:#666">★ Store</div></div></div>` },
+    { id:'stats-counter', label:'Statistici', cat:'Social Proof', media: T.badges,
+      content: `<div style="padding:36px 20px;background:${p};color:#fff"><div class="unitone-stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:24px;max-width:900px;margin:0 auto;text-align:center">
+        <div><div style="font-size:36px;font-weight:900;line-height:1;margin-bottom:6px">10K+</div><div style="font-size:13px;font-weight:600;opacity:0.85">Clienți mulțumiți</div></div>
+        <div><div style="font-size:36px;font-weight:900;line-height:1;margin-bottom:6px">4.8★</div><div style="font-size:13px;font-weight:600;opacity:0.85">Rating mediu</div></div>
+        <div><div style="font-size:36px;font-weight:900;line-height:1;margin-bottom:6px">24h</div><div style="font-size:13px;font-weight:600;opacity:0.85">Procesare comandă</div></div>
+        <div><div style="font-size:36px;font-weight:900;line-height:1;margin-bottom:6px">30 zile</div><div style="font-size:13px;font-weight:600;opacity:0.85">Garanție retur</div></div>
+      </div></div>` },
   ]
 
   // Category → kind map (Sections vs Elements) — defineste ce tab apare in
   // sidebar pentru fiecare categorie. SECTIONS = block-uri mari complete care
   // adauga un section intreg pe pagina; ELEMENTS = atomice (buton, text, imagine).
   // Inspirat din GemPages UI: tabs "Section" vs "Element".
-  const ELEMENT_CATS = ['COD Form', 'Layout', 'Text', 'Media', 'Navigare', 'Avansat']
+  const ELEMENT_CATS = ['COD Form', 'Layout', 'Text', 'Media', 'Navigare', 'Avansat', 'Produs Auto']
   const kindFor = (cat) => ELEMENT_CATS.includes(cat) ? 'element' : 'section'
 
   blocks.forEach(b => {

@@ -214,6 +214,10 @@ async function bindProductBlocks(html, call, productId) {
     const imgSrc = p.image?.src || p.images?.[0]?.src || ''
     const title = (p.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
+    // Description din Shopify product (body_html original, plain text fallback)
+    const rawDesc = (p.body_html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+    const descText = rawDesc.length > 800 ? rawDesc.substring(0, 800) + '...' : rawDesc
+
     let out = html
     // Inlocuieste IMG src — atributul src dintr-un <img data-unitone-bind="image" src="...">
     if (imgSrc) {
@@ -226,6 +230,11 @@ async function bindProductBlocks(html, call, productId) {
       out = out.replace(/(<(?:span|div)[^>]*data-unitone-bind="compareAt"[^>]*>)[^<]*(<\/(?:span|div)>)/g, `$1${oldPrice} LEI$2`)
       out = out.replace(/(<(?:span|div)[^>]*data-unitone-bind="discount"[^>]*>)[^<]*(<\/(?:span|div)>)/g, `$1-${discount}%$2`)
       out = out.replace(/(<(?:span|div|p)[^>]*data-unitone-bind="savings"[^>]*>)[^<]*(<\/(?:span|div|p)>)/g, `$1Economisești ${savings} LEI$2`)
+    }
+    // Description block (plain text, escape simplu)
+    if (descText) {
+      const safeDesc = descText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      out = out.replace(/(<(?:div|p|span)[^>]*data-unitone-bind="description"[^>]*>)[\s\S]*?(<\/(?:div|p|span)>)/g, `$1${safeDesc}$2`)
     }
     console.log('bindProductBlocks: applied real data for product', p.id, 'price', realPrice)
     return out
