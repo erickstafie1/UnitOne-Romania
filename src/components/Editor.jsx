@@ -6,7 +6,8 @@ import {
 } from '@shopify/polaris'
 import {
   ArrowLeftIcon, DesktopIcon, MobileIcon, SaveIcon, ExternalIcon,
-  CheckIcon, ImageIcon, ViewIcon, RefreshIcon, UndoIcon, RedoIcon, SendIcon
+  CheckIcon, ImageIcon, ViewIcon, RefreshIcon, UndoIcon, RedoIcon, SendIcon,
+  ProductIcon
 } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
@@ -560,6 +561,21 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           <Button icon={RedoIcon} onClick={() => gjsRef.current?.UndoManager.redo()} accessibilityLabel="Redo" />
         </ButtonGroup>
 
+        {/* Product picker in toolbar — ca la GemPages "Assign Products". User
+            alege produsul AICI (in editor), nu la momentul publish. Butonul
+            arata cati produsi sunt asignati (0 sau numele unuia selectat).
+            Pe edit existing LP, nu apare (produsul e deja fixat pe pagina). */}
+        {!isEditing && (
+          <Button
+            icon={ProductIcon}
+            onClick={() => { setShowProductModal(true); if (products.length === 0) loadProducts() }}
+          >
+            {selectedProduct
+              ? selectedProduct.title.length > 24 ? selectedProduct.title.substring(0, 24) + '...' : selectedProduct.title
+              : '0 Produse asignate'}
+          </Button>
+        )}
+
         <Button
           variant="primary"
           icon={isEditing ? SaveIcon : SendIcon}
@@ -568,8 +584,11 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           onClick={() => {
             if (isEditing) {
               publish()
+            } else if (selectedProduct) {
+              // Produsul deja selectat in toolbar -> publish direct
+              publish()
             } else {
-              setSelectedProduct(null)
+              // Fara produs -> deschide modal sa-l aleaga, apoi publish
               setShowProductModal(true)
               if (products.length === 0) loadProducts()
             }
@@ -588,9 +607,9 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         </div>
       )}
 
-      {/* Product info strip — visible cand un produs Shopify e atasat sau cand
-          editezi un LP existent. Arata numele + pretul real ca user-ul stie ce
-          publica si poate aplica pretul pe LP printr-un click. */}
+      {/* Product info strip — read-only, doar informativ. Pretul se aplica
+          automat server-side la publish (in api/publish.js syncPriceToProduct).
+          User-ul nu mai are buton care risca sa strice layout-ul. */}
       {(selectedProduct || data.productId || data.id) && (
         <div style={{
           padding: '8px 16px',
@@ -602,7 +621,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           fontSize: 13,
           flexWrap: 'wrap'
         }}>
-          <span style={{ color: '#6d7175' }}>Pagina pentru:</span>
+          <span style={{ color: '#6d7175' }}>Asociat cu:</span>
           <strong style={{ color: '#202223' }}>
             {selectedProduct?.title || data.productName || pageTitle}
           </strong>
@@ -612,27 +631,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
               <span style={{ color: '#008060', fontWeight: 600 }}>
                 {selectedProduct.variants[0].price} LEI
               </span>
-              <Button
-                size="micro"
-                onClick={() => {
-                  // Aplica pretul produsului pe LP: regex replace al primei
-                  // aparitii de preț in HTML (hero priceBlock are formatul
-                  // distinct: <span ... font-size:42px ... >PRICE</span>)
-                  if (!gjsRef.current) return
-                  const newPrice = Math.round(parseFloat(selectedProduct.variants[0].price))
-                  const oldPriceVal = Math.round(newPrice * 1.6)
-                  let html = gjsRef.current.getHtml()
-                  // Inlocuieste preturile: pattern strict pe span-ul mare de pret + struck-through
-                  html = html.replace(/(<span[^>]*font-size:42px[^>]*>)(\d+)(<\/span>)/, `$1${newPrice}$3`)
-                  html = html.replace(/(<span[^>]*text-decoration:line-through[^>]*>)(\d+)( LEI<\/span>)/, `$1${oldPriceVal}$3`)
-                  // Economisesti X LEI
-                  html = html.replace(/Economise(s|ș)ti \d+ LEI/g, `Economise$1ti ${oldPriceVal - newPrice} LEI`)
-                  gjsRef.current.setComponents(html)
-                  dirtyRef.current = true
-                }}
-              >
-                Aplică preț pe LP
-              </Button>
+              <span style={{ color: '#8c9196', fontSize: 12 }}>(se aplică automat la publish)</span>
             </>
           )}
         </div>
@@ -669,17 +668,23 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         </div>
       </div>
 
-      {/* Modal Polaris pentru selectare produs */}
+      {/* Modal Polaris pentru selectare produs — ca la GemPages "Assign Products".
+          Acum permite si "Asigneaza doar" (fara publish) — user-ul lucreaza
+          in editor cu produsul selectat, foloseste pretul din info banner,
+          si publica DUPA cand vrea (din toolbar). */}
       <Modal
         open={showProductModal}
         onClose={() => setShowProductModal(false)}
-        title="Asociază produsul"
+        title="Asignează produsul"
         primaryAction={{
-          content: selectedProduct ? `Publică pe "${selectedProduct.title.substring(0, 24)}${selectedProduct.title.length > 24 ? '...' : ''}"` : 'Selectează un produs',
+          content: selectedProduct ? 'Asignează' : 'Selectează un produs',
           disabled: !selectedProduct,
-          onAction: () => { setShowProductModal(false); publish() }
+          onAction: () => setShowProductModal(false)
         }}
-        secondaryActions={[{ content: 'Anulează', onAction: () => setShowProductModal(false) }]}
+        secondaryActions={[
+          { content: 'Anulează', onAction: () => { setSelectedProduct(null); setShowProductModal(false) } },
+          ...(selectedProduct ? [{ content: 'Asignează și publică', onAction: () => { setShowProductModal(false); publish() } }] : [])
+        ]}
       >
         <Modal.Section>
           <Text as="p" tone="subdued">Selectează produsul din magazin căruia îi atașezi acest landing page.</Text>
