@@ -28,8 +28,22 @@ function buildOverlay(html) { return ensureCloseMarker(applyWrapper(html, 'overl
 function buildEmbed(html) { return ensureCloseMarker(applyWrapper(html, 'embed')) }
 
 function buildHideScript() {
+  // Pentru OVERLAY mode (hideHeaderFooter=true): ascunde TOT inafara LP-ului
+  // nostru. Asta merge chiar daca template-urile pagecod/pagecodfull nu s-au
+  // instalat in tema (Shopify-managed themes refuza .liquid templates silent).
+  // CSS direct in body_html prinde orice header/footer/nav din orice tema.
   return '<style>\n' +
-    'html,body{overflow:hidden!important;margin:0!important;padding:0!important}\n' +
+    'html,body{margin:0!important;padding:0!important;background:#fff!important}\n' +
+    /* Hide every typical theme header/footer/nav across Dawn, Horizon, Debut, OS2 themes */
+    'header,footer,nav,.header,.footer,.site-header,.site-footer,.shopify-section-header,.shopify-section-footer,' +
+    '#shopify-section-header,#shopify-section-footer,.announcement-bar,.sticky-header,' +
+    '.section-header,.section-footer,.site-nav,.site-header__wrapper,.header-wrapper,' +
+    '[class*="section-template--"][class*="-header"],[class*="section-template--"][class*="-footer"]' +
+    '{display:none!important;height:0!important;visibility:hidden!important}\n' +
+    /* Also hide native Shopify product info that might render alongside our LP */
+    '.product__media-wrapper,.product__info-container,.product__title,.product__view-details,' +
+    '.product__pickup-availabilities,.product-form,.shopify-payment-button,.price--listing,' +
+    '.product__media-list,.product-form__buttons{display:none!important}\n' +
     '</style>'
 }
 
