@@ -958,6 +958,7 @@ function buildHTML(data) {
   const quickBullets = (data.quickBullets || []).slice(0, 4)
   const topBenefits = (data.topBenefits && data.topBenefits.length ? data.topBenefits : benefits.slice(0, 3)).slice(0, 3)
   const featureSections = (data.featureSections || []).slice(0, 2)
+  const objections = (data.objections || []).slice(0, 4)
   const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
   const riskReversalText = data.riskReversalText || 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.'
   // Palette accents — generator assigns these per LP; fallback la galben default
@@ -1053,6 +1054,23 @@ function buildHTML(data) {
     `</div></div>`
   ].join('') : ''
 
+  // Obiecții Tratate — apare doar daca formularul Generator a cerut-o (includeObjections=true)
+  // si Claude a populat array-ul `objections`. Layout: 2-col grid pe desktop,
+  // fiecare card are obiectia (rosu) + rebuttal (verde).
+  const objectionsHtml = objections.length ? [
+    `<div style="padding:36px 20px;background:#fafbfc">`,
+    `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center">Răspundem îngrijorărilor tale</h2>`,
+    `<p style="font-size:14px;color:#666;text-align:center;margin:0 0 24px">Ce te-ai putea întreba înainte să comanzi:</p>`,
+    `<div class="unitone-obj-grid" style="display:grid;grid-template-columns:1fr;gap:14px;max-width:860px;margin:0 auto">`,
+    objections.map(o => [
+      `<div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,0.04)">`,
+      `<div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px;line-height:1;flex-shrink:0">✗</span><strong style="font-size:14px;color:#111;line-height:1.4">${esc(o.objection || '')}</strong></div>`,
+      `<div style="display:flex;align-items:start;gap:10px;padding-left:6px;border-left:3px solid #16a34a;padding-top:2px"><span style="color:#16a34a;font-weight:900;font-size:18px;line-height:1;flex-shrink:0">✓</span><span style="font-size:14px;color:#444;line-height:1.6">${esc(o.rebuttal || '')}</span></div>`,
+      `</div>`
+    ].join('')).join(''),
+    `</div></div>`
+  ].join('') : ''
+
   // 3-card grid pentru top 3 beneficii (Section 5 din produsutil.ro)
   const topBenefitsHtml = topBenefits.length ? [
     `<div style="padding:32px 20px;background:#fff">`,
@@ -1087,6 +1105,7 @@ function buildHTML(data) {
       #unitone-lp .unitone-feature-row{padding:48px 32px !important}
       #unitone-lp .unitone-quickbullets{grid-template-columns:1fr 1fr !important;gap:14px !important}
       #unitone-lp .unitone-product-block,.unitone-product-block{grid-template-columns:1fr 1fr !important;gap:40px !important;padding:48px 32px !important;align-items:center !important}
+      #unitone-lp .unitone-obj-grid{grid-template-columns:1fr 1fr !important;gap:16px !important}
     }
     @keyframes unitone-gift-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
     #unitone-lp .unitone-gift{animation:unitone-gift-pulse 2.5s ease-in-out infinite}
@@ -1178,6 +1197,9 @@ function buildHTML(data) {
 
     // ─── 6b. Feature section 2 (IMG + TEXT, alternant) ────────────────
     renderFeatureSection(featureSections[1], 1),
+
+    // ─── 7b. Obiectii Tratate (TEXT) — daca user a cerut in form generator ─
+    objectionsHtml,
 
     // ─── 8. Testimoniale (TEXT) ────────────────────────────────────────
     testimonials.length ? [
@@ -1428,6 +1450,13 @@ function addBlocks(editor, data) {
         <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px">🚚</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Livrare Rapidă</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">2-4 zile prin Fan Courier</p></div>
         <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px">↩</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Retur 30 Zile</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">Banii înapoi fără întrebări</p></div>
         <div style="text-align:center;padding:18px;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05)"><div style="width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px">🌟</div><h3 style="font-size:14px;font-weight:800;color:#111;margin:0 0 6px">Garanție 24 Luni</h3><p style="font-size:12px;color:#666;margin:0;line-height:1.5">Inclusă cu fiecare comandă</p></div>
+      </div></div>` },
+    { id:'objections-section', label:'Obiecții Tratate', cat:'Conversie', media: T.comparison,
+      content: `<div style="padding:36px 20px;background:#fafbfc"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center">Răspundem îngrijorărilor tale</h2><p style="font-size:14px;color:#666;text-align:center;margin:0 0 24px">Ce te-ai putea întreba înainte să comanzi:</p><div style="display:grid;grid-template-columns:1fr;gap:14px;max-width:860px;margin:0 auto">
+        <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">E prea scump</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Costul pe folosire e &lt;30 bani/zi — mai ieftin decât o cafea.</span></div></div>
+        <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">Nu funcționează cum scrie</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Garanție 30 zile retur fără întrebări. Peste 1000 clienți mulțumiți.</span></div></div>
+        <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">Am deja ceva similar</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Diferența principală e [feature specific] pe care alternativele nu îl au.</span></div></div>
+        <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">E fragil sau nu rezistă</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Material premium testat + garanție 24 luni înlocuire gratuită.</span></div></div>
       </div></div>` },
     { id:'how-to-use', label:'Cum Se Folosește', cat:'Educație', media: T.howToUse,
       content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 28px;text-align:center">Cum funcționează — 3 pași simpli</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">

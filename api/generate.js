@@ -140,16 +140,65 @@ function extractMeta(html) {
   return { title, priceUSD, description, specs }
 }
 
-function callClaude(productInfo, styleDesc) {
+function callClaude(productInfo, styleDesc, opts = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
+
+  // Personalizare AI din formularul Generator — fiecare camp devine constraint
+  // direct in prompt-ul Claude pentru output customizat.
+  const tone = opts.tone || 'direct'
+  const salesAngle = opts.salesAngle || 'practic'
+  const urgencyLevel = opts.urgencyLevel || 'medie'
+  const lengthMode = opts.lengthMode || 'mediu'
+  const includeObjections = opts.includeObjections !== false  // default true
+
+  const toneMap = {
+    direct: 'DIRECT — clar, fara ocoluri, propozitii scurte si la subiect',
+    agresiv: 'AGRESIV — urgenta mare, propozitii imperative, scarcity puternic, "ACUM" / "ULTIMA SANSA" / "NU PIERDE"',
+    casual: 'CASUAL — ca un sfat de la un prieten, "tu" peste tot, fara jargon',
+    profesional: 'PROFESIONAL — autoritate, dovezi concrete, ton de expert, fara emoji extra',
+    emotional: 'EMOTIONAL — storytelling, accent pe sentimente, "imagineaza-ti" / "stii sentimentul cand"'
+  }
+  const angleMap = {
+    practic: 'PRACTIC / SOLUTIE — copy-ul se concentreaza pe ce PROBLEMA rezolva produsul si cum',
+    frica: 'FRICA / URGENTA — "ce pierzi daca NU cumperi" / "competitorii tai deja folosesc"',
+    dorinta: 'DORINTA / ASPIRATIE — "devino persoana care vrei sa fii" / transformare personala',
+    economie: 'ECONOMIE / VALOARE — "cea mai buna oferta" / cost-benefit / "platesti 1x, beneficiezi ani"'
+  }
+  const urgencyMap = {
+    medie: 'MEDIE — urgencyMessage "STOC LIMITAT", scarcity ce mentioneaza ofera-limitata',
+    inalta: 'INALTA — urgencyMessage cu countdown verbal "ULTIMELE X BUC", "OFERTA EXPIRA AZI", presiune temporal puternica',
+    fara: 'FARA — urgencyMessage neutru ce mentioneaza disponibilitate, fara presiune temporala'
+  }
+  const lengthMap = {
+    scurt: 'SCURT — 2-3 testimoniale, 3 beneficii in benefits, 4 FAQ (in loc de 6), featureSections 1 in loc de 2',
+    mediu: 'MEDIU — 4 testimoniale, 5 beneficii, 6 FAQ, 2 featureSections (standard)',
+    lung: 'LUNG — 6 testimoniale, 7-8 beneficii, 8 FAQ, 3 featureSections (adauga inca una)'
+  }
+
+  const personalizationBlock = `
+
+=== PERSONALIZARE LP (RESPECTA EXACT) ===
+TON COPY: ${toneMap[tone]}
+UNGHI VANZARE: ${angleMap[salesAngle]}
+NIVEL URGENTA: ${urgencyMap[urgencyLevel]}
+LUNGIME CONTINUT: ${lengthMap[lengthMode]}
+OBIECTII: ${includeObjections ? 'INCLUDE — populeaza campul "objections" cu 4 obiectii standard COD si rebuttals' : 'OMITE — lasa "objections": [] (array gol)'}`
+
   // styleDesc e CONTEXT COMERCIAL OPTIONAL din partea user-ului (audienta tinta,
   // ton, unghi specific de vanzare, features pe care vrea sa le accentueze).
   // Identitatea produsului (ce E) vine din AliExpress (productInfo.title).
   // Descrierea complementeaza, nu inlocuieste.
   const briefBlock = styleDesc
-    ? `\n\n=== CONTEXT COMERCIAL ADITIONAL (din partea user-ului) ===\n"""\n${styleDesc}\n"""\n\nFoloseste contextul pentru:\n- audienta tinta (varsta, sex, situatie de viata reflectate in testimoniale + ton)\n- unghiul de vanzare (frica/dorinta/economie/aspiratie)\n- features sau beneficii specifice pe care user-ul vrea sa le accentueze\n- tonul copy-ului (cald/direct/profesional dupa context)\n\nIMPORTANT: identitatea produsului (ce este, ce face) vine din nume + poze AliExpress. Contextul aditional NU schimba ce e produsul — doar adauga unghi comercial peste.`
+    ? `\n\n=== AUDIENTA TINTA (din formular) ===\n"""\n${styleDesc}\n"""\nFoloseste pentru: audienta in testimoniale, ton in featureSections, durere in benefits.`
+    : ''
+
+  // Competitor context — daca user-ul a dat link competitor, am scrape-uit text
+  // de pe pagina lui ca sa-l folosesti ca referinta de stil/unghi (NU copia,
+  // doar inspira-te din ce functioneaza).
+  const competitorBlock = opts.competitorContext
+    ? `\n\n=== COMPETITOR ANALIZAT (referinta stil, NU copia) ===\n"""\n${opts.competitorContext}\n"""\nAnalizeaza tonul, unghiul, structura — apoi fa MAI BUN. Foloseste cuvinte si fraze similare ca registru lingvistic dar TOATE textele sa fie originale.`
     : ''
   // Prompt scris pentru a produce copy în stilul produsutil.ro:
   // - frază "PROBLEMĂ → REZOLVARE" cu cuvinte CAPITALIZATE la început
@@ -166,7 +215,8 @@ REGULI CRITICE:
    Exemplu: "FARA MIZERIE — baveta colectoare prinde tot ce cade"
 4. Testimoniale: nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti) + text 2-3 fraze cu detaliu CONCRET despre utilizare (cum, cand, ce s-a schimbat). NU "produs excelent recomand".
 5. FAQ exact 6 intrebari in ordinea: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
-6. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).${briefBlock}
+6. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).
+7. objections (daca cerut): 4 obiectii standard cu rebuttals scurte si convingatoare. Format: {objection: "...", rebuttal: "..."}. Exemple bune: {objection: "E prea scump", rebuttal: "Costul pe folosire e <30 bani/zi — mai ieftin decat o cafea care nu rezolva nimic"}. NU rebuttals defensive ("avem cei mai buni..."); rebuttals contextuale.${personalizationBlock}${briefBlock}${competitorBlock}
 
 Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
 
@@ -231,6 +281,12 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
     {"q": "Am garantie?", "a": "Da, produsul are garantie de 24 luni. In caz de defect, il inlocuim gratuit."},
     {"q": "Pot comanda prin telefon?", "a": "Da, suni la numarul afisat pe pagina si plasezi comanda direct."},
     {"q": "Pot returna produsul?", "a": "Ai 30 de zile pentru retur fara intrebari. Banii inapoi integral."}
+  ],
+  "objections": [
+    {"objection": "E prea scump", "rebuttal": "Rebuttal scurt si concret bazat pe valoarea reala"},
+    {"objection": "Nu functioneaza la fel cum scrie", "rebuttal": "Mentioneaza garantia + numar specific de clienti multumiti"},
+    {"objection": "Deja am ceva similar", "rebuttal": "Compara cu alternativa, evidentiaza diferenta cheie"},
+    {"objection": "E fragil / nu rezista mult", "rebuttal": "Mentioneaza materialul, testele, garantia"}
   ]
 }`
 
@@ -328,20 +384,16 @@ function extractBalancedJSON(text) {
 // rate limit, overload). Reincercam o data, apoi cadem pe skelet generic
 // editabil. User-ul NU primeste 500 din motive Claude — primeste un LP basic
 // pe care il poate edita in editor.
-async function callClaudeWithRetry(productInfo, styleDesc) {
+async function callClaudeWithRetry(productInfo, styleDesc, opts = {}) {
   let lastErr
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const copy = await callClaude(productInfo, styleDesc)
-      // Validare minimala — daca Claude a returnat JSON dar lipsesc campuri critice,
-      // tratam ca eroare si reincercam sau cadem pe fallback.
+      const copy = await callClaude(productInfo, styleDesc, opts)
       if (!copy || typeof copy !== 'object') throw new Error('Claude returned non-object')
       return copy
     } catch (e) {
       lastErr = e
       console.log('Claude attempt ' + (attempt + 1) + ' failed:', e.message)
-      // Auth/key errors — nu reincerca, dar tot cade pe fallback ca user-ul
-      // sa nu primeasca 500. (in production cu key valid asta nu se intampla.)
       if (/x-api-key|authentication|401/i.test(e.message)) break
       if (attempt === 0) await new Promise(r => setTimeout(r, 1500))
     }
@@ -484,7 +536,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, styleDesc, presetStyle } = req.body
+    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections } = req.body
     if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
 
     const geminiKey = process.env.GEMINI_API_KEY
@@ -506,10 +558,37 @@ module.exports = async function handler(req, res) {
     }
     console.log('Ali scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length, descLen: productInfo.description?.length, specsCount: productInfo.specs?.length })
 
-    // STEP 2: Claude cu produsul REAL — toate textele (benefits, testimoniale,
-    // featureSections, FAQ) sunt despre produsul efectiv, nu generic.
+    // STEP 1.5: Scrape competitor URL pentru context (best-effort, max 5s)
+    let competitorContext = ''
+    if (competitorUrl && /^https?:\/\//i.test(competitorUrl)) {
+      try {
+        const compHtml = await Promise.race([
+          fetchWithScraper(competitorUrl),
+          new Promise(r => setTimeout(() => r(''), 5000))  // max 5s sa nu blocam
+        ])
+        if (compHtml && compHtml.length > 500) {
+          // Extrage doar text vizibil: titlu, meta description, primele headings + paragrafe
+          const titleMatch = compHtml.match(/<title[^>]*>([^<]+)<\/title>/i)
+          const metaDesc = compHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']{50,500})["']/i)
+          const h1s = (compHtml.match(/<h[12][^>]*>([^<]{5,150})<\/h[12]>/gi) || []).slice(0, 5).map(h => h.replace(/<[^>]+>/g, '').trim())
+          const paragraphs = (compHtml.match(/<p[^>]*>([^<]{30,250})<\/p>/gi) || []).slice(0, 6).map(p => p.replace(/<[^>]+>/g, '').trim())
+          competitorContext = [
+            titleMatch?.[1] ? 'Titlu: ' + titleMatch[1].trim() : '',
+            metaDesc?.[1] ? 'Meta: ' + metaDesc[1] : '',
+            h1s.length ? 'Headings: ' + h1s.join(' | ') : '',
+            paragraphs.length ? 'Paragrafe: ' + paragraphs.join(' / ') : ''
+          ].filter(Boolean).join('\n').slice(0, 2000)
+          console.log('Competitor scraped:', compHtml.length, 'bytes →', competitorContext.length, 'chars context')
+        }
+      } catch (e) { console.log('Competitor scrape fail (non-blocking):', e.message) }
+    }
+
+    // STEP 2: Claude cu produsul REAL + personalizarea + competitor context.
     // Cu retry + fallback skelet — nu mai dam 500 cand Claude e flaky.
-    const copy = await callClaudeWithRetry(productInfo, styleDesc || '')
+    const copy = await callClaudeWithRetry(productInfo, styleDesc || '', {
+      tone, salesAngle, urgencyLevel, lengthMode, includeObjections,
+      competitorContext
+    })
     // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
     if (productInfo.priceUSD > 0) {
