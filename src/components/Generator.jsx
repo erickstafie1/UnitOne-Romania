@@ -30,6 +30,11 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   const [enhancing, setEnhancing] = useState(false)
   const [enhanceMsg, setEnhanceMsg] = useState('')
   const cancelRef = useRef(false)
+  // Wizard state — MUST be here (before any return), nu dupa if(loading)
+  // altfel violam regula React hooks (order changes between renders).
+  const STEPS_COUNT = 6
+  const [step, setStep] = useState(0)
+  const [direction, setDirection] = useState('forward')
 
   // AI Enhance — ia textul vag al user-ului si returneaza un brief polished
   // pe care Claude principal il poate folosi sa genereze copy mult mai bun.
@@ -145,12 +150,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   }
 
   // ─── Wizard step-by-step cu swipe transitions ───────────────────────────
-  // 6 pași distincti, fiecare e o întrebare. User dă click "Următorul" sau Enter.
-  // Sliding animation între pași (translateX + opacity). Progress bar sus.
-  const STEPS_COUNT = 6
-  const [step, setStep] = useState(0)
-  const [direction, setDirection] = useState('forward')  // forward | backward (pentru animatie)
-
+  // (state declarat sus impreuna cu celelalte useState — regula React)
   function goNext() {
     if (!canAdvance()) return
     setDirection('forward')
