@@ -16,13 +16,13 @@ const STEPS = [
 export default function Generator({ onGenerated, onBack, presetStyle }) {
   const [aliUrl, setAliUrl] = useState('')
   const [competitorUrl, setCompetitorUrl] = useState('')
-  const [styleDesc, setStyleDesc] = useState('')
   // Personalizare AI — fiecare camp influenteaza prompt-ul Claude direct
-  const [tone, setTone] = useState('direct')              // agresiv | direct | casual | profesional
-  const [salesAngle, setSalesAngle] = useState('practic') // frica | dorinta | economie | practic
+  const [tone, setTone] = useState('direct')              // agresiv | direct | casual | profesional | emotional
+  const [salesAngle, setSalesAngle] = useState('')        // FREE TEXT: cine cumpara + ce-l motiveaza
   const [urgencyLevel, setUrgencyLevel] = useState('medie') // inalta | medie | fara
   const [lengthMode, setLengthMode] = useState('mediu')   // scurt | mediu | lung
   const [includeObjections, setIncludeObjections] = useState(true)
+  const [customObjections, setCustomObjections] = useState('')  // FREE TEXT: obiectii custom, una per linie
   const [loading, setLoading] = useState(false)
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
@@ -36,10 +36,10 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState('forward')
 
-  // AI Enhance — ia textul vag al user-ului si returneaza un brief polished
-  // pe care Claude principal il poate folosi sa genereze copy mult mai bun.
+  // AI Enhance — ia textul user-ului (profilul cumparatorului) si il extinde
+  // cu detalii comerciale: ce-l motiveaza, ce durere are, ce moment cumpara.
   async function enhancePrompt() {
-    const txt = styleDesc.trim()
+    const txt = salesAngle.trim()
     if (!txt) return
     setEnhancing(true); setEnhanceMsg(''); setError('')
     try {
@@ -48,14 +48,14 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
         body: JSON.stringify({
           action: 'enhance_prompt',
           text: txt,
-          productContext: aliUrl.trim() ? `Link AliExpress: ${aliUrl.trim()}` : ''
+          productContext: (aliUrl.trim() || competitorUrl.trim()) ? `Link produs: ${aliUrl.trim() || competitorUrl.trim()}` : ''
         })
       })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Eroare AI')
       if (json.enhanced) {
-        setStyleDesc(json.enhanced)
-        setEnhanceMsg('✓ Descrierea a fost îmbunătățită — poți edita mai departe sau apăsa Generează')
+        setSalesAngle(json.enhanced)
+        setEnhanceMsg('✓ Profilul a fost îmbunătățit — poți edita mai departe sau treci la pasul următor')
       }
     } catch (e) {
       setError('AI Enhance: ' + e.message)
@@ -81,15 +81,26 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
     setTimeout(advance, STEPS[0].delay)
 
     try {
+      // customObjections: lista pe care user-ul a scris in pasul final
+      // (una per linie). Daca e populata, Claude le foloseste in loc sa
+      // inventeze obiectiile default.
+      const customObjList = customObjections
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 3)
+        .slice(0, 8)
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           aliUrl: aliUrl.trim(),
           competitorUrl: competitorUrl.trim() || null,
-          styleDesc: styleDesc.trim(),
+          // salesAngle e acum text liber descrievind profilul buyer-ului
+          // (audienta + ce-l motiveaza). Inlocuieste vechiul styleDesc.
+          styleDesc: salesAngle.trim(),
+          salesAngle: salesAngle.trim(),
+          customObjections: customObjList,
           presetStyle: presetStyle?.style || null,
-          // Personalizare AI — toate ajung in prompt-ul Claude
-          tone, salesAngle, urgencyLevel, lengthMode,
+          tone, urgencyLevel, lengthMode,
           includeObjections
         })
       })
@@ -280,19 +291,31 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           {step === 2 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
-                <Text as="h2" variant="headingLg">Care e unghiul principal de vânzare?</Text>
-                <Text as="p" tone="subdued">Pe ce buton emoțional apăsăm cel mai tare.</Text>
+                <Text as="h2" variant="headingLg">Cine cumpără și ce-l motivează?</Text>
+                <Text as="p" tone="subdued">Descrie în câteva fraze cumpărătorul ideal + unghiul de vânzare. AI-ul va adapta copy-ul exact pe profilul ăsta.</Text>
               </BlockStack>
-              <BlockStack gap="200">
-                <OptionCard active={salesAngle === 'practic'} onClick={() => setSalesAngle('practic')}
-                  icon="🔧" label="Soluție practică" desc='"Rezolvă X problemă concretă". Pentru utilitare, casă, sănătate.' />
-                <OptionCard active={salesAngle === 'frica'} onClick={() => setSalesAngle('frica')}
-                  icon="⚠️" label="Frică / Urgență" desc='"Nu pierde ocazia". Pentru oferte limitate, scarcity.' />
-                <OptionCard active={salesAngle === 'dorinta'} onClick={() => setSalesAngle('dorinta')}
-                  icon="✨" label="Dorință / Aspirație" desc='"Devino persoana care vrei". Pentru beauty, fashion, fitness.' />
-                <OptionCard active={salesAngle === 'economie'} onClick={() => setSalesAngle('economie')}
-                  icon="💰" label="Economie / Valoare" desc='"Cea mai bună ofertă". Pentru bulk, bundle, gadgets ieftine.' />
-              </BlockStack>
+              <TextField
+                label=""
+                value={salesAngle}
+                onChange={setSalesAngle}
+                placeholder="Ex: Mamă de 30 ani cu copil 1-3 ani care se chinuie când mănâncă (varsă mâncarea, se murdărește). Caută o soluție rapidă care să-i scape de stresul curățeniei și hainelor murdare."
+                multiline={5}
+                autoComplete="off"
+                disabled={enhancing}
+                helpText='Cât mai concret: vârstă, sex, situație, durerea principală. Apasă „Îmbunătățește cu AI" să extindem profilul automat.'
+              />
+              <InlineStack align="end">
+                <Button
+                  icon={WandIcon}
+                  onClick={enhancePrompt}
+                  loading={enhancing}
+                  disabled={!salesAngle.trim() || enhancing}
+                  size="slim"
+                >
+                  {enhancing ? 'Îmbunătățesc...' : 'Îmbunătățește cu AI'}
+                </Button>
+              </InlineStack>
+              {enhanceMsg && <Banner tone="success">{enhanceMsg}</Banner>}
             </BlockStack>
           )}
 
@@ -343,37 +366,32 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           {step === 5 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
-                <Text as="h2" variant="headingLg">Cine cumpără? (opțional)</Text>
-                <Text as="p" tone="subdued">Audiența țintă concretă. Cu cât mai detaliată, cu atât mai bine personalizat copy-ul. Poți și să sari peste.</Text>
+                <Text as="h2" variant="headingLg">{includeObjections ? 'Obiecții specifice (opțional)' : 'Aproape gata!'}</Text>
+                <Text as="p" tone="subdued">
+                  {includeObjections
+                    ? 'Dacă ai obiecții SPECIFICE pe care le auzi des de la clienți, scrie-le aici — una pe linie. AI-ul le va trata pe pagină. Lasă gol să folosească obiecțiile standard.'
+                    : 'Treci direct la generare. Ai bifat să nu includem secțiunea de obiecții.'
+                  }
+                </Text>
               </BlockStack>
-              <TextField
-                label=""
-                value={styleDesc}
-                onChange={setStyleDesc}
-                placeholder="Ex: mame cu copii 1-3 ani, durere = mizeria de pe haine la masă"
-                multiline={4}
-                autoComplete="off"
-                disabled={enhancing}
-              />
-              <InlineStack align="end">
-                <Button
-                  icon={WandIcon}
-                  onClick={enhancePrompt}
-                  loading={enhancing}
-                  disabled={!styleDesc.trim() || enhancing}
-                  size="slim"
-                >
-                  {enhancing ? 'Îmbunătățesc...' : 'Îmbunătățește cu AI'}
-                </Button>
-              </InlineStack>
-              {enhanceMsg && <Banner tone="success">{enhanceMsg}</Banner>}
+              {includeObjections && (
+                <TextField
+                  label=""
+                  value={customObjections}
+                  onChange={setCustomObjections}
+                  placeholder={'Ex (una pe linie):\nE prea scump pentru un simplu produs\nAm încercat altele similare și nu au funcționat\nMi-e teamă că se sparge după 2 utilizări\nNu pot să-l returnez dacă nu-mi place'}
+                  multiline={6}
+                  autoComplete="off"
+                  helpText="Lasă gol pentru obiecțiile standard COD (preț, funcționare, alternative, fragilitate)."
+                />
+              )}
               <Box paddingBlockStart="200">
                 <Banner tone="info">
                   <BlockStack gap="100">
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">Ești gata! Recapitulare:</Text>
-                    <Text as="p" variant="bodySm">• Ton: <strong>{tone}</strong> · Unghi: <strong>{salesAngle}</strong></Text>
-                    <Text as="p" variant="bodySm">• Urgență: <strong>{urgencyLevel}</strong> · Lungime: <strong>{lengthMode}</strong></Text>
-                    <Text as="p" variant="bodySm">• Obiecții: <strong>{includeObjections ? 'Da' : 'Nu'}</strong></Text>
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">Recapitulare comandă AI:</Text>
+                    <Text as="p" variant="bodySm">• <strong>Ton:</strong> {tone} · <strong>Urgență:</strong> {urgencyLevel} · <strong>Lungime:</strong> {lengthMode}</Text>
+                    <Text as="p" variant="bodySm">• <strong>Obiecții tratate:</strong> {includeObjections ? (customObjections.trim() ? 'Custom (' + customObjections.split('\n').filter(s => s.trim()).length + ')' : 'Standard') : 'Nu'}</Text>
+                    <Text as="p" variant="bodySm">• <strong>Profil cumpărător:</strong> {salesAngle.trim() ? salesAngle.slice(0, 80) + (salesAngle.length > 80 ? '...' : '') : '(nedefinit — AI va folosi default)'}</Text>
                   </BlockStack>
                 </Banner>
               </Box>

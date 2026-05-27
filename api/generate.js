@@ -148,10 +148,11 @@ function callClaude(productInfo, styleDesc, opts = {}) {
   // Personalizare AI din formularul Generator — fiecare camp devine constraint
   // direct in prompt-ul Claude pentru output customizat.
   const tone = opts.tone || 'direct'
-  const salesAngle = opts.salesAngle || 'practic'
+  const salesAngleText = (opts.salesAngle || '').trim() // FREE TEXT acum, nu enum
   const urgencyLevel = opts.urgencyLevel || 'medie'
   const lengthMode = opts.lengthMode || 'mediu'
   const includeObjections = opts.includeObjections !== false  // default true
+  const customObjections = Array.isArray(opts.customObjections) ? opts.customObjections.filter(s => s && s.trim()) : []
 
   const toneMap = {
     direct: 'DIRECT — clar, fara ocoluri, propozitii scurte si la subiect',
@@ -159,12 +160,6 @@ function callClaude(productInfo, styleDesc, opts = {}) {
     casual: 'CASUAL — ca un sfat de la un prieten, "tu" peste tot, fara jargon',
     profesional: 'PROFESIONAL — autoritate, dovezi concrete, ton de expert, fara emoji extra',
     emotional: 'EMOTIONAL — storytelling, accent pe sentimente, "imagineaza-ti" / "stii sentimentul cand"'
-  }
-  const angleMap = {
-    practic: 'PRACTIC / SOLUTIE — copy-ul se concentreaza pe ce PROBLEMA rezolva produsul si cum',
-    frica: 'FRICA / URGENTA — "ce pierzi daca NU cumperi" / "competitorii tai deja folosesc"',
-    dorinta: 'DORINTA / ASPIRATIE — "devino persoana care vrei sa fii" / transformare personala',
-    economie: 'ECONOMIE / VALOARE — "cea mai buna oferta" / cost-benefit / "platesti 1x, beneficiezi ani"'
   }
   const urgencyMap = {
     medie: 'MEDIE — urgencyMessage "STOC LIMITAT", scarcity ce mentioneaza ofera-limitata',
@@ -177,14 +172,28 @@ function callClaude(productInfo, styleDesc, opts = {}) {
     lung: 'LUNG — 6 testimoniale, 7-8 beneficii, 8 FAQ, 3 featureSections (adauga inca una)'
   }
 
+  // Obiectii custom: daca user-ul le-a scris in formular, tu DOAR rebuttalizezi
+  // la EXACT obiectiile lui. Daca nu, generezi 4 obiectii standard COD.
+  const objectionsInstruction = includeObjections
+    ? (customObjections.length > 0
+        ? `INCLUDE — campul "objections" trebuie sa contina EXACT urmatoarele obiectii (cu rebuttals scurte si convingatoare in romana):\n${customObjections.map((o, i) => '  ' + (i + 1) + '. ' + o).join('\n')}\nFiecare obiectie e {objection: "<text user>", rebuttal: "<rebuttal tau>"}.`
+        : 'INCLUDE — populeaza campul "objections" cu 4 obiectii standard COD si rebuttals')
+    : 'OMITE — lasa "objections": [] (array gol)'
+
+  // Sales angle e acum TEXT LIBER (profil cumparator + motivatie). Daca e gol,
+  // AI-ul ghiceste din numele produsului.
+  const angleBlock = salesAngleText
+    ? `PROFIL CUMPARATOR + UNGHI VANZARE (FOLOSIT IN TOATA PAGINA):\n"""\n${salesAngleText}\n"""\nFolosesti acest profil pentru: nume + varste + orase in testimoniale, durerea reflectata in benefits + headline, tonul si registrul de cuvinte.`
+    : 'UNGHI VANZARE: nedefinit — alege unul potrivit nisei produsului (practic/economie pentru utilitar, frica pentru limited offer, dorinta pentru beauty/fashion, etc).'
+
   const personalizationBlock = `
 
 === PERSONALIZARE LP (RESPECTA EXACT) ===
 TON COPY: ${toneMap[tone]}
-UNGHI VANZARE: ${angleMap[salesAngle]}
+${angleBlock}
 NIVEL URGENTA: ${urgencyMap[urgencyLevel]}
 LUNGIME CONTINUT: ${lengthMap[lengthMode]}
-OBIECTII: ${includeObjections ? 'INCLUDE — populeaza campul "objections" cu 4 obiectii standard COD si rebuttals' : 'OMITE — lasa "objections": [] (array gol)'}`
+OBIECTII: ${objectionsInstruction}`
 
   // styleDesc e CONTEXT COMERCIAL OPTIONAL din partea user-ului (audienta tinta,
   // ton, unghi specific de vanzare, features pe care vrea sa le accentueze).
@@ -536,7 +545,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections } = req.body
+    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections } = req.body
     // Acceptam fie aliUrl, fie competitorUrl — cel putin unul. Daca user-ul
     // a dat doar competitor URL, il folosim ca sursa primara pentru scrape.
     if (!aliUrl && !competitorUrl) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link (AliExpress sau competitor)' })
@@ -592,6 +601,7 @@ module.exports = async function handler(req, res) {
     // Cu retry + fallback skelet — nu mai dam 500 cand Claude e flaky.
     const copy = await callClaudeWithRetry(productInfo, styleDesc || '', {
       tone, salesAngle, urgencyLevel, lengthMode, includeObjections,
+      customObjections: Array.isArray(customObjections) ? customObjections : [],
       competitorContext
     })
     // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
