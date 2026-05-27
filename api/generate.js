@@ -537,15 +537,19 @@ module.exports = async function handler(req, res) {
 
   try {
     const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections } = req.body
-    if (!aliUrl) return res.status(400).json({ error: 'aliUrl lipseste' })
+    // Acceptam fie aliUrl, fie competitorUrl — cel putin unul. Daca user-ul
+    // a dat doar competitor URL, il folosim ca sursa primara pentru scrape.
+    if (!aliUrl && !competitorUrl) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link (AliExpress sau competitor)' })
+    const primaryUrl = aliUrl || competitorUrl
 
     const geminiKey = process.env.GEMINI_API_KEY
     console.log('=== GENERATE v5 ===')
     console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
 
-    // STEP 1: Scrape AliExpress PRIMUL — fara nume + pret, Claude genereaza orb
-    // testimoniale despre "produs bun" care apoi nu se potrivesc cu produsul real.
-    const html = await fetchWithScraper(aliUrl).catch(() => '')
+    // STEP 1: Scrape sursa primara (aliUrl daca exista, altfel competitorUrl).
+    // Fara nume + pret, Claude genereaza orb testimoniale despre "produs bun"
+    // care apoi nu se potrivesc cu produsul real.
+    const html = await fetchWithScraper(primaryUrl).catch(() => '')
     let aliImages = []
     let productInfo = { title: '', priceUSD: 0, description: '', specs: [] }
     if (html.length > 1000) {
@@ -558,9 +562,10 @@ module.exports = async function handler(req, res) {
     }
     console.log('Ali scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length, descLen: productInfo.description?.length, specsCount: productInfo.specs?.length })
 
-    // STEP 1.5: Scrape competitor URL pentru context (best-effort, max 5s)
+    // STEP 1.5: Scrape competitor URL pentru context — doar daca e DIFERIT de
+    // primaryUrl (altfel duplicate fetch). Best-effort, max 5s.
     let competitorContext = ''
-    if (competitorUrl && /^https?:\/\//i.test(competitorUrl)) {
+    if (competitorUrl && competitorUrl !== primaryUrl && /^https?:\/\//i.test(competitorUrl)) {
       try {
         const compHtml = await Promise.race([
           fetchWithScraper(competitorUrl),
@@ -657,9 +662,9 @@ module.exports = async function handler(req, res) {
       console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant + ' (from desc=' + (styleDesc ? 'YES' : 'NO') + ')')
     }
 
-    // Save aliUrl in returned data so editor's auto-save can use it as
+    // Save URL in returned data so editor's auto-save can use it as
     // a stable identifier for localStorage draft (otherwise drafts collide).
-    copy.aliUrl = aliUrl
+    copy.aliUrl = primaryUrl
 
     console.log('=== DONE === Images:', copy.images.length, '/4 (', goodGemini.length, 'Gemini +', aliImages.length, 'Ali)')
     res.status(200).json({ success: true, data: copy })

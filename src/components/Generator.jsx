@@ -143,151 +143,278 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
     )
   }
 
+  // ─── Wizard step-by-step cu swipe transitions ───────────────────────────
+  // 6 pași distincti, fiecare e o întrebare. User dă click "Următorul" sau Enter.
+  // Sliding animation între pași (translateX + opacity). Progress bar sus.
+  const STEPS_COUNT = 6
+  const [step, setStep] = useState(0)
+  const [direction, setDirection] = useState('forward')  // forward | backward (pentru animatie)
+
+  function goNext() {
+    if (!canAdvance()) return
+    setDirection('forward')
+    setStep(s => Math.min(s + 1, STEPS_COUNT - 1))
+  }
+  function goBack() {
+    setDirection('backward')
+    setStep(s => Math.max(s - 1, 0))
+  }
+  function canAdvance() {
+    if (step === 0) return aliUrl.trim() || competitorUrl.trim()  // cel putin unul
+    return true  // alte pasi au valori default, OK
+  }
+  function isLastStep() { return step === STEPS_COUNT - 1 }
+
+  // Card option for visual selectors — used in tone/angle/urgency/length steps
+  function OptionCard({ active, onClick, icon, label, desc }) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        style={{
+          textAlign: 'left',
+          padding: '18px 18px',
+          background: active ? '#f0f7ff' : '#fff',
+          border: '2px solid ' + (active ? '#2c6ecb' : '#e1e3e5'),
+          borderRadius: 10,
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          width: '100%',
+          fontFamily: 'inherit'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+          <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{icon}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#202223', marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 13, color: '#6d7175', lineHeight: 1.4 }}>{desc}</div>
+          </div>
+          {active && <div style={{ color: '#2c6ecb', fontSize: 18, fontWeight: 900, flexShrink: 0 }}>✓</div>}
+        </div>
+      </button>
+    )
+  }
+
   return (
     <Page
       title="Generator AI"
-      subtitle="Generează automat o landing page COD personalizată — răspunde la câteva întrebări pentru ca AI-ul să o facă perfect pentru produsul și audiența ta."
-      backAction={{ content: 'Înapoi', onAction: onBack }}
+      subtitle={`Pasul ${step + 1} din ${STEPS_COUNT}`}
+      backAction={{ content: 'Anulează', onAction: onBack }}
     >
+      <style>{`
+        @keyframes ue-slide-in-right { from {opacity:0;transform:translateX(40px)} to {opacity:1;transform:translateX(0)} }
+        @keyframes ue-slide-in-left { from {opacity:0;transform:translateX(-40px)} to {opacity:1;transform:translateX(0)} }
+        .ue-wizard-step { animation: ue-slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+        .ue-wizard-step.back { animation: ue-slide-in-left 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+        .ue-progress-bar { height: 4px; background: #f1f2f4; border-radius: 2px; overflow: hidden; margin-bottom: 24px; }
+        .ue-progress-fill { height: 100%; background: linear-gradient(90deg, #2c6ecb 0%, #5b8def 100%); transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 2px; }
+      `}</style>
+
       <Card>
-        <BlockStack gap="500">
-          {presetStyle && (
+        {/* Progress bar */}
+        <div className="ue-progress-bar">
+          <div className="ue-progress-fill" style={{ width: ((step + 1) / STEPS_COUNT * 100) + '%' }} />
+        </div>
+
+        {presetStyle && step === 0 && (
+          <div style={{ marginBottom: 16 }}>
             <Banner tone="info">
-              Stil pre-selectat: <strong>{presetStyle.templateName}</strong>. AI-ul va genera conținutul pentru produsul tău folosind paleta și layout-ul acestui stil.
+              Stil pre-selectat: <strong>{presetStyle.templateName}</strong>
             </Banner>
+          </div>
+        )}
+
+        {/* Step content cu animatie */}
+        <div className={'ue-wizard-step' + (direction === 'backward' ? ' back' : '')} key={step}>
+          {step === 0 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">De unde luăm produsul?</Text>
+                <Text as="p" tone="subdued">Pune fie un link AliExpress, fie unul de la un competitor — cel puțin unul. Poți pune și ambele.</Text>
+              </BlockStack>
+              <TextField
+                label="Link AliExpress"
+                value={aliUrl}
+                onChange={setAliUrl}
+                placeholder="https://www.aliexpress.com/item/..."
+                type="url"
+                autoComplete="off"
+                onKeyDown={e => e.key === 'Enter' && canAdvance() && goNext()}
+              />
+              <Text as="p" variant="bodySm" tone="subdued" alignment="center">— sau —</Text>
+              <TextField
+                label="Link competitor (LP de la concurent)"
+                value={competitorUrl}
+                onChange={setCompetitorUrl}
+                placeholder="https://magazin-concurent.ro/products/..."
+                type="url"
+                autoComplete="off"
+                helpText="AI învață stilul și unghiul, apoi îl bate la conversie"
+                onKeyDown={e => e.key === 'Enter' && canAdvance() && goNext()}
+              />
+            </BlockStack>
           )}
 
-          {/* ─── SECȚIUNEA 1: Sursele (link AliExpress + competitor opțional) ─── */}
-          <BlockStack gap="300">
-            <Text as="h3" variant="headingSm">1. De unde luăm produsul</Text>
-            <TextField
-              label="Link AliExpress"
-              value={aliUrl}
-              onChange={setAliUrl}
-              placeholder="https://www.aliexpress.com/item/..."
-              type="url"
-              autoComplete="off"
-              helpText="Sursa principală: nume, preț, poze produs."
-            />
-            <TextField
-              label="Link competitor (opțional)"
-              value={competitorUrl}
-              onChange={setCompetitorUrl}
-              placeholder="https://magazin-concurent.ro/products/..."
-              type="url"
-              autoComplete="off"
-              helpText="Dă-ne un link de la un competitor cu LP bun → AI-ul învață stilul și unghiul de vânzare ca să te bată pe terenul lor."
-            />
-          </BlockStack>
+          {step === 1 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Cum vrei să sune copy-ul?</Text>
+                <Text as="p" tone="subdued">Tonul determină cum vorbește pagina cu clientul.</Text>
+              </BlockStack>
+              <BlockStack gap="200">
+                <OptionCard active={tone === 'direct'} onClick={() => setTone('direct')}
+                  icon="🎯" label="Direct" desc="Clar, fără ocoluri, propoziții scurte. Recomandat." />
+                <OptionCard active={tone === 'agresiv'} onClick={() => setTone('agresiv')}
+                  icon="🔥" label="Agresiv" desc='Urgență mare, "ACUM", "ULTIMA ȘANSĂ". Conversie mare pe rece.' />
+                <OptionCard active={tone === 'casual'} onClick={() => setTone('casual')}
+                  icon="😎" label="Casual" desc="Ca sfat de la un prieten. 'Tu' peste tot, fără jargon." />
+                <OptionCard active={tone === 'profesional'} onClick={() => setTone('profesional')}
+                  icon="👔" label="Profesional" desc="Autoritate, dovezi, ton de expert. Pentru produse premium." />
+                <OptionCard active={tone === 'emotional'} onClick={() => setTone('emotional')}
+                  icon="💞" label="Emoțional" desc="Storytelling, sentiment. Pentru cosmetice, copii, cadouri." />
+              </BlockStack>
+            </BlockStack>
+          )}
 
-          <Divider />
+          {step === 2 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Care e unghiul principal de vânzare?</Text>
+                <Text as="p" tone="subdued">Pe ce buton emoțional apăsăm cel mai tare.</Text>
+              </BlockStack>
+              <BlockStack gap="200">
+                <OptionCard active={salesAngle === 'practic'} onClick={() => setSalesAngle('practic')}
+                  icon="🔧" label="Soluție practică" desc='"Rezolvă X problemă concretă". Pentru utilitare, casă, sănătate.' />
+                <OptionCard active={salesAngle === 'frica'} onClick={() => setSalesAngle('frica')}
+                  icon="⚠️" label="Frică / Urgență" desc='"Nu pierde ocazia". Pentru oferte limitate, scarcity.' />
+                <OptionCard active={salesAngle === 'dorinta'} onClick={() => setSalesAngle('dorinta')}
+                  icon="✨" label="Dorință / Aspirație" desc='"Devino persoana care vrei". Pentru beauty, fashion, fitness.' />
+                <OptionCard active={salesAngle === 'economie'} onClick={() => setSalesAngle('economie')}
+                  icon="💰" label="Economie / Valoare" desc='"Cea mai bună ofertă". Pentru bulk, bundle, gadgets ieftine.' />
+              </BlockStack>
+            </BlockStack>
+          )}
 
-          {/* ─── SECȚIUNEA 2: Personalizare AI ─── */}
-          <BlockStack gap="300">
-            <Text as="h3" variant="headingSm">2. Cum vrei să sune pagina</Text>
+          {step === 3 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Cât de „pushy" să fie pagina?</Text>
+                <Text as="p" tone="subdued">Cantitatea de urgență vizuală și presiune.</Text>
+              </BlockStack>
+              <BlockStack gap="200">
+                <OptionCard active={urgencyLevel === 'medie'} onClick={() => setUrgencyLevel('medie')}
+                  icon="📦" label="Medie" desc='Banner "stoc limitat" + scarcity ușor. Recomandat.' />
+                <OptionCard active={urgencyLevel === 'inalta'} onClick={() => setUrgencyLevel('inalta')}
+                  icon="⏰" label="Înaltă" desc='Countdown timer + stock counter + bare urgență. Conversie maximă pe trafic rece.' />
+                <OptionCard active={urgencyLevel === 'fara'} onClick={() => setUrgencyLevel('fara')}
+                  icon="🌿" label="Fără" desc="Zero presiune, focus pe valoare. Pentru produse premium/luxury." />
+              </BlockStack>
+              <Divider />
+              <BlockStack gap="100">
+                <Text as="h3" variant="headingSm">Cât de lungă să fie pagina?</Text>
+              </BlockStack>
+              <BlockStack gap="200">
+                <OptionCard active={lengthMode === 'mediu'} onClick={() => setLengthMode('mediu')}
+                  icon="📄" label="Mediu (5-7 secțiuni)" desc="Recomandat pentru COD. Echilibru info / conversie." />
+                <OptionCard active={lengthMode === 'scurt'} onClick={() => setLengthMode('scurt')}
+                  icon="⚡" label="Scurt (3-4 secțiuni)" desc="Pentru ads rapide FB Reels, TikTok. Decizie imediată." />
+                <OptionCard active={lengthMode === 'lung'} onClick={() => setLengthMode('lung')}
+                  icon="📚" label="Lung (8-10 secțiuni)" desc="Pentru trafic SEO/email cald. Mai mult timp pe pagină." />
+              </BlockStack>
+            </BlockStack>
+          )}
 
-            <Select
-              label="Ton copy"
-              options={[
-                { label: 'Direct (clar, fără ocoluri) — recomandat', value: 'direct' },
-                { label: 'Agresiv (urgență mare, pression sales)', value: 'agresiv' },
-                { label: 'Casual (prietenos, ca un sfat de la prieten)', value: 'casual' },
-                { label: 'Profesional (autoritate, încredere, formal)', value: 'profesional' },
-                { label: 'Emoțional (storytelling, accent pe sentiment)', value: 'emotional' }
-              ]}
-              value={tone}
-              onChange={setTone}
-            />
+          {step === 4 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Tratăm obiecțiile cumpărătorilor?</Text>
+                <Text as="p" tone="subdued">Secțiune cu "Răspundem îngrijorărilor tale" — crește conversia cu 10-15%.</Text>
+              </BlockStack>
+              <BlockStack gap="200">
+                <OptionCard active={includeObjections === true} onClick={() => setIncludeObjections(true)}
+                  icon="✅" label="Da, include obiecții" desc='AI generează 4 rebuttals la "e scump", "nu funcționează", "am alt produs", "e fragil". Recomandat.' />
+                <OptionCard active={includeObjections === false} onClick={() => setIncludeObjections(false)}
+                  icon="✗" label="Nu, sări peste" desc="LP mai scurt fără secțiunea de obiecții." />
+              </BlockStack>
+            </BlockStack>
+          )}
 
-            <Select
-              label="Unghi principal de vânzare"
-              options={[
-                { label: 'Soluție practică — "Rezolvă X problemă"', value: 'practic' },
-                { label: 'Frică / Urgență — "Nu pierde ocazia"', value: 'frica' },
-                { label: 'Dorință / Aspirație — "Devino mai bun"', value: 'dorinta' },
-                { label: 'Economie / Valoare — "Cea mai bună ofertă"', value: 'economie' }
-              ]}
-              value={salesAngle}
-              onChange={setSalesAngle}
-            />
+          {step === 5 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Cine cumpără? (opțional)</Text>
+                <Text as="p" tone="subdued">Audiența țintă concretă. Cu cât mai detaliată, cu atât mai bine personalizat copy-ul. Poți și să sari peste.</Text>
+              </BlockStack>
+              <TextField
+                label=""
+                value={styleDesc}
+                onChange={setStyleDesc}
+                placeholder="Ex: mame cu copii 1-3 ani, durere = mizeria de pe haine la masă"
+                multiline={4}
+                autoComplete="off"
+                disabled={enhancing}
+              />
+              <InlineStack align="end">
+                <Button
+                  icon={WandIcon}
+                  onClick={enhancePrompt}
+                  loading={enhancing}
+                  disabled={!styleDesc.trim() || enhancing}
+                  size="slim"
+                >
+                  {enhancing ? 'Îmbunătățesc...' : 'Îmbunătățește cu AI'}
+                </Button>
+              </InlineStack>
+              {enhanceMsg && <Banner tone="success">{enhanceMsg}</Banner>}
+              <Box paddingBlockStart="200">
+                <Banner tone="info">
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">Ești gata! Recapitulare:</Text>
+                    <Text as="p" variant="bodySm">• Ton: <strong>{tone}</strong> · Unghi: <strong>{salesAngle}</strong></Text>
+                    <Text as="p" variant="bodySm">• Urgență: <strong>{urgencyLevel}</strong> · Lungime: <strong>{lengthMode}</strong></Text>
+                    <Text as="p" variant="bodySm">• Obiecții: <strong>{includeObjections ? 'Da' : 'Nu'}</strong></Text>
+                  </BlockStack>
+                </Banner>
+              </Box>
+            </BlockStack>
+          )}
+        </div>
 
-            <Select
-              label="Nivel urgență vizuală"
-              options={[
-                { label: 'Medie — banner "stoc limitat" + scarcity ușor', value: 'medie' },
-                { label: 'Înaltă — countdown timer + stock counter + urgency bars', value: 'inalta' },
-                { label: 'Fără — fără presiune, focus pe valoare', value: 'fara' }
-              ]}
-              value={urgencyLevel}
-              onChange={setUrgencyLevel}
-              helpText='Cât de „pushy" să fie LP-ul.'
-            />
+        {error && <div style={{ marginTop: 16 }}><Banner tone="critical">{error}</Banner></div>}
 
-            <Select
-              label="Lungime conținut"
-              options={[
-                { label: 'Mediu (5-7 secțiuni) — recomandat pentru COD', value: 'mediu' },
-                { label: 'Scurt (3-4 secțiuni) — pentru ad-uri rapide, FB Reels', value: 'scurt' },
-                { label: 'Lung (8-10 secțiuni) — pentru SEO/email traffic cald', value: 'lung' }
-              ]}
-              value={lengthMode}
-              onChange={setLengthMode}
-            />
-
-            <Checkbox
-              label="Include secțiune Obiecții Tratate"
-              checked={includeObjections}
-              onChange={setIncludeObjections}
-              helpText='AI generează rebuttals la obiecții comune ("e prea scump", "nu funcționează", "deja am alt produs", "e fragil") — crește conversia cu 10-15%.'
-            />
-          </BlockStack>
-
-          <Divider />
-
-          {/* ─── SECȚIUNEA 3: Audiența țintă (opțional) ─── */}
-          <BlockStack gap="300">
-            <Text as="h3" variant="headingSm">3. Audiență țintă (opțional)</Text>
-            <TextField
-              label="Detalii audiență"
-              helpText='Cine cumpără produsul? Vârstă, sex, situație de viață, durere specifică. Apasă „Îmbunătățește cu AI" să extindem contextul.'
-              value={styleDesc}
-              onChange={setStyleDesc}
-              placeholder="Ex: pentru mame cu copii 1-3 ani, durere = mizeria de pe haine la masă"
-              multiline={3}
-              autoComplete="off"
-              disabled={enhancing}
-            />
-            <InlineStack align="end">
-              <Button
-                icon={WandIcon}
-                onClick={enhancePrompt}
-                loading={enhancing}
-                disabled={!styleDesc.trim() || enhancing}
-                size="slim"
-              >
-                {enhancing ? 'Îmbunătățesc...' : 'Îmbunătățește cu AI'}
-              </Button>
-            </InlineStack>
-          </BlockStack>
-
-          {enhanceMsg && <Banner tone="success">{enhanceMsg}</Banner>}
-          {error && <Banner tone="critical">{error}</Banner>}
-
-          <Button
-            variant="primary"
-            size="large"
-            icon={MagicIcon}
-            onClick={generate}
-            disabled={!aliUrl.trim()}
-            fullWidth
-          >
-            Generează pagina
+        {/* Navigation footer */}
+        <div style={{
+          marginTop: 28,
+          paddingTop: 18,
+          borderTop: '1px solid #e1e3e5',
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 12
+        }}>
+          <Button onClick={goBack} disabled={step === 0}>
+            ← Înapoi
           </Button>
-
-          <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-            ≈ 1 minut de procesare
-          </Text>
-        </BlockStack>
+          {isLastStep() ? (
+            <Button
+              variant="primary"
+              size="large"
+              icon={MagicIcon}
+              onClick={generate}
+              disabled={!aliUrl.trim() && !competitorUrl.trim()}
+            >
+              Generează pagina ta
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="large"
+              onClick={goNext}
+              disabled={!canAdvance()}
+            >
+              Următorul →
+            </Button>
+          )}
+        </div>
       </Card>
     </Page>
   )
