@@ -54,7 +54,11 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   const [lastSaved, setLastSaved] = useState(null)
   const [saving, setSaving] = useState(false)
   const [autosaveOn, setAutosaveOn] = useState(true)
-  const isEditing = !!data.fromDashboard
+  // isEditing = exista produs Shopify atasat (id real). Daca data e o copie
+  // duplicate (fromDuplicate flag, id=null), tratam ca pagina noua → buton
+  // "Publică" deschide product picker, nu butonul "Salvează" care ar trimite
+  // update fara productId si ar crash-ui.
+  const isEditing = !!data.fromDashboard && !!data.id
   const dirtyRef = useRef(false)
   const pageIdRef = useRef(data.id || null)
 

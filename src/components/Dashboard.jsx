@@ -97,9 +97,11 @@ export default function Dashboard({
         body: JSON.stringify({ action: 'duplicate', shop, pageId })
       })
       const d = await res.json()
-      if (d.success) {
-        setPages(prev => [d.page, ...prev])
-        setToast('Pagină duplicată')
+      if (d.success && d.source) {
+        // Duplicate NU mai creeaza produs Shopify. Deschidem editor cu copia
+        // si user-ul o asigneaza la ce produs vrea (existing) prin toolbar.
+        setToast('Conținut LP copiat — alege un produs din toolbar')
+        onEdit({ ...d.source, fromDashboard: true })
       } else {
         setToast('Eroare la duplicare')
       }
