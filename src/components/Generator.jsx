@@ -60,7 +60,8 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   }
 
   async function generate() {
-    if (!aliUrl.trim()) return
+    // Accept either AliExpress link OR competitor link (cel putin unul)
+    if (!aliUrl.trim() && !competitorUrl.trim()) return
     setError(''); setLoading(true); setLoadPct(STEPS[0].pct); setLoadMsg(STEPS[0].msg)
     cancelRef.current = false
 
