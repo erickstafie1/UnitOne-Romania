@@ -7,7 +7,7 @@ import {
 import {
   PlusIcon, DeleteIcon, EditIcon, ViewIcon, PauseCircleIcon, PlayCircleIcon,
   SearchIcon, CheckIcon, ClipboardIcon, StoreIcon, ClockIcon,
-  QuestionCircleIcon, SendIcon, ChevronRightIcon, MagicIcon, EmailIcon
+  QuestionCircleIcon, SendIcon, ChevronRightIcon, MagicIcon, EmailIcon, DuplicateIcon
 } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
@@ -24,6 +24,7 @@ export default function Dashboard({
   const [loading, setLoading] = useState(true)
   const [shopOwner, setShopOwner] = useState('')
   const [deleting, setDeleting] = useState(null)
+  const [duplicating, setDuplicating] = useState(null)
   const [toast, setToast] = useState('')
 
   // Navigate via URL pathname so Shopify Admin NavMenu highlights the right link.
@@ -88,6 +89,24 @@ export default function Dashboard({
     setDeleting(null)
   }
 
+  async function duplicatePage(pageId) {
+    setDuplicating(pageId)
+    try {
+      const res = await apiFetch('/api/pages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'duplicate', shop, pageId })
+      })
+      const d = await res.json()
+      if (d.success) {
+        setPages(prev => [d.page, ...prev])
+        setToast('Pagină duplicată')
+      } else {
+        setToast('Eroare la duplicare')
+      }
+    } catch { setToast('Eroare la duplicare') }
+    setDuplicating(null)
+  }
+
   async function togglePage(pageId, published) {
     try {
       const res = await apiFetch('/api/pages', {
@@ -126,7 +145,8 @@ export default function Dashboard({
             if (planLimit < 9999 && pages.length >= planLimit) { goToSection('pricing'); return }
             onNew()
           }}
-          onEdit={openEdit} onToggle={togglePage} onDelete={deletePage} deleting={deleting} />
+          onEdit={openEdit} onToggle={togglePage} onDelete={deletePage} deleting={deleting}
+          onDuplicate={duplicatePage} duplicating={duplicating} />
       )}
       {section === 'templates' && (
         <TemplatesView onUse={onUseTemplate || onNew} onUseAsStyle={onUseStyle || onNew} />
@@ -418,7 +438,7 @@ function ChatBubble({ role, content }) {
 }
 
 /* ─── PAGES ─────────────────────────────────────────────────────────── */
-function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, deleting }) {
+function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, deleting, onDuplicate, duplicating }) {
   const [query, setQuery] = useState('')
   const filtered = pages.filter(p => p.title.toLowerCase().includes(query.toLowerCase()))
 
@@ -507,6 +527,12 @@ function PagesView({ pages, loading, shop, onNew, onEdit, onToggle, onDelete, de
                     accessibilityLabel="Vezi pagina live"
                     url={`https://${shop}/products/${page.handle}`}
                     external
+                  />
+                  <Button
+                    icon={DuplicateIcon}
+                    accessibilityLabel="Duplică"
+                    loading={duplicating === page.id}
+                    onClick={(e) => { e?.stopPropagation?.(); onDuplicate(page.id) }}
                   />
                   <Button
                     icon={page.published ? PauseCircleIcon : PlayCircleIcon}

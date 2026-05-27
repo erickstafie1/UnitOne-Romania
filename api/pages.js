@@ -118,6 +118,52 @@ module.exports = async function handler(req, res) {
       })
     }
 
+    if (action === 'duplicate') {
+      // Fetch source product + editor_source metafield
+      const [srcData, mfData] = await Promise.all([
+        auth.call('/products/' + pageId + '.json'),
+        auth.call('/products/' + pageId + '/metafields.json?namespace=unitone&key=editor_source').catch(() => ({}))
+      ])
+      const src = srcData.product
+      const newTitle = src.title + ' (Copie)'
+      const newHandle = src.handle + '-copie-' + Date.now()
+      const newTags = ((src.tags || '').split(',').map(t => t.trim()).filter(Boolean).concat('unitone-cod-page')).join(', ')
+
+      const created = await auth.call('/products.json', 'POST', {
+        product: {
+          title: newTitle,
+          handle: newHandle,
+          body_html: src.body_html,
+          status: 'draft',
+          template_suffix: src.template_suffix,
+          tags: newTags
+        }
+      })
+      const newId = created.product.id
+
+      // Copy editor_source metafield if exists
+      const mf = mfData?.metafields?.[0]
+      if (mf?.value) {
+        await auth.call('/products/' + newId + '/metafields.json', 'POST', {
+          metafield: { namespace: 'unitone', key: 'editor_source', type: 'json', value: mf.value }
+        }).catch(() => {})
+      }
+
+      return res.status(200).json({
+        success: true,
+        page: {
+          id: created.product.id,
+          title: newTitle,
+          handle: newHandle,
+          published: false,
+          created_at: created.product.created_at,
+          updated_at: created.product.updated_at,
+          template_suffix: src.template_suffix,
+          isProduct: true
+        }
+      })
+    }
+
     if (action === 'reinstall') {
       const result = await installTemplates(auth.call)
       return res.status(200).json({ success: result.ok, ...result })
