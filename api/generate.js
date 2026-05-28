@@ -186,6 +186,21 @@ function callClaude(productInfo, styleDesc, opts = {}) {
     ? `PROFIL CUMPARATOR + UNGHI VANZARE (FOLOSIT IN TOATA PAGINA):\n"""\n${salesAngleText}\n"""\nFolosesti acest profil pentru: nume + varste + orase in testimoniale, durerea reflectata in benefits + headline, tonul si registrul de cuvinte.`
     : 'UNGHI VANZARE: nedefinit — alege unul potrivit nisei produsului (practic/economie pentru utilitar, frica pentru limited offer, dorinta pentru beauty/fashion, etc).'
 
+  // Popup: optional element pe pagina cu un obiectiv specific
+  // - discount: ofera cod reducere, valid la check-out / pe numar telefonic
+  // - phone: colecteaza telefon ca sa sune agent
+  // - order: forteaza utilizatorul sa scroll-eze la butonul COD
+  const popupEnabled = !!opts.popupEnabled
+  const popupGoal = opts.popupGoal || null
+  const popupGoalMap = {
+    discount: 'OFERA REDUCERE — popup cu headline scurt despre o reducere exclusiva, ctaText "Aplica reducerea", discountCode generat aleator (4-8 caractere, capitalizate, usor de tinut minte ex: SAVE10, AZI20), discountPercent intre 10 si 20',
+    phone: 'COLECTEAZA TELEFON — popup cu headline despre consultare gratuita / oferta personalizata, subtext explica ce primeste user-ul daca lasa telefonul, ctaText "Te sun eu", fara discountCode',
+    order: 'FORTEAZA COMANDA — popup cu headline urgent despre stocul care se epuizeaza, subtext de urgenta, ctaText "Comanda acum", fara discountCode'
+  }
+  const popupInstruction = popupEnabled
+    ? `INCLUDE — populeaza campul "popup" cu: ${popupGoalMap[popupGoal] || popupGoalMap.discount}`
+    : 'OMITE — lasa "popup": null'
+
   const personalizationBlock = `
 
 === PERSONALIZARE LP (RESPECTA EXACT) ===
@@ -193,7 +208,8 @@ TON COPY: ${toneMap[tone]}
 ${angleBlock}
 NIVEL URGENTA: ${urgencyMap[urgencyLevel]}
 LUNGIME CONTINUT: ${lengthMap[lengthMode]}
-OBIECTII: ${objectionsInstruction}`
+OBIECTII: ${objectionsInstruction}
+POPUP: ${popupInstruction}`
 
   // styleDesc e CONTEXT COMERCIAL OPTIONAL din partea user-ului (audienta tinta,
   // ton, unghi specific de vanzare, features pe care vrea sa le accentueze).
@@ -296,7 +312,15 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
     {"objection": "Nu functioneaza la fel cum scrie", "rebuttal": "Mentioneaza garantia + numar specific de clienti multumiti"},
     {"objection": "Deja am ceva similar", "rebuttal": "Compara cu alternativa, evidentiaza diferenta cheie"},
     {"objection": "E fragil / nu rezista mult", "rebuttal": "Mentioneaza materialul, testele, garantia"}
-  ]
+  ],
+  "popup": ${popupEnabled ? `{
+    "goal": "${popupGoal || 'discount'}",
+    "headline": "Titlu scurt si captivant (max 50 char)",
+    "subtext": "1-2 fraze cu beneficiul concret (max 140 char)",
+    "ctaText": "Text buton scurt (max 25 char)",
+    "discountCode": "${popupGoal === 'discount' ? 'COD_GENERAT' : ''}",
+    "discountPercent": ${popupGoal === 'discount' ? 15 : 0}
+  }` : 'null'}
 }`
 
   // Detalii AliExpress de pasat la Claude — fara ele inventeaza orb
@@ -545,7 +569,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections } = req.body
+    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections, popupEnabled, popupGoal } = req.body
     // Acceptam fie aliUrl, fie competitorUrl — cel putin unul. Daca user-ul
     // a dat doar competitor URL, il folosim ca sursa primara pentru scrape.
     if (!aliUrl && !competitorUrl) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link (AliExpress sau competitor)' })
@@ -602,7 +626,9 @@ module.exports = async function handler(req, res) {
     const copy = await callClaudeWithRetry(productInfo, styleDesc || '', {
       tone, salesAngle, urgencyLevel, lengthMode, includeObjections,
       customObjections: Array.isArray(customObjections) ? customObjections : [],
-      competitorContext
+      competitorContext,
+      popupEnabled: !!popupEnabled,
+      popupGoal: popupEnabled ? (popupGoal || 'discount') : null
     })
     // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)

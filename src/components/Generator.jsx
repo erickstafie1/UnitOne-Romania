@@ -23,6 +23,9 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   const [lengthMode, setLengthMode] = useState('mediu')   // scurt | mediu | lung
   const [includeObjections, setIncludeObjections] = useState(true)
   const [customObjections, setCustomObjections] = useState('')  // FREE TEXT: obiectii custom, una per linie
+  // Popup options — adauga popup pe pagina cu un obiectiv specific
+  const [popupEnabled, setPopupEnabled] = useState(false)
+  const [popupGoal, setPopupGoal] = useState('discount')  // phone | order | discount
   const [loading, setLoading] = useState(false)
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
@@ -32,7 +35,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   const cancelRef = useRef(false)
   // Wizard state — MUST be here (before any return), nu dupa if(loading)
   // altfel violam regula React hooks (order changes between renders).
-  const STEPS_COUNT = 6
+  const STEPS_COUNT = 7
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState('forward')
 
@@ -101,7 +104,9 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           customObjections: customObjList,
           presetStyle: presetStyle?.style || null,
           tone, urgencyLevel, lengthMode,
-          includeObjections
+          includeObjections,
+          popupEnabled,
+          popupGoal: popupEnabled ? popupGoal : null
         })
       })
       cancelRef.current = true
@@ -366,6 +371,37 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           {step === 5 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Adăugăm un popup pe pagină?</Text>
+                <Text as="p" tone="subdued">Popup-ul apare la exit-intent sau după 30 secunde, cu un obiectiv clar. Crește conversia cu 5-15%.</Text>
+              </BlockStack>
+              <BlockStack gap="200">
+                <OptionCard active={popupEnabled === false} onClick={() => setPopupEnabled(false)}
+                  icon="✗" label="Fără popup" desc="Pagina rămâne simplă, fără popup. Recomandat dacă vrei minimalism." />
+                <OptionCard active={popupEnabled === true} onClick={() => setPopupEnabled(true)}
+                  icon="✅" label="Da, adaugă popup" desc="Popup la exit-intent + after delay. Alege obiectivul mai jos." />
+              </BlockStack>
+              {popupEnabled && (
+                <>
+                  <Divider />
+                  <BlockStack gap="100">
+                    <Text as="h3" variant="headingSm">Ce obiectiv are popup-ul?</Text>
+                  </BlockStack>
+                  <BlockStack gap="200">
+                    <OptionCard active={popupGoal === 'discount'} onClick={() => setPopupGoal('discount')}
+                      icon="🎁" label="Oferă reducere" desc='Popup cu cod de reducere (ex: "10% off cu codul SAVE10"). Recomandat pentru produse cu margin bun.' />
+                    <OptionCard active={popupGoal === 'phone'} onClick={() => setPopupGoal('phone')}
+                      icon="📞" label="Colectează telefon" desc="Popup cu formular nume + telefon → te sună agentul. Pentru produse high-ticket sau consultanță." />
+                    <OptionCard active={popupGoal === 'order'} onClick={() => setPopupGoal('order')}
+                      icon="🛒" label="Forțează formularul de comandă" desc="Popup care duce direct la butonul COD. Pentru conversie agresivă pe trafic rece." />
+                  </BlockStack>
+                </>
+              )}
+            </BlockStack>
+          )}
+
+          {step === 6 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">{includeObjections ? 'Obiecții specifice (opțional)' : 'Aproape gata!'}</Text>
                 <Text as="p" tone="subdued">
                   {includeObjections
@@ -391,6 +427,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
                     <Text as="p" variant="bodyMd" fontWeight="semibold">Recapitulare comandă AI:</Text>
                     <Text as="p" variant="bodySm">• <strong>Ton:</strong> {tone} · <strong>Urgență:</strong> {urgencyLevel} · <strong>Lungime:</strong> {lengthMode}</Text>
                     <Text as="p" variant="bodySm">• <strong>Obiecții tratate:</strong> {includeObjections ? (customObjections.trim() ? 'Custom (' + customObjections.split('\n').filter(s => s.trim()).length + ')' : 'Standard') : 'Nu'}</Text>
+                    <Text as="p" variant="bodySm">• <strong>Popup:</strong> {popupEnabled ? ({discount: 'Reducere', phone: 'Telefon', order: 'Forțare comandă'}[popupGoal] || popupGoal) : 'Nu'}</Text>
                     <Text as="p" variant="bodySm">• <strong>Profil cumpărător:</strong> {salesAngle.trim() ? salesAngle.slice(0, 80) + (salesAngle.length > 80 ? '...' : '') : '(nedefinit — AI va folosi default)'}</Text>
                   </BlockStack>
                 </Banner>

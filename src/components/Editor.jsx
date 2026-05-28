@@ -963,6 +963,8 @@ function buildHTML(data) {
   const topBenefits = (data.topBenefits && data.topBenefits.length ? data.topBenefits : benefits.slice(0, 3)).slice(0, 3)
   const featureSections = (data.featureSections || []).slice(0, 2)
   const objections = (data.objections || []).slice(0, 4)
+  // Popup config — daca user a bifat in formularul Generator
+  const popup = data.popup && typeof data.popup === 'object' ? data.popup : null
   const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
   const riskReversalText = data.riskReversalText || 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.'
   // Palette accents — generator assigns these per LP; fallback la galben default
@@ -1239,6 +1241,42 @@ function buildHTML(data) {
     `Ai nevoie de ajutor? Ne poți contacta la <a href="tel:${esc(phoneClean)}" style="color:${primary};font-weight:800;text-decoration:none">${esc(phoneNumber)}</a>`,
     `</p>`,
     `</div>`,
+
+    // ─── 11b. Popup (optional) — afisat la exit-intent sau dupa 30s ───
+    popup ? (() => {
+      const goal = popup.goal || 'discount'
+      const head = esc(popup.headline || 'Stai puțin!')
+      const sub = esc(popup.subtext || 'Avem ceva special pentru tine.')
+      const cta = esc(popup.ctaText || 'Profită acum')
+      const code = esc(popup.discountCode || '')
+      const pct = Number(popup.discountPercent) || 0
+      // Continut variabil dupa goal
+      let bodyExtra = ''
+      let ctaAction = ''
+      if (goal === 'discount' && code) {
+        bodyExtra = `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE${pct > 0 ? ' (' + pct + '%)' : ''}</div><div style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${code}</div></div>`
+        ctaAction = `onclick="navigator.clipboard&&navigator.clipboard.writeText('${code}');var b=document.getElementById('unitone-popup-cta');if(b){b.textContent='Cod copiat ✓';setTimeout(function(){document.getElementById('unitone-popup').style.display='none'},900)}"`
+      } else if (goal === 'phone') {
+        bodyExtra = `<form id="unitone-popup-form" onsubmit="event.preventDefault();var n=this.querySelector('[name=name]').value,p=this.querySelector('[name=phone]').value;if(!p)return;document.getElementById('unitone-popup-form').style.display='none';document.getElementById('unitone-popup-thanks').style.display='block';try{fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,phone:p,source:'popup-lp'})})}catch(e){}" style="margin:14px 0"><input name="name" placeholder="Numele tău" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box" /><input name="phone" type="tel" required placeholder="Numărul de telefon" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box" /></form><div id="unitone-popup-thanks" style="display:none;padding:14px;background:#dcfce7;color:#166534;border-radius:6px;text-align:center;font-weight:600;margin:14px 0">Mulțumim! Te sunăm în maxim 24h.</div>`
+        ctaAction = `onclick="document.getElementById('unitone-popup-form').requestSubmit&&document.getElementById('unitone-popup-form').requestSubmit()"`
+      } else {
+        // order — scroll to COD anchor + close popup
+        ctaAction = `onclick="document.getElementById('unitone-popup').style.display='none';var a=document.getElementById('unitone-cod-anchor');if(a)a.scrollIntoView({behavior:'smooth',block:'center'})"`
+      }
+      return [
+        `<div id="unitone-popup" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.7);z-index:99999;align-items:center;justify-content:center;padding:20px" onclick="if(event.target.id==='unitone-popup')this.style.display='none'">`,
+        `<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:28px 24px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:unitone-popup-in 0.4s cubic-bezier(0.16,1,0.3,1)">`,
+        `<button onclick="document.getElementById('unitone-popup').style.display='none'" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:24px;cursor:pointer;width:32px;height:32px;line-height:1" aria-label="Close">×</button>`,
+        `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">${head}</h2>`,
+        `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 6px;line-height:1.55">${sub}</p>`,
+        bodyExtra,
+        `<button id="unitone-popup-cta" ${ctaAction} style="width:100%;background:${primary};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">${cta}</button>`,
+        `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing. Te poți dezabona oricând.</p>`,
+        `</div></div>`,
+        `<style>@keyframes unitone-popup-in{from{opacity:0;transform:scale(0.92) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}</style>`,
+        `<script>(function(){var p=document.getElementById('unitone-popup');if(!p)return;var shown=false;function show(){if(shown)return;shown=true;p.style.display='flex';try{sessionStorage.setItem('unitone-popup-shown','1')}catch(e){}}if(sessionStorage.getItem('unitone-popup-shown')==='1')return;setTimeout(show,30000);document.addEventListener('mouseout',function(e){if(!e.relatedTarget&&e.clientY<10)show()});})();<\/script>`
+      ].join('')
+    })() : '',
 
     // ─── 12. Footer ───────────────────────────────────────────────────
     `<div style="background:#1a1a1a;color:#999;padding:28px 20px;text-align:center;font-size:12px;line-height:1.8">`,
