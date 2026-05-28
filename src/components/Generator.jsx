@@ -388,11 +388,9 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
                   </BlockStack>
                   <BlockStack gap="200">
                     <OptionCard active={popupGoal === 'discount'} onClick={() => setPopupGoal('discount')}
-                      icon="🎁" label="Oferă reducere" desc='Popup cu cod de reducere (ex: "10% off cu codul SAVE10"). Recomandat pentru produse cu margin bun.' />
-                    <OptionCard active={popupGoal === 'phone'} onClick={() => setPopupGoal('phone')}
-                      icon="📞" label="Colectează telefon" desc="Popup cu formular nume + telefon → te sună agentul. Pentru produse high-ticket sau consultanță." />
+                      icon="🎁" label="Oferă reducere" desc='Popup cu cod de reducere (poți edita codul și procentul). Recomandat pentru produse cu margin bun.' />
                     <OptionCard active={popupGoal === 'order'} onClick={() => setPopupGoal('order')}
-                      icon="🛒" label="Forțează formularul de comandă" desc="Popup care duce direct la butonul COD. Pentru conversie agresivă pe trafic rece." />
+                      icon="🛒" label="Forțează formularul de comandă" desc="Popup care duce direct la butonul COD. La click pe CTA, popup-ul se închide automat și rămâne formularul." />
                   </BlockStack>
                 </>
               )}
@@ -427,7 +425,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
                     <Text as="p" variant="bodyMd" fontWeight="semibold">Recapitulare comandă AI:</Text>
                     <Text as="p" variant="bodySm">• <strong>Ton:</strong> {tone} · <strong>Urgență:</strong> {urgencyLevel} · <strong>Lungime:</strong> {lengthMode}</Text>
                     <Text as="p" variant="bodySm">• <strong>Obiecții tratate:</strong> {includeObjections ? (customObjections.trim() ? 'Custom (' + customObjections.split('\n').filter(s => s.trim()).length + ')' : 'Standard') : 'Nu'}</Text>
-                    <Text as="p" variant="bodySm">• <strong>Popup:</strong> {popupEnabled ? ({discount: 'Reducere', phone: 'Telefon', order: 'Forțare comandă'}[popupGoal] || popupGoal) : 'Nu'}</Text>
+                    <Text as="p" variant="bodySm">• <strong>Popup:</strong> {popupEnabled ? ({discount: 'Reducere', order: 'Forțare comandă'}[popupGoal] || popupGoal) : 'Nu'}</Text>
                     <Text as="p" variant="bodySm">• <strong>Profil cumpărător:</strong> {salesAngle.trim() ? salesAngle.slice(0, 80) + (salesAngle.length > 80 ? '...' : '') : '(nedefinit — AI va folosi default)'}</Text>
                   </BlockStack>
                 </Banner>

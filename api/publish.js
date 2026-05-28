@@ -149,6 +149,115 @@ function buildCodFormUniversal() {
   ].join('')
 }
 
+// Universal popup handler — gaseste toate .unitone-popup-block in DOM,
+// citeste data-trigger / data-delay / data-goal, le transforma in overlay
+// fixed-position cu trigger comportament. Cardul inline e ascuns (display:none)
+// dupa setup. La trigger, overlay-ul cloneaza cardul si il afiseaza.
+// CTA behavior:
+//   - data-goal="discount" → copy cod in clipboard + close
+//   - data-goal="order"    → close popup + scroll smooth la #unitone-cod-anchor
+// Trigger types:
+//   - data-trigger="time" + data-delay=N → arata dupa N secunde
+//   - data-trigger="scroll" → arata cand userul scrolleaza peste pozitia block-ului
+function buildPopupHandler() {
+  return [
+    '<script>(function(){',
+    'function setupPopups(){',
+      'var blocks=document.querySelectorAll(".unitone-popup-block");',
+      'if(!blocks.length)return;',
+      'var sessionShown=false;',
+      'try{if(sessionStorage.getItem("unitone-popup-shown")==="1")sessionShown=true}catch(e){}',
+      'blocks.forEach(function(block){',
+        'var trigger=block.getAttribute("data-trigger")||"time";',
+        'var delay=parseInt(block.getAttribute("data-delay"),10)||30;',
+        'var goal=block.getAttribute("data-goal")||"discount";',
+        'var card=block.querySelector(".unitone-popup-card");',
+        'if(!card)return;',
+        // Pastreaza spot-ul block-ului ca anchor pentru scroll trigger
+        'var anchor=document.createElement("div");',
+        'anchor.style.cssText="height:0;width:0;overflow:hidden";',
+        'block.parentNode.insertBefore(anchor,block);',
+        // Construim overlay-ul ascuns
+        'var overlay=document.createElement("div");',
+        'overlay.className="unitone-popup-overlay";',
+        'overlay.style.cssText="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.7);z-index:99999;align-items:center;justify-content:center;padding:20px";',
+        'overlay.addEventListener("click",function(e){if(e.target===overlay)overlay.style.display="none"});',
+        // Clonam cardul si ascundem label-ul de editor
+        'var clone=card.cloneNode(true);',
+        'clone.style.maxWidth="440px";',
+        'clone.style.width="100%";',
+        'var lbl=block.querySelector(".unitone-popup-editor-label");',
+        'if(lbl)lbl.style.display="none";',
+        'overlay.appendChild(clone);',
+        'document.body.appendChild(overlay);',
+        // Ascunde cardul inline pe pagina (popup-ul real e overlay-ul)
+        'block.style.display="none";',
+        // CTA wiring per goal
+        'var cta=clone.querySelector(".unitone-popup-cta");',
+        'if(cta){',
+          'cta.addEventListener("click",function(){',
+            'if(goal==="discount"){',
+              'var codeEl=clone.querySelector(".unitone-popup-code");',
+              'if(codeEl&&navigator.clipboard){',
+                'try{navigator.clipboard.writeText(codeEl.textContent.trim())}catch(e){}',
+              '}',
+              'cta.textContent="Cod copiat \\u2713";',
+              'setTimeout(function(){overlay.style.display="none"},900);',
+            '}else if(goal==="order"){',
+              // Inchide popup IMEDIAT + scroll la formular
+              'overlay.style.display="none";',
+              'var target=document.getElementById("unitone-cod-anchor")||document.querySelector(".unitone-cod-hook")||document.querySelector("._rsi-cod-form-gempages-button-hook")||document.querySelector(".es-form-hook");',
+              'if(target){',
+                'setTimeout(function(){target.scrollIntoView({behavior:"smooth",block:"center"})},50);',
+              '}',
+            '}',
+          '});',
+        '}',
+        // Close button + ESC key
+        'var close=clone.querySelector(".unitone-popup-close");',
+        'if(close)close.addEventListener("click",function(){overlay.style.display="none"});',
+        'document.addEventListener("keydown",function(e){if(e.key==="Escape")overlay.style.display="none"});',
+        // Show logic
+        'var shown=false;',
+        'function show(){',
+          'if(shown||sessionShown)return;',
+          'shown=true;sessionShown=true;',
+          'overlay.style.display="flex";',
+          'try{sessionStorage.setItem("unitone-popup-shown","1")}catch(e){}',
+        '}',
+        // Trigger setup
+        'if(trigger==="scroll"){',
+          // Folosim IntersectionObserver — apare cand anchor-ul trece in viewport
+          'if("IntersectionObserver" in window){',
+            'var obs=new IntersectionObserver(function(entries){',
+              'entries.forEach(function(en){',
+                // boundingClientRect.bottom < 0 = scrolat trecut de element
+                'if(en.isIntersecting||en.boundingClientRect.bottom<0){show();obs.disconnect()}',
+              '});',
+            '},{threshold:0.1,rootMargin:"0px 0px -20% 0px"});',
+            'obs.observe(anchor);',
+          '}else{',
+            // Fallback fara IntersectionObserver
+            'window.addEventListener("scroll",function(){',
+              'var r=anchor.getBoundingClientRect();',
+              'if(r.top<window.innerHeight*0.8)show();',
+            '});',
+          '}',
+        '}else{',
+          // Default: time trigger
+          'setTimeout(show,delay*1000);',
+        '}',
+        // Exit-intent universal (toate tipurile)
+        'document.addEventListener("mouseout",function(e){',
+          'if(!e.relatedTarget&&e.clientY<10)show();',
+        '});',
+      '});',
+    '}',
+    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",setupPopups)}else{setupPopups()}',
+    '})();</script>'
+  ].join('')
+}
+
 // Builds the product-json script element COD apps look for to bind variant info.
 // Format matches Releasit's official GemPages snippet (type="text/plain",
 // class="product-json", id="product-json{productId}"). Injected directly into
@@ -407,6 +516,13 @@ module.exports = async function handler(req, res) {
     }
     // Forteaza full-width — defense in depth contra theme.liquid constraints
     finalHtml = buildFullWidthOverride() + finalHtml
+
+    // Daca user-ul a adaugat popup-uri (block "unitone-popup-block"), atasam
+    // scriptul universal care le transforma in overlay + trigger. Skip daca
+    // nu exista popup pe pagina ca sa nu poluam DOM-ul cu script nefolosit.
+    if (finalHtml.includes('unitone-popup-block')) {
+      finalHtml = finalHtml + buildPopupHandler()
+    }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
 

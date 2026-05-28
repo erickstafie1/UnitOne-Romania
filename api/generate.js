@@ -194,7 +194,6 @@ function callClaude(productInfo, styleDesc, opts = {}) {
   const popupGoal = opts.popupGoal || null
   const popupGoalMap = {
     discount: 'OFERA REDUCERE — popup cu headline scurt despre o reducere exclusiva, ctaText "Aplica reducerea", discountCode generat aleator (4-8 caractere, capitalizate, usor de tinut minte ex: SAVE10, AZI20), discountPercent intre 10 si 20',
-    phone: 'COLECTEAZA TELEFON — popup cu headline despre consultare gratuita / oferta personalizata, subtext explica ce primeste user-ul daca lasa telefonul, ctaText "Te sun eu", fara discountCode',
     order: 'FORTEAZA COMANDA — popup cu headline urgent despre stocul care se epuizeaza, subtext de urgenta, ctaText "Comanda acum", fara discountCode'
   }
   const popupInstruction = popupEnabled

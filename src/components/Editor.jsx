@@ -1242,39 +1242,30 @@ function buildHTML(data) {
     `</p>`,
     `</div>`,
 
-    // ─── 11b. Popup (optional) — afisat la exit-intent sau dupa 30s ───
+    // ─── 11b. Popup (optional) — generat de AI in formular ───
+    // Foloseste aceleasi clase + data-attrs ca block-ul manual din addBlocks.
+    // publish.js (buildPopupHandler) le acopera pe ambele cu acelasi script.
     popup ? (() => {
-      const goal = popup.goal || 'discount'
+      const goal = (popup.goal === 'order') ? 'order' : 'discount'  // doar 2 tipuri acceptate
       const head = esc(popup.headline || 'Stai puțin!')
       const sub = esc(popup.subtext || 'Avem ceva special pentru tine.')
-      const cta = esc(popup.ctaText || 'Profită acum')
-      const code = esc(popup.discountCode || '')
-      const pct = Number(popup.discountPercent) || 0
-      // Continut variabil dupa goal
-      let bodyExtra = ''
-      let ctaAction = ''
-      if (goal === 'discount' && code) {
-        bodyExtra = `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE${pct > 0 ? ' (' + pct + '%)' : ''}</div><div style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${code}</div></div>`
-        ctaAction = `onclick="navigator.clipboard&&navigator.clipboard.writeText('${code}');var b=document.getElementById('unitone-popup-cta');if(b){b.textContent='Cod copiat ✓';setTimeout(function(){document.getElementById('unitone-popup').style.display='none'},900)}"`
-      } else if (goal === 'phone') {
-        bodyExtra = `<form id="unitone-popup-form" onsubmit="event.preventDefault();var n=this.querySelector('[name=name]').value,p=this.querySelector('[name=phone]').value;if(!p)return;document.getElementById('unitone-popup-form').style.display='none';document.getElementById('unitone-popup-thanks').style.display='block';try{fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,phone:p,source:'popup-lp'})})}catch(e){}" style="margin:14px 0"><input name="name" placeholder="Numele tău" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box" /><input name="phone" type="tel" required placeholder="Numărul de telefon" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box" /></form><div id="unitone-popup-thanks" style="display:none;padding:14px;background:#dcfce7;color:#166534;border-radius:6px;text-align:center;font-weight:600;margin:14px 0">Mulțumim! Te sunăm în maxim 24h.</div>`
-        ctaAction = `onclick="document.getElementById('unitone-popup-form').requestSubmit&&document.getElementById('unitone-popup-form').requestSubmit()"`
-      } else {
-        // order — scroll to COD anchor + close popup
-        ctaAction = `onclick="document.getElementById('unitone-popup').style.display='none';var a=document.getElementById('unitone-cod-anchor');if(a)a.scrollIntoView({behavior:'smooth',block:'center'})"`
-      }
+      const cta = esc(popup.ctaText || (goal === 'order' ? 'Comandă acum' : 'Aplică reducerea'))
+      const code = esc(popup.discountCode || 'SAVE10')
+      const pct = Number(popup.discountPercent) || 10
+      const discountBlock = goal === 'discount'
+        ? `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE (${pct}%)</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${code}</div></div>`
+        : ''
       return [
-        `<div id="unitone-popup" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.7);z-index:99999;align-items:center;justify-content:center;padding:20px" onclick="if(event.target.id==='unitone-popup')this.style.display='none'">`,
-        `<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:28px 24px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:unitone-popup-in 0.4s cubic-bezier(0.16,1,0.3,1)">`,
-        `<button onclick="document.getElementById('unitone-popup').style.display='none'" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:24px;cursor:pointer;width:32px;height:32px;line-height:1" aria-label="Close">×</button>`,
+        `<div class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="${goal}" style="margin:24px auto;max-width:440px">`,
+        `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
+        `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
         `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">${head}</h2>`,
         `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 6px;line-height:1.55">${sub}</p>`,
-        bodyExtra,
-        `<button id="unitone-popup-cta" ${ctaAction} style="width:100%;background:${primary};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">${cta}</button>`,
-        `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing. Te poți dezabona oricând.</p>`,
-        `</div></div>`,
-        `<style>@keyframes unitone-popup-in{from{opacity:0;transform:scale(0.92) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}</style>`,
-        `<script>(function(){var p=document.getElementById('unitone-popup');if(!p)return;var shown=false;function show(){if(shown)return;shown=true;p.style.display='flex';try{sessionStorage.setItem('unitone-popup-shown','1')}catch(e){}}if(sessionStorage.getItem('unitone-popup-shown')==='1')return;setTimeout(show,30000);document.addEventListener('mouseout',function(e){if(!e.relatedTarget&&e.clientY<10)show()});})();<\/script>`
+        discountBlock,
+        `<button class="unitone-popup-cta" style="width:100%;background:${primary};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">${cta}</button>`,
+        `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing.</p>`,
+        `</div>`,
+        `</div>`
       ].join('')
     })() : '',
 
@@ -1307,65 +1298,62 @@ function addBlocks(editor, data) {
     return `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real (Releasit / EasySell)</span></div>`
   }
 
-  // ─── Popup block builder ──────────────────────────────────────────────
-  // Genereaza un block-popup cu: label vizibil in editor (asa user-ul stie
-  // ce e), card popup statica (editabila inline) + script auto-trigger.
-  // Pe storefront (window.self === window.top), scriptul transforma cardul
-  // intr-un overlay fixed-position care apare la 30s sau exit-intent.
-  // In editor (iframe GrapesJS), scriptul nu face nimic → cardul ramane
-  // inline si user-ul poate edita textul.
-  function popupBlock(goal) {
-    const goalDefaults = {
-      discount: {
-        head: 'Mai stai 10 secunde!',
-        sub: 'Avem o reducere exclusivă doar pentru tine — codul de mai jos îți reduce comanda cu 10%.',
-        cta: 'Aplică reducerea',
-        code: 'SAVE10',
-        pct: 10,
-        bodyExtra: true
-      },
-      phone: {
-        head: 'Lasă-ne numărul tău',
-        sub: 'Te sună un agent în maxim 24h cu o ofertă personalizată — fără obligație de cumpărare.',
-        cta: 'Te sun eu',
-        code: '',
-        pct: 0,
-        bodyExtra: false
-      },
-      order: {
-        head: 'Stocul se epuizează!',
-        sub: 'Nu rata oferta — apasă butonul de mai jos și completează comanda în 30 de secunde.',
-        cta: 'Comandă acum',
-        code: '',
-        pct: 0,
-        bodyExtra: false
+  // ─── Custom component type: unitone-popup ─────────────────────────────
+  // Inregistreaza un tip de component cu traits (selectoare) editabile din
+  // panelul Settings (dreapta in editor). Trigger / delay / goal devin
+  // data-attributes care publish.js le citeste si seteaza comportamentul.
+  try {
+    editor.DomComponents.addType('unitone-popup', {
+      isComponent: el => el && el.classList && el.classList.contains('unitone-popup-block'),
+      model: {
+        defaults: {
+          name: 'Popup',
+          droppable: true,
+          traits: [
+            {
+              type: 'select', label: 'Trigger', name: 'data-trigger', changeProp: 0,
+              options: [
+                { id: 'time', name: 'După X secunde' },
+                { id: 'scroll', name: 'La scroll past popup' }
+              ]
+            },
+            { type: 'number', label: 'Secunde (doar pentru trigger Time)', name: 'data-delay', placeholder: '30', min: 1, max: 600 },
+            {
+              type: 'select', label: 'Goal', name: 'data-goal', changeProp: 0,
+              options: [
+                { id: 'discount', name: 'Reducere (cod)' },
+                { id: 'order', name: 'Formular comandă (scroll la COD)' }
+              ]
+            }
+          ]
+        }
       }
-    }
-    const d = goalDefaults[goal] || goalDefaults.discount
-    // Continut variabil: discount = cod, phone = form, order = scroll
-    let bodyExtra = ''
-    if (goal === 'discount') {
-      bodyExtra = `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE (${d.pct}%)</div><div style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${d.code}</div></div>`
-    } else if (goal === 'phone') {
-      bodyExtra = `<div style="margin:14px 0"><input placeholder="Numele tău" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box" /><input type="tel" placeholder="Numărul de telefon" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box" /></div>`
-    }
-    // Auto-trigger script: pe storefront → overlay + delay + exit-intent
-    // In editor (iframe) → no-op, cardul ramane inline si editabil
-    const script = `<script>(function(){var s=document.currentScript;var b=s.parentElement;if(!b||!b.classList.contains('unitone-popup-block'))return;if(window.self!==window.top)return;var lbl=b.querySelector('.unitone-popup-editor-label');if(lbl)lbl.style.display='none';var card=b.querySelector('.unitone-popup-card');if(!card)return;b.style.cssText='display:none;position:fixed;inset:0;background:rgba(17,24,39,0.7);z-index:99999;align-items:center;justify-content:center;padding:20px';b.addEventListener('click',function(e){if(e.target===b)b.style.display='none'});var goal='${goal}';var ctaBtn=b.querySelector('.unitone-popup-cta');if(ctaBtn){if(goal==='discount'){ctaBtn.addEventListener('click',function(){var c=b.querySelector('.unitone-popup-code');if(c&&navigator.clipboard){navigator.clipboard.writeText(c.textContent.trim()).catch(function(){})}ctaBtn.textContent='Cod copiat ✓';setTimeout(function(){b.style.display='none'},900)})}else if(goal==='order'){ctaBtn.addEventListener('click',function(){b.style.display='none';var a=document.getElementById('unitone-cod-anchor')||document.querySelector('.unitone-cod-hook');if(a)a.scrollIntoView({behavior:'smooth',block:'center'})})}else if(goal==='phone'){ctaBtn.addEventListener('click',function(){var inputs=b.querySelectorAll('input');var n=inputs[0]?inputs[0].value:'';var ph=inputs[1]?inputs[1].value:'';if(!ph){alert('Te rugăm completează telefonul');return}ctaBtn.textContent='Mulțumim ✓';setTimeout(function(){b.style.display='none'},1200);try{fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,phone:ph,source:'popup-block'})})}catch(e){}})}}var close=b.querySelector('.unitone-popup-close');if(close)close.addEventListener('click',function(){b.style.display='none'});var shown=false;function show(){if(shown)return;shown=true;b.style.display='flex';try{sessionStorage.setItem('unitone-popup-shown','1')}catch(e){}}try{if(sessionStorage.getItem('unitone-popup-shown')==='1')return}catch(e){}setTimeout(show,30000);document.addEventListener('mouseout',function(e){if(!e.relatedTarget&&e.clientY<10)show()});})();<\/script>`
+    })
+  } catch (e) { console.log('Popup component type registration failed:', e.message) }
 
+  // ─── Popup block builder ──────────────────────────────────────────────
+  // Genereaza UN SINGUR block-popup generic. User-ul editeaza textul cum vrea
+  // si configureaza trigger/delay/goal din panelul Settings (dreapta). La
+  // publish, publish.js insereaza un script universal care citeste data-*
+  // attributes si seteaza comportamentul (overlay + trigger).
+  function popupBlock() {
+    // Block default content — user editeaza textul direct in canvas.
+    // data-trigger / data-delay / data-goal sunt setate prin trait panel (dreapta).
+    // publish.js insereaza la publish un script universal care:
+    //   1. ascunde inline-cardul
+    //   2. cloneaza in overlay fixed-position
+    //   3. wireaza trigger (time / scroll past) si CTA (discount / order)
     return [
-      `<div class="unitone-popup-block" data-unitone-popup="${goal}" style="margin:24px auto;max-width:440px">`,
-      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center">⚠ POPUP — Pe pagina publicată apare automat la 30s sau exit-intent. Editează textul de mai jos.</div>`,
+      `<div class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="discount" style="margin:24px auto;max-width:440px">`,
+      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center">⚠ POPUP — Configurează trigger/delay/goal în panelul Settings (dreapta). Pe pagina publicată apare ca overlay.</div>`,
       `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
       `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
-      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">${d.head}</h2>`,
-      `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 6px;line-height:1.55">${d.sub}</p>`,
-      goal === 'discount' ? `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE (${d.pct}%)</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${d.code}</div></div>` : '',
-      goal === 'phone' ? `<div style="margin:14px 0"><input placeholder="Numele tău" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box" /><input type="tel" placeholder="Numărul de telefon" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box" /></div>` : '',
-      `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">${d.cta}</button>`,
+      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">Stai puțin!</h2>`,
+      `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 16px;line-height:1.55">Avem o reducere exclusivă pentru tine — folosește codul de mai jos la check-out.</p>`,
+      `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">SAVE10</div></div>`,
+      `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">Aplică reducerea</button>`,
       `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing.</p>`,
       `</div>`,
-      script,
       `</div>`
     ].join('')
   }
@@ -1564,12 +1552,8 @@ function addBlocks(editor, data) {
         <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">Am deja ceva similar</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Diferența principală e [feature specific] pe care alternativele nu îl au.</span></div></div>
         <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">E fragil sau nu rezistă</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Material premium testat + garanție 24 luni înlocuire gratuită.</span></div></div>
       </div></div>` },
-    { id:'popup-discount', label:'Popup · Reducere', cat:'Conversie', media: T.popup,
-      content: popupBlock('discount') },
-    { id:'popup-phone', label:'Popup · Colectează Telefon', cat:'Conversie', media: T.popup,
-      content: popupBlock('phone') },
-    { id:'popup-order', label:'Popup · Forțează Comanda', cat:'Conversie', media: T.popup,
-      content: popupBlock('order') },
+    { id:'popup', label:'Popup', cat:'Conversie', media: T.popup,
+      content: popupBlock() },
     { id:'how-to-use', label:'Cum Se Folosește', cat:'Educație', media: T.howToUse,
       content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 28px;text-align:center">Cum funcționează — 3 pași simpli</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
         <div style="text-align:center"><div style="width:64px;height:64px;background:${p};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;margin:0 auto 16px">1</div><h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 10px">Pasul 1</h3><p style="font-size:14px;color:#555;margin:0;line-height:1.6">Descrie primul pas concret aici.</p></div>
