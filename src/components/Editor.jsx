@@ -1307,6 +1307,69 @@ function addBlocks(editor, data) {
     return `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real (Releasit / EasySell)</span></div>`
   }
 
+  // ─── Popup block builder ──────────────────────────────────────────────
+  // Genereaza un block-popup cu: label vizibil in editor (asa user-ul stie
+  // ce e), card popup statica (editabila inline) + script auto-trigger.
+  // Pe storefront (window.self === window.top), scriptul transforma cardul
+  // intr-un overlay fixed-position care apare la 30s sau exit-intent.
+  // In editor (iframe GrapesJS), scriptul nu face nimic → cardul ramane
+  // inline si user-ul poate edita textul.
+  function popupBlock(goal) {
+    const goalDefaults = {
+      discount: {
+        head: 'Mai stai 10 secunde!',
+        sub: 'Avem o reducere exclusivă doar pentru tine — codul de mai jos îți reduce comanda cu 10%.',
+        cta: 'Aplică reducerea',
+        code: 'SAVE10',
+        pct: 10,
+        bodyExtra: true
+      },
+      phone: {
+        head: 'Lasă-ne numărul tău',
+        sub: 'Te sună un agent în maxim 24h cu o ofertă personalizată — fără obligație de cumpărare.',
+        cta: 'Te sun eu',
+        code: '',
+        pct: 0,
+        bodyExtra: false
+      },
+      order: {
+        head: 'Stocul se epuizează!',
+        sub: 'Nu rata oferta — apasă butonul de mai jos și completează comanda în 30 de secunde.',
+        cta: 'Comandă acum',
+        code: '',
+        pct: 0,
+        bodyExtra: false
+      }
+    }
+    const d = goalDefaults[goal] || goalDefaults.discount
+    // Continut variabil: discount = cod, phone = form, order = scroll
+    let bodyExtra = ''
+    if (goal === 'discount') {
+      bodyExtra = `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE (${d.pct}%)</div><div style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${d.code}</div></div>`
+    } else if (goal === 'phone') {
+      bodyExtra = `<div style="margin:14px 0"><input placeholder="Numele tău" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box" /><input type="tel" placeholder="Numărul de telefon" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box" /></div>`
+    }
+    // Auto-trigger script: pe storefront → overlay + delay + exit-intent
+    // In editor (iframe) → no-op, cardul ramane inline si editabil
+    const script = `<script>(function(){var s=document.currentScript;var b=s.parentElement;if(!b||!b.classList.contains('unitone-popup-block'))return;if(window.self!==window.top)return;var lbl=b.querySelector('.unitone-popup-editor-label');if(lbl)lbl.style.display='none';var card=b.querySelector('.unitone-popup-card');if(!card)return;b.style.cssText='display:none;position:fixed;inset:0;background:rgba(17,24,39,0.7);z-index:99999;align-items:center;justify-content:center;padding:20px';b.addEventListener('click',function(e){if(e.target===b)b.style.display='none'});var goal='${goal}';var ctaBtn=b.querySelector('.unitone-popup-cta');if(ctaBtn){if(goal==='discount'){ctaBtn.addEventListener('click',function(){var c=b.querySelector('.unitone-popup-code');if(c&&navigator.clipboard){navigator.clipboard.writeText(c.textContent.trim()).catch(function(){})}ctaBtn.textContent='Cod copiat ✓';setTimeout(function(){b.style.display='none'},900)})}else if(goal==='order'){ctaBtn.addEventListener('click',function(){b.style.display='none';var a=document.getElementById('unitone-cod-anchor')||document.querySelector('.unitone-cod-hook');if(a)a.scrollIntoView({behavior:'smooth',block:'center'})})}else if(goal==='phone'){ctaBtn.addEventListener('click',function(){var inputs=b.querySelectorAll('input');var n=inputs[0]?inputs[0].value:'';var ph=inputs[1]?inputs[1].value:'';if(!ph){alert('Te rugăm completează telefonul');return}ctaBtn.textContent='Mulțumim ✓';setTimeout(function(){b.style.display='none'},1200);try{fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,phone:ph,source:'popup-block'})})}catch(e){}})}}var close=b.querySelector('.unitone-popup-close');if(close)close.addEventListener('click',function(){b.style.display='none'});var shown=false;function show(){if(shown)return;shown=true;b.style.display='flex';try{sessionStorage.setItem('unitone-popup-shown','1')}catch(e){}}try{if(sessionStorage.getItem('unitone-popup-shown')==='1')return}catch(e){}setTimeout(show,30000);document.addEventListener('mouseout',function(e){if(!e.relatedTarget&&e.clientY<10)show()});})();<\/script>`
+
+    return [
+      `<div class="unitone-popup-block" data-unitone-popup="${goal}" style="margin:24px auto;max-width:440px">`,
+      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center">⚠ POPUP — Pe pagina publicată apare automat la 30s sau exit-intent. Editează textul de mai jos.</div>`,
+      `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
+      `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
+      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">${d.head}</h2>`,
+      `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 6px;line-height:1.55">${d.sub}</p>`,
+      goal === 'discount' ? `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE (${d.pct}%)</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${d.code}</div></div>` : '',
+      goal === 'phone' ? `<div style="margin:14px 0"><input placeholder="Numele tău" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box" /><input type="tel" placeholder="Numărul de telefon" style="width:100%;padding:11px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box" /></div>` : '',
+      `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">${d.cta}</button>`,
+      `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing.</p>`,
+      `</div>`,
+      script,
+      `</div>`
+    ].join('')
+  }
+
   // Mini visual previews — each is a small SVG that hints at what the block does.
   // GrapesJS renders this as the block thumbnail.
   const T = {
@@ -1339,6 +1402,7 @@ function addBlocks(editor, data) {
     delivery: `<svg viewBox="0 0 60 36"><rect x="4" y="10" width="52" height="16" rx="2" fill="#f0fdf4" stroke="#bbf7d0"/><circle cx="14" cy="18" r="3" fill="#15803d"/><rect x="22" y="13" width="28" height="3" rx="1" fill="#15803d"/><rect x="22" y="20" width="20" height="2" rx="1" fill="#16a34a"/></svg>`,
     coupon: `<svg viewBox="0 0 60 36"><rect x="4" y="8" width="52" height="20" rx="3" fill="#f0fdf4" stroke="#86efac" stroke-width="2" stroke-dasharray="3 2"/><rect x="14" y="14" width="22" height="8" rx="1" fill="#fff" stroke="#86efac"/><rect x="40" y="14" width="12" height="8" rx="1" fill="#16a34a"/></svg>`,
     newsletter: `<svg viewBox="0 0 60 36"><rect x="4" y="14" width="36" height="10" rx="2" fill="#fff" stroke="#e1e3e5"/><rect x="42" y="14" width="14" height="10" rx="2" fill="${p}"/><rect x="14" y="6" width="32" height="3" rx="1" fill="#202223"/></svg>`,
+    popup: `<svg viewBox="0 0 60 36"><rect x="2" y="2" width="56" height="32" fill="rgba(0,0,0,0.15)"/><rect x="14" y="8" width="32" height="22" rx="3" fill="#fff" stroke="#202223" stroke-width="1.5"/><rect x="18" y="12" width="20" height="3" rx="1" fill="#202223"/><rect x="18" y="18" width="24" height="2" rx="1" fill="#898f94"/><rect x="22" y="24" width="16" height="4" rx="2" fill="${p}"/></svg>`,
     arrowUp: `<svg viewBox="0 0 60 36"><circle cx="48" cy="22" r="8" fill="${p}"/><polygon points="48,18 44,24 52,24" fill="#fff"/></svg>`,
     code: `<svg viewBox="0 0 60 36"><rect x="2" y="6" width="56" height="24" rx="2" fill="#1e1e2e"/><text x="10" y="22" font-size="9" fill="#a5f3fc" font-family="monospace">&lt;/&gt;</text></svg>`,
     productImage: `<svg viewBox="0 0 60 36"><rect x="14" y="4" width="32" height="28" rx="3" fill="#e1e3e5"/><circle cx="22" cy="14" r="3" fill="#898f94"/><path d="M14 28 L22 18 L30 26 L46 12 L46 32 L14 32 Z" fill="#898f94"/></svg>`,
@@ -1500,6 +1564,12 @@ function addBlocks(editor, data) {
         <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">Am deja ceva similar</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Diferența principală e [feature specific] pe care alternativele nu îl au.</span></div></div>
         <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">E fragil sau nu rezistă</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Material premium testat + garanție 24 luni înlocuire gratuită.</span></div></div>
       </div></div>` },
+    { id:'popup-discount', label:'Popup · Reducere', cat:'Conversie', media: T.popup,
+      content: popupBlock('discount') },
+    { id:'popup-phone', label:'Popup · Colectează Telefon', cat:'Conversie', media: T.popup,
+      content: popupBlock('phone') },
+    { id:'popup-order', label:'Popup · Forțează Comanda', cat:'Conversie', media: T.popup,
+      content: popupBlock('order') },
     { id:'how-to-use', label:'Cum Se Folosește', cat:'Educație', media: T.howToUse,
       content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 28px;text-align:center">Cum funcționează — 3 pași simpli</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
         <div style="text-align:center"><div style="width:64px;height:64px;background:${p};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;margin:0 auto 16px">1</div><h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 10px">Pasul 1</h3><p style="font-size:14px;color:#555;margin:0;line-height:1.6">Descrie primul pas concret aici.</p></div>
