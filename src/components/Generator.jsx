@@ -1,5 +1,40 @@
 import { useState, useRef, useEffect } from 'react'
-import { Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, ProgressBar, Box, Select } from '@shopify/polaris'
+import { Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, ProgressBar, Box, Select, Divider } from '@shopify/polaris'
+
+// Mic chip pentru demografice (varsta, oras, ocupatie)
+function Chip({ text }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '4px 10px',
+      background: '#f1f5f9',
+      borderRadius: 12,
+      fontSize: 12,
+      color: '#475569',
+      fontWeight: 500
+    }}>{text}</span>
+  )
+}
+
+// Card compact pentru sumar (dureri/dorinte/frici)
+function InfoCard({ emoji, label, items }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div style={{
+      background: '#fafbfc',
+      border: '1px solid #e1e3e5',
+      borderRadius: 10,
+      padding: 14
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+        <span style={{ marginRight: 4 }}>{emoji}</span>{label}
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#202223', lineHeight: 1.5 }}>
+        {items.map((it, i) => <li key={i} style={{ marginBottom: 4 }}>{typeof it === 'string' ? it : (it.title || JSON.stringify(it))}</li>)}
+      </ul>
+    </div>
+  )
+}
 import { MagicIcon } from '@shopify/polaris-icons'
 import { apiFetch } from '../apiFetch.js'
 
@@ -43,6 +78,7 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   const [productInfo, setProductInfo] = useState(null)
   const [researchImages, setResearchImages] = useState([])
   const [researching, setResearching] = useState(false)
+  const [showEditDetails, setShowEditDetails] = useState(false)
 
   // Generation
   const [loading, setLoading] = useState(false)
@@ -365,110 +401,127 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
           {step === 1 && icp && (
             <BlockStack gap="400">
               <BlockStack gap="100">
-                <Text as="h2" variant="headingLg">ICP-ul construit de AI</Text>
+                <Text as="h2" variant="headingLg">Avatar cumpărător</Text>
                 <Text as="p" tone="subdued">
-                  AI a analizat produsul și a construit profilul cumpărătorului ideal. Poți edita orice câmp înainte de generare,
-                  sau lasă tot așa și apasă Generează.
+                  AI a analizat produsul și a construit avatarul psihologic. Verifică-l rapid și apasă Generează.
                 </Text>
               </BlockStack>
 
               <Banner tone="success">
                 <Text as="p" variant="bodySm">
-                  <strong>Produs identificat:</strong> {productInfo?.title}
+                  <strong>Produs:</strong> {productInfo?.title}
                 </Text>
               </Banner>
 
-              <TextField
-                label="Persona (cine e cumpărătorul)"
-                value={icp.persona || ''}
-                onChange={(v) => updateIcpField('persona', v)}
-                multiline={2}
-                autoComplete="off"
-              />
+              {/* Persona card — Atlas-style */}
+              <div style={{
+                background: '#fff',
+                border: '1px solid #e1e3e5',
+                borderRadius: 12,
+                padding: 24,
+                display: 'flex',
+                gap: 18,
+                alignItems: 'flex-start'
+              }}>
+                <div style={{
+                  width: 64, height: 64,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#2c6ecb,#5b8def)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 28,
+                  fontWeight: 700,
+                  flexShrink: 0
+                }}>
+                  {(icp.name || 'A').charAt(0).toUpperCase()}
+                </div>
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd">{icp.name || 'Avatar'}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{icp.bio || ''}</Text>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {icp.demographics?.age && <Chip text={'Vârstă: ' + icp.demographics.age} />}
+                    {icp.demographics?.occupation && <Chip text={icp.demographics.occupation} />}
+                    {icp.demographics?.location && <Chip text={icp.demographics.location} />}
+                  </div>
+                </BlockStack>
+              </div>
 
-              <TextField
-                label="Dureri (una per linie)"
-                value={(icp.pains || []).join('\n')}
-                onChange={(v) => updateIcpField('pains', v.split('\n').filter(s => s.trim()))}
-                multiline={4}
-                autoComplete="off"
-              />
-
-              <TextField
-                label="Dorințe (una per linie)"
-                value={(icp.desires || []).join('\n')}
-                onChange={(v) => updateIcpField('desires', v.split('\n').filter(s => s.trim()))}
-                multiline={3}
-                autoComplete="off"
-              />
-
-              <TextField
-                label="Credințe limitative (obiecții psihologice — una per linie)"
-                value={(icp.beliefBarriers || []).join('\n')}
-                onChange={(v) => updateIcpField('beliefBarriers', v.split('\n').filter(s => s.trim()))}
-                multiline={3}
-                autoComplete="off"
-              />
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
-                <Select
-                  label="Hawkins level"
-                  options={[
-                    { label: 'Vină (guilt)', value: 'guilt' },
-                    { label: 'Frică (fear)', value: 'fear' },
-                    { label: 'Durere/Dor (grief)', value: 'grief' },
-                    { label: 'Apatie (apathy)', value: 'apathy' },
-                    { label: 'Neutralitate', value: 'neutrality' },
-                    { label: 'Curaj (courage)', value: 'courage' },
-                  ]}
-                  value={icp.hawkinsLevel || 'fear'}
-                  onChange={(v) => updateIcpField('hawkinsLevel', v)}
+              {/* Compact summary cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                <InfoCard
+                  emoji="🚩"
+                  label="Top 3 dureri"
+                  items={(icp.pains || icp.painPoints?.map(p => p.title) || []).slice(0, 3)}
                 />
-                <Select
-                  label="Sophistication Level (piață)"
-                  options={[
-                    { label: '1 — Piață nouă', value: '1' },
-                    { label: '2 — Competiție directă', value: '2' },
-                    { label: '3 — Mecanism', value: '3' },
-                    { label: '4 — Mecanism mărit', value: '4' },
-                    { label: '5 — Identificare emoțională', value: '5' },
-                  ]}
-                  value={String(icp.sophisticationLevel || 3)}
-                  onChange={(v) => updateIcpField('sophisticationLevel', parseInt(v, 10))}
+                <InfoCard
+                  emoji="🌟"
+                  label="Top 3 dorințe"
+                  items={(icp.desires || icp.longTermAspirations || []).slice(0, 3)}
                 />
-                <Select
-                  label="Nișă"
-                  options={['fashion','electronics','beauty','auto','health','home','sports','baby','pet','generic'].map(n => ({ label: n, value: n }))}
-                  value={icp.niche || 'generic'}
-                  onChange={(v) => updateIcpField('niche', v)}
-                />
-                <Select
-                  label="Ton recomandat"
-                  options={['direct','agresiv','casual','profesional','emotional'].map(n => ({ label: n, value: n }))}
-                  value={icp.recommendedTone || 'direct'}
-                  onChange={(v) => updateIcpField('recommendedTone', v)}
-                />
-                <Select
-                  label="Urgență"
-                  options={[{label:'Înaltă',value:'inalta'},{label:'Medie',value:'medie'},{label:'Fără',value:'fara'}]}
-                  value={icp.recommendedUrgency || 'medie'}
-                  onChange={(v) => updateIcpField('recommendedUrgency', v)}
-                />
-                <Select
-                  label="Lungime pagină"
-                  options={[{label:'Scurtă',value:'scurt'},{label:'Medie',value:'mediu'},{label:'Lungă',value:'lung'}]}
-                  value={icp.recommendedLength || 'mediu'}
-                  onChange={(v) => updateIcpField('recommendedLength', v)}
+                <InfoCard
+                  emoji="🧠"
+                  label="Frici principale"
+                  items={(icp.keyFears || icp.beliefBarriers || []).slice(0, 3)}
                 />
               </div>
 
-              <TextField
-                label="Unique Angle (de ce ASTA și nu alt produs)"
-                value={icp.uniqueAngle || ''}
-                onChange={(v) => updateIcpField('uniqueAngle', v)}
-                multiline={2}
-                autoComplete="off"
-              />
+              {/* Edit details toggle */}
+              <Button
+                variant="plain"
+                onClick={() => setShowEditDetails(!showEditDetails)}
+                disclosure={showEditDetails ? 'up' : 'down'}
+              >
+                {showEditDetails ? 'Ascunde editarea detaliilor' : 'Editează în detaliu'}
+              </Button>
+
+              {showEditDetails && (
+                <BlockStack gap="400">
+                  <Divider />
+                  <TextField
+                    label="Nume avatar"
+                    value={icp.name || ''}
+                    onChange={(v) => updateIcpField('name', v)}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Bio scurt"
+                    value={icp.bio || ''}
+                    onChange={(v) => updateIcpField('bio', v)}
+                    multiline={2}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Dureri (una per linie)"
+                    value={(icp.pains || []).join('\n')}
+                    onChange={(v) => updateIcpField('pains', v.split('\n').filter(s => s.trim()))}
+                    multiline={4}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Dorințe (una per linie)"
+                    value={(icp.desires || []).join('\n')}
+                    onChange={(v) => updateIcpField('desires', v.split('\n').filter(s => s.trim()))}
+                    multiline={3}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Frici / credințe limitative (una per linie)"
+                    value={(icp.beliefBarriers || []).join('\n')}
+                    onChange={(v) => updateIcpField('beliefBarriers', v.split('\n').filter(s => s.trim()))}
+                    multiline={3}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Unique Angle"
+                    value={icp.uniqueAngle || ''}
+                    onChange={(v) => updateIcpField('uniqueAngle', v)}
+                    multiline={2}
+                    autoComplete="off"
+                  />
+                </BlockStack>
+              )}
             </BlockStack>
           )}
         </div>

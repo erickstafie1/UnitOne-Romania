@@ -300,22 +300,62 @@ function callClaude(productInfo, styleDesc, opts = {}) {
   }
   const nicheInstruction = nicheMap[niche] || nicheMap.generic
 
-  // ICP block — daca research agent a construit ICP, foloseste-l DIRECT in
-  // headlines + topBenefits + testimoniale + objections. Aceasta e SURSA
-  // PRIMARA de truth pentru cine e cumparatorul.
+  // ICP block — research agent (Mark Builds Brands framework) construieste
+  // Avatar complet (persona+bio+demographics+painPoints×subIssues+goals+
+  // emotionalDrivers+directQuotes+fears+psychographics+emotionalJourney+
+  // coreBeliefs+outsideBlames+existingSolutions+curiosityHook). Aceasta e
+  // SURSA PRIMARA de truth pentru cine e cumparatorul si cum vorbeste.
   const icp = opts.icp || {}
-  const icpBlock = (icp && (icp.persona || icp.pains || icp.desires)) ? `
+  const hasIcp = icp && (icp.name || icp.bio || icp.persona || icp.pains || icp.painPoints)
+  const icpBlock = hasIcp ? `
 
-=== ICP (Ideal Customer Profile — CONSTRUIT DE RESEARCH AGENT, RESPECTA-L EXACT) ===
-PRODUS: ${icp.productSummary || ''}
-PERSONA: ${icp.persona || ''}
+=== AVATAR / ICP (CONSTRUIT DE RESEARCH AGENT — RESPECTA EXACT) ===
+NUME AVATAR: ${icp.name || ''}
+BIO: ${icp.bio || icp.persona || ''}
 DEMOGRAFICE: ${JSON.stringify(icp.demographics || {})}
-DURERI (folose in topBenefits + testimoniale): ${(icp.pains || []).map((p,i)=>`(${i+1}) ${p}`).join(' | ')}
-DORINTE (folose in subheadline + benefits + final CTA): ${(icp.desires || []).map((d,i)=>`(${i+1}) ${d}`).join(' | ')}
-CREDINTE LIMITATIVE (TREBUIE DARAMATE in objections sau riskReversal): ${(icp.beliefBarriers || []).map((b,i)=>`(${i+1}) ${b}`).join(' | ')}
-HAWKINS LEVEL: ${icp.hawkinsLevel || 'fear'} — INTRA in copy la acest nivel emotional (sub linia 200), NU sari direct la hope/courage.
+${icp.identities?.length ? 'IDENTITATI TIPICE: ' + icp.identities.join(', ') : ''}
+
+PAIN POINTS DETALIATE (Mark Avatar Sheet):
+${(icp.painPoints || []).map((pp, i) => `  ${i+1}. ${pp.title}\n     - ${(pp.subIssues || []).join('\n     - ')}`).join('\n') || (icp.pains || []).map((p,i)=>`  ${i+1}. ${p}`).join('\n')}
+
+GOALS:
+  Short-term: ${(icp.shortTermGoals || []).join(' | ')}
+  Long-term: ${(icp.longTermAspirations || []).join(' | ')}
+
+EMOTIONAL DRIVERS: ${(icp.emotionalDrivers || []).join(' | ')}
+
+DIRECT QUOTES (cum vorbesc EI — foloseste limbajul AUTHENTIC in testimoniale + headline):
+  Pain: ${(icp.painQuotes || []).map(q => '"' + q + '"').join(' | ')}
+  Mindset: ${(icp.mindsetQuotes || []).map(q => '"' + q + '"').join(' | ')}
+  Motivation: ${(icp.motivationQuotes || []).map(q => '"' + q + '"').join(' | ')}
+
+KEY FEARS: ${(icp.keyFears || []).join(' | ')}
+PSYCHOGRAPHIC INSIGHTS: ${(icp.psychographicInsights || []).join(' | ')}
+
+EMOTIONAL JOURNEY (mapeaza pe LP — awareness=hero, frustration=topBenefits, desperation=urgency+CTA, relief=riskReversal):
+  Awareness: ${icp.emotionalJourney?.awareness || ''}
+  Frustration: ${icp.emotionalJourney?.frustration || ''}
+  Desperation: ${icp.emotionalJourney?.desperation || ''}
+  Relief: ${icp.emotionalJourney?.relief || ''}
+
+CORE BELIEFS: ${icp.coreBeliefs || ''}
+OUTSIDE BLAMES (foloseste in headline daca produsul e legat de aceste blame-uri): ${(icp.outsideBlames || []).join(' | ')}
+
+EXISTING SOLUTIONS (esential pentru differentiation + objections):
+  Tried: ${(icp.existingSolutions?.tried || []).join(' | ')}
+  Liked: ${(icp.existingSolutions?.liked || []).join(' | ')}
+  Disliked (foloseste in objections + featureSections sa contrastezi): ${(icp.existingSolutions?.disliked || []).join(' | ')}
+
+CURIOSITY HOOK / FALL FROM EDEN (daca exista, foloseste in headline sau featureSections[0]): ${icp.curiosityHook || '(none)'}
+
+COMPACT SUMMARY pentru rapid reference:
+  Pains: ${(icp.pains || []).join(' | ')}
+  Desires: ${(icp.desires || []).join(' | ')}
+  Belief barriers (TREBUIE DARAMATE in objections sau riskReversal): ${(icp.beliefBarriers || []).join(' | ')}
+
+HAWKINS LEVEL: ${icp.hawkinsLevel || 'fear'} — INTRA in copy la acest nivel emotional (sub linia 200), NU sari direct la hope.
 SOPHISTICATION LEVEL: ${icp.sophisticationLevel || 3} — APLICA Regula 1 (formula H1 conform Level)
-UNIQUE ANGLE: ${icp.uniqueAngle || ''} — DIFERENTIATORUL CHEIE, reflecta-l in headline + featureSections[0]` : ''
+UNIQUE ANGLE: ${icp.uniqueAngle || ''}` : ''
 
   const personalizationBlock = `
 

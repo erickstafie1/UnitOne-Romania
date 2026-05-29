@@ -75,6 +75,10 @@ function extractGenericMeta(html) {
     const tt = html.match(/<title[^>]*>([^<|]+)/i)
     if (tt?.[1]) title = tt[1].replace(/\s*[-|]\s*(Amazon|Alibaba|.*\.com).*$/i, '').trim()
   }
+  // Reject Google/CDN error pages — they have title "Error 404 (Not Found)!!1" etc.
+  if (/^(error\s+\d+|not\s+found|access\s+denied|forbidden|404|page\s+not\s+found|robot\s+check)/i.test(title)) {
+    title = ''
+  }
   // Description
   const ogDesc = html.match(/<meta\s+property="og:description"\s+content="([^"]{30,2000})"/i) ||
                  html.match(/<meta\s+name="description"\s+content="([^"]{30,2000})"/i)
@@ -139,25 +143,42 @@ function callClaudeVisionForResearch(imageDataUri) {
 }
 
 // ─── Research agent (Sonnet 4.5 + extended thinking) ───
+// Construieste un Avatar/ICP COMPLET conform framework-ului MARK BUILDS BRANDS:
+// - Demographics + Identitati tipice
+// - 3 pain points × 3 sub-issues fiecare
+// - Goals (short + long term)
+// - Emotional drivers
+// - Direct quotes in 5 categorii (cum vorbesc EI in forumuri/reviews)
+// - Fears + emotional journey (Awareness → Frustration → Desperation → Relief)
+// - Core beliefs life/love/family
+// - Existing solutions + ce le place + ce nu le place
+// - Conspiratorial story / "fall from eden" angle (Mark's curiosity hook)
 function callClaudeResearch(productInfo) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 20000,
-    thinking: { type: 'enabled', budget_tokens: 10000 },
-    system: `Esti un research agent expert pentru landing page-uri COD din Romania.
+    max_tokens: 24000,
+    thinking: { type: 'enabled', budget_tokens: 12000 },
+    system: `Esti un research strategist expert care construieste AVATARE / ICP-uri pentru produse COD vandute in Romania, dupa metodologia MARK BUILDS BRANDS.
 
-Ai un produs (descriere + specs) si trebuie sa construiesti un ICP (Ideal Customer Profile) complet si autentic, plus sa decizi parametrii optimi pentru LP-ul de vanzare.
+Misiune: pornind de la un produs (descriere + specs), GANDESTE PROFUND (foloseste extended thinking) ca un consumer researcher care a citit zeci de review-uri Amazon, mii de comentarii forum si zeci de reclame de la competitori. Apoi creeaza un AVATAR PSIHOLOGIC complet — nu generic.
 
-Pentru ICP foloseste cadrul:
-- PERSONA: descriere narativa scurta (1-2 fraze: cine e + situatia lui)
-- DEMOGRAFICE: varsta, sex, venit, locatie, status familial
-- PAINS: 3-5 dureri concrete pe care le simte ZILNIC (in cuvintele lor)
-- DESIRES: 3-5 dorinte profunde (nu superficial)
-- BELIEF BARRIERS: 2-4 credinte limitative care l-ar opri sa cumpere ("produsele astea nu functioneaza", "e prea scump", etc.)
-- HAWKINS LEVEL: nivelul de constiinta in care e (guilt, fear, grief, apathy, neutrality, courage, willingness, acceptance — alege UNA din primele 4 pentru aproape orice produs COD)
-- SOPHISTICATION LEVEL (1-5): cat de saturata e piata pentru acest produs
+Avatarul include:
+1. UN NUME DE PERSOANA (prenume romanesc real) + varsta concreta + rol/identitate (ex: "Maria, 38, mama unica din Cluj-Napoca")
+2. BIO scurt (2-3 fraze: cine e + ce situatie + ce o macina ZILNIC) — scrii ca si cum ai descrie-o intr-o intalnire de research
+3. DEMOGRAFICE complete (varsta exacta, sex, locatie, venit lunar in LEI, ocupatie, status familial, identitati culturale)
+4. 3 PAIN POINTS principale, fiecare cu 3 sub-issues concrete in cuvintele LOR
+5. GOALS: 3 short-term + 3 long-term (in viata, nu doar legate de produs)
+6. EMOTIONAL DRIVERS: 3 mari sentimente care il mana (frica, rusine, dor, mandrie, etc.)
+7. DIRECT QUOTES (cum vorbesc EI cand se plang sau cer ajutor) — 3 quote-uri pain + 3 mindset + 3 motivation. Foloseste limbaj autentic forum romanesc (gen "ma satur", "nu mai pot", "tot timpul", "iar am incercat sa...", "asa e mereu")
+8. KEY FEARS: 3 frici emotionale profunde
+9. PSYCHOGRAPHIC INSIGHTS: 3 (atitudini, prejudecati tribal, ideologii)
+10. EMOTIONAL JOURNEY in 4 etape (Awareness → Frustration → Desperation → Relief)
+11. CORE BELIEFS despre viata/familie/munca in 1-3 propozitii
+12. OUTSIDE BLAMES — ce factor extern blameaza pentru viata lor (sistemul, big pharma, vremurile, etc.)
+13. EXISTING SOLUTIONS — ce au incercat deja + ce le-a placut + ce NU le-a placut
+14. CURIOSITY HOOK / FALL FROM EDEN angle — daca exista un hook conspiratorial sau "lost solution" pentru acest produs (Mark's framework)
 
 Apoi recomanda parametrii LP:
 - niche (fashion/electronics/beauty/auto/health/home/sports/baby/pet/generic)
@@ -165,12 +186,14 @@ Apoi recomanda parametrii LP:
 - urgencyLevel (medie/inalta/fara)
 - lengthMode (scurt/mediu/lung)
 - includeObjections (true/false)
+- hawkinsLevel (guilt|fear|grief|apathy|neutrality|courage — alege UNA din primele 4 pentru COD)
+- sophisticationLevel (1-5)
 
-Apoi un UNIQUE ANGLE — diferentiatorul cheie de copywriting (de ce ASTA si nu altul).
+Plus UNIQUE ANGLE — diferentiatorul cheie.
 
-GANDESTE PROFUND inainte de a raspunde. Foloseste extended thinking.
+CRITIC: nu inventa generic. Daca produsul e pentru parinti, avatarul e un parinte SPECIFIC cu varsta+oras. Daca e supliment, persoana are conditie medicala specifica. Daca e gadget tech, persoana are job+venit congruente. Limbaj autentic romanesc — NU "ma simt epuizat" generic, ci "vin acasa si nu mai am chef de nimic, doar caut Netflix-ul".
 
-Returneaza DOAR JSON valid (fara markdown).`,
+Returneaza DOAR JSON valid (fara markdown, fara backtick-uri, fara explicatii).`,
     messages: [{
       role: 'user',
       content: 'Produs:\n' +
@@ -178,21 +201,40 @@ Returneaza DOAR JSON valid (fara markdown).`,
         'Pret: ~' + (productInfo.priceUSD ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 + ' LEI' : 'necunoscut') + '\n' +
         (productInfo.description ? 'Descriere:\n"""\n' + productInfo.description + '\n"""\n' : '') +
         (productInfo.specs?.length ? 'Specificatii:\n- ' + productInfo.specs.join('\n- ') + '\n' : '') + '\n' +
-        'Construieste ICP-ul si returneaza JSON:\n' +
+        'Construieste AVATARUL complet si returneaza JSON cu aceasta schema EXACTA:\n' +
         '{\n' +
-        '  "productSummary": "1-2 fraze cu ce e produsul si pentru cine",\n' +
-        '  "persona": "1-2 fraze cu cine e cumparatorul tipic + situatia lui",\n' +
-        '  "demographics": {"age": "...", "gender": "...", "income": "...", "location": "...", "familyStatus": "..."},\n' +
-        '  "pains": ["durere 1 in cuvintele lor", "durere 2", "..."],\n' +
-        '  "desires": ["dorinta 1", "dorinta 2", "..."],\n' +
-        '  "beliefBarriers": ["credinta 1", "credinta 2", "..."],\n' +
+        '  "name": "Prenume RO + varsta + rol (ex: Maria, 38, mama din Cluj)",\n' +
+        '  "bio": "2-3 fraze descriere: cine e + situatie + ce o macina zilnic",\n' +
+        '  "productSummary": "1-2 fraze: ce e produsul si pentru cine",\n' +
+        '  "demographics": {"age": "X-Y", "gender": "...", "income": "X-Y LEI/luna", "location": "...", "occupation": "...", "familyStatus": "...", "identities": ["..."]},\n' +
+        '  "painPoints": [\n' +
+        '    {"title": "Pain Point 1 - 3-5 cuvinte", "subIssues": ["sub-issue 1 in cuvintele lor", "sub-issue 2", "sub-issue 3"]},\n' +
+        '    {"title": "Pain Point 2", "subIssues": ["...","...","..."]},\n' +
+        '    {"title": "Pain Point 3", "subIssues": ["...","...","..."]}\n' +
+        '  ],\n' +
+        '  "shortTermGoals": ["...", "...", "..."],\n' +
+        '  "longTermAspirations": ["...", "...", "..."],\n' +
+        '  "emotionalDrivers": ["...", "...", "..."],\n' +
+        '  "painQuotes": ["quote 1 in limbaj autentic forum RO", "quote 2", "quote 3"],\n' +
+        '  "mindsetQuotes": ["...", "...", "..."],\n' +
+        '  "motivationQuotes": ["...", "...", "..."],\n' +
+        '  "keyFears": ["frica 1", "frica 2", "frica 3"],\n' +
+        '  "psychographicInsights": ["...", "...", "..."],\n' +
+        '  "emotionalJourney": {"awareness": "...", "frustration": "...", "desperation": "...", "relief": "..."},\n' +
+        '  "coreBeliefs": "1-3 propozitii: ce crede despre viata/familie/munca",\n' +
+        '  "outsideBlames": ["sistemul economic", "...", "..."],\n' +
+        '  "existingSolutions": {"tried": ["..."], "liked": ["..."], "disliked": ["..."]},\n' +
+        '  "curiosityHook": "Conspiracy/lost solution angle daca exista. Altfel string gol.",\n' +
+        '  "pains": ["compact: top 3-5 dureri pentru prompt-ul de generare LP"],\n' +
+        '  "desires": ["compact: top 3-5 dorinte"],\n' +
+        '  "beliefBarriers": ["compact: top 3-4 credinte limitative"],\n' +
         '  "hawkinsLevel": "guilt|fear|grief|apathy|neutrality|courage",\n' +
         '  "sophisticationLevel": 1-5,\n' +
-        '  "niche": "...",\n' +
-        '  "recommendedTone": "...",\n' +
-        '  "recommendedUrgency": "...",\n' +
-        '  "recommendedLength": "...",\n' +
-        '  "includeObjections": true/false,\n' +
+        '  "niche": "fashion|electronics|beauty|auto|health|home|sports|baby|pet|generic",\n' +
+        '  "recommendedTone": "direct|agresiv|casual|profesional|emotional",\n' +
+        '  "recommendedUrgency": "medie|inalta|fara",\n' +
+        '  "recommendedLength": "scurt|mediu|lung",\n' +
+        '  "includeObjections": true,\n' +
         '  "uniqueAngle": "1-2 fraze: de ce ASTA si nu produsele similare"\n' +
         '}'
     }]
@@ -303,8 +345,12 @@ module.exports = async function handler(req, res) {
       images = extractImages(html)
     }
 
-    if (!productInfo.title || productInfo.title.length < 5) {
-      return res.status(500).json({ error: 'Nu am putut extrage informatii suficiente despre produs' })
+    // Detect scraping failures — Google 404 pages, error pages, blocked etc.
+    if (/^(error|not\s+found|404|page\s+not|forbidden|access|robot|captcha)/i.test(productInfo.title || '') ||
+        !productInfo.title || productInfo.title.length < 5) {
+      return res.status(422).json({
+        error: 'Nu am putut citi produsul de la URL-ul dat. Site-ul ne-a blocat sau pagina nu exista. Incearca alt URL sau foloseste upload poza.'
+      })
     }
 
     console.log('[research] productInfo:', { title: productInfo.title.slice(0, 60), priceUSD: productInfo.priceUSD, descLen: productInfo.description.length, specs: productInfo.specs.length, images: images.length })
