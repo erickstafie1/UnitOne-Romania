@@ -293,7 +293,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           const height = a['data-height'] || 'auto'
           const padding = parseInt(a['data-padding'] || '32', 10)
           const fullscreen = a['data-fullscreen'] === 'yes'
-          let style = 'background:' + bgColor + ';'
+          let style = 'display:none;background:' + bgColor + ';'
           if (bgImage) style += 'background-image:url(\'' + bgImage + '\');background-size:cover;background-position:center;'
           style += 'border-radius:' + corner + 'px;padding:' + padding + 'px;box-shadow:' + shadow + ';position:relative;margin:24px auto;'
           if (fullscreen) {
@@ -1623,7 +1623,7 @@ function registerPopupType(editor) {
         toolbar: [],
         attributes: {
           class: 'unitone-popup-block',
-          style: 'background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
+          style: 'display:none;background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
           'data-trigger': 'time',
           'data-delay': '30',
           'data-frequency': 'every-visit',

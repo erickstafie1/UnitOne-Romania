@@ -167,18 +167,7 @@ function buildPopupHandler(hadPopupInFinalHtml) {
   return [
     '<script>(function(){',
     'function setupPopups(){',
-      // VISUAL DEBUG: red banner sus 5 sec daca handler a rulat. User vede
-      // fara DevTools. Va fi sters in commit-urile viitoare dupa diagnosticare.
-      'try{',
-        'var dbg=document.createElement("div");',
-        'dbg.style.cssText="position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px;text-align:center;z-index:999999;font:bold 13px monospace";',
-        'var blocks=document.querySelectorAll(".unitone-popup-block");',
-        'dbg.textContent="[UNITONE-POPUP DEBUG] handler ran. DOM popups: "+blocks.length+" | server detected popup in finalHtml: ' + (hadPopupInFinalHtml ? 'YES' : 'NO') + '";',
-        'document.body.appendChild(dbg);',
-        'setTimeout(function(){if(dbg.parentNode)dbg.parentNode.removeChild(dbg)},6000);',
-      '}catch(e){}',
       'var blocks=document.querySelectorAll(".unitone-popup-block");',
-      'console.log("[unitone-popup] handler started, found "+blocks.length+" popup(s)");',
       'if(!blocks.length)return;',
       // CSS pentru entrance effects + position classes
       'var styleEl=document.createElement("style");',
@@ -241,16 +230,18 @@ function buildPopupHandler(hadPopupInFinalHtml) {
         'if(overlayClickClose){',
           'overlay.addEventListener("click",function(e){if(e.target===overlay)hide()});',
         '}',
-        // Clonam block-ul (cu toate elementele drop-uite inauntru) ca popup card.
-        // Important: redenumim clasa pe clone ca anti-flash CSS sa NU se aplice si pe el.
-        'var clone=block.cloneNode(true);',
-        'clone.classList.remove("unitone-popup-block");',
-        'clone.classList.add("unitone-popup-clone");',
-        'clone.removeAttribute("data-popup-edit-id");',
-        // Sterge editor-only labels si side-effect classes
+        // NU clonam! Releasit / EasySell isi binda click handlers la load pe
+        // hook-urile reale din DOM. Daca clonezi, clone-ul are markup dar
+        // niciun binding → COD button moare. In schimb MUTAM blocul original
+        // (cu toate bindings intacte) inauntrul overlay-ului.
+        'var clone=block;',  // alias pentru claritate, ne referim la original
+        'block.classList.remove("unitone-popup-block");',
+        'block.classList.add("unitone-popup-clone");',
+        'block.removeAttribute("data-popup-edit-id");',
+        // Sterge editor-only labels (rare in storefront dar safe)
         'var lbl=clone.querySelector(".unitone-popup-editor-label");',
         'if(lbl)lbl.parentNode.removeChild(lbl);',
-        // Styles pe clone (overrride peste cele inline)
+        // Styles pe block (overrride peste cele inline)
         'var cs="background:"+bgColor+";";',
         'if(bgImage)cs+="background-image:url(\'"+bgImage+"\');background-size:cover;background-position:center;";',
         'cs+="border-radius:"+corner+"px;padding:"+padding+"px;box-shadow:"+shadow+";position:relative;margin:0;";',
@@ -266,8 +257,8 @@ function buildPopupHandler(hadPopupInFinalHtml) {
         '}',
         'overlay.appendChild(clone);',
         'document.body.appendChild(overlay);',
-        // Ascunde originalul din pagina
-        'block.style.display="none";',
+        // NU mai e nevoie sa ascunzi originalul — l-am MUTAT in overlay
+        // (nu am clonat). El nu mai e in LP, deci nu e vizibil acolo.
         // CTA wiring (cauta primul .unitone-popup-cta din clone)
         'var cta=clone.querySelector(".unitone-popup-cta");',
         'if(cta){',
