@@ -29,6 +29,8 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   // GemPages-style tabs in left sidebar: Sections vs Elements
   const [blocksTab, setBlocksTab] = useState('section')
   const [blocksSearch, setBlocksSearch] = useState('')
+  // Popup-uri detectate in canvas — pentru side tab (clickabil ca sa selectezi popup-ul)
+  const [popups, setPopups] = useState([])
 
   // Filtru pe textul de search — ascunde block-urile care nu match-uiesc
   useEffect(() => {
@@ -111,6 +113,23 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       // matched la parse. Daca registrarea se face dupa, blocurile salvate
       // raman cu type='default' si trait-urile noastre nu apar.
       registerPopupType(editor)
+
+      // Side-tab refresh — scaneaza canvas dupa popup-uri si update-aza lista
+      // pentru tab-ul flotant din dreapta canvas-ului.
+      const refreshPopups = () => {
+        try {
+          const found = []
+          editor.getWrapper().find('.unitone-popup-block').forEach((c, i) => {
+            const name = (c.getAttributes() && c.getAttributes()['data-popup-name']) || `Popup ${i + 1}`
+            found.push({ id: c.getId(), name, component: c })
+          })
+          setPopups(found)
+        } catch (e) {}
+      }
+      editor.on('load', refreshPopups)
+      editor.on('component:add', refreshPopups)
+      editor.on('component:remove', refreshPopups)
+      editor.on('component:update:attributes', refreshPopups)
 
       if (data.fromDashboard && data.editorHtml) {
         // BEST PATH: the page was published with the metafield-source pipeline
@@ -749,8 +768,54 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           <div id="blocks-panel" data-search={blocksSearch} />
         </div>
 
-        <div className="ue-canvas">
+        <div className="ue-canvas" style={{ position: 'relative' }}>
           <div ref={editorRef} style={{ width:'100%', height:'100%' }} />
+          {/* Side tab flotant pentru popup-uri — click selecteaza popup-ul */}
+          {popups.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: 80,
+              right: 0,
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6
+            }}>
+              {popups.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    try {
+                      if (gjsRef.current && p.component) {
+                        gjsRef.current.select(p.component)
+                        // Scroll selectat in view
+                        const el = p.component.getEl && p.component.getEl()
+                        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }
+                    } catch (e) {}
+                  }}
+                  title={`Selectează ${p.name}`}
+                  style={{
+                    writingMode: 'vertical-rl',
+                    transform: 'rotate(180deg)',
+                    background: '#2c6ecb',
+                    color: '#fff',
+                    border: 0,
+                    borderRadius: '6px 0 0 6px',
+                    padding: '12px 6px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    letterSpacing: 0.5,
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="ue-panel ue-panel-right">
@@ -1302,8 +1367,11 @@ function registerPopupType(editor) {
     console.warn('[unitone] DomComponents missing, popup type not registered')
     return
   }
+
+  // OUTER POPUP CONTAINER — toate setarile GemPages-style ca traits
+  // Trait-urile se mapeaza ca data-* attributes pe outer div.
+  // publish.js (buildPopupHandler) le citeste si construieste overlay-ul.
   Components.addType('unitone-popup', {
-    extend: 'default',
     isComponent: (el) => {
       if (el && el.classList && el.classList.contains('unitone-popup-block')) {
         return { type: 'unitone-popup' }
@@ -1311,43 +1379,159 @@ function registerPopupType(editor) {
     },
     model: {
       defaults: {
+        tagName: 'div',
         name: 'Popup',
-        droppable: true,
+        draggable: true,
+        droppable: false,  // outer NU primeste drop direct — doar inner body
         selectable: true,
         hoverable: true,
-        attributes: { 'data-trigger': 'time', 'data-delay': '30', 'data-goal': 'discount' },
+        copyable: true,
+        removable: true,
+        attributes: {
+          class: 'unitone-popup-block',
+          style: 'background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
+          'data-trigger': 'time',
+          'data-delay': '30',
+          'data-goal': 'discount',
+          'data-popup-name': 'Popup 1',
+          'data-overlay-color': '#121212',
+          'data-overlay-opacity': '70',
+          'data-overlay-click-close': 'yes',
+          'data-fullscreen': 'no',
+          'data-width': '600',
+          'data-height': 'auto',
+          'data-padding': '32',
+          'data-bg-color': '#FFFFFF',
+          'data-corner': '14',
+          'data-shadow': '0 20px 60px rgba(0,0,0,0.3)',
+          'data-position': 'center',
+          'data-entrance': 'fade',
+          'data-close-icon': 'x',
+          'data-close-size': '16',
+          'data-close-color': '#FFFFFF',
+          'data-close-w': '32',
+          'data-close-h': '32',
+          'data-close-bg': '#121212'
+        },
         traits: [
+          // === IDENTITATE ===
+          { type: 'text', label: 'Nume popup', name: 'data-popup-name', placeholder: 'Popup 1' },
+
+          // === TRIGGER (Display Condition) ===
           {
-            type: 'select',
-            label: 'Trigger',
-            name: 'data-trigger',
+            type: 'select', label: '⚡ Trigger', name: 'data-trigger',
             options: [
-              { value: 'time', name: 'După X secunde' },
-              { value: 'scroll', name: 'La scroll past popup' }
+              { id: 'time', name: 'După X secunde' },
+              { id: 'scroll', name: 'La scroll past popup' },
+              { id: 'exit', name: 'Exit-intent' },
+              { id: 'none', name: 'Doar manual' }
             ]
           },
+          { type: 'number', label: 'Delay (secunde)', name: 'data-delay', placeholder: '30', min: 1, max: 600 },
+
+          // === GOAL CTA ===
           {
-            type: 'number',
-            label: 'Secunde (delay)',
-            name: 'data-delay',
-            placeholder: '30',
-            min: 1,
-            max: 600
-          },
-          {
-            type: 'select',
-            label: 'Goal',
-            name: 'data-goal',
+            type: 'select', label: '🎯 Goal CTA', name: 'data-goal',
             options: [
-              { value: 'discount', name: 'Reducere (cod)' },
-              { value: 'order', name: 'Formular comandă (scroll la COD)' }
+              { id: 'discount', name: 'Reducere (copy code)' },
+              { id: 'order', name: 'Formular comandă (scroll)' },
+              { id: 'close', name: 'Doar închide' }
             ]
-          }
+          },
+
+          // === OVERLAY ===
+          { type: 'color', label: '🌫 Overlay color', name: 'data-overlay-color' },
+          { type: 'number', label: 'Overlay opacity (%)', name: 'data-overlay-opacity', min: 0, max: 100 },
+          {
+            type: 'select', label: 'Click pe overlay închide?', name: 'data-overlay-click-close',
+            options: [{ id: 'yes', name: 'Da' }, { id: 'no', name: 'Nu' }]
+          },
+
+          // === SIZE ===
+          {
+            type: 'select', label: '📐 Full screen', name: 'data-fullscreen',
+            options: [{ id: 'no', name: 'Nu' }, { id: 'yes', name: 'Da' }]
+          },
+          { type: 'number', label: 'Lățime (px)', name: 'data-width', min: 200, max: 1400 },
+          { type: 'text', label: 'Înălțime (auto / px)', name: 'data-height', placeholder: 'auto' },
+          { type: 'number', label: 'Padding interior (px)', name: 'data-padding', min: 0, max: 80 },
+
+          // === BACKGROUND ===
+          { type: 'color', label: '🎨 Background color', name: 'data-bg-color' },
+          { type: 'text', label: 'Background image URL', name: 'data-bg-image', placeholder: 'https://...' },
+
+          // === SHAPE ===
+          { type: 'number', label: '⬜ Corner radius (px)', name: 'data-corner', min: 0, max: 40 },
+          { type: 'text', label: 'Shadow (CSS)', name: 'data-shadow', placeholder: '0 20px 60px rgba(0,0,0,0.3)' },
+
+          // === POSITION ===
+          {
+            type: 'select', label: '📍 Poziție', name: 'data-position',
+            options: [
+              { id: 'center', name: 'Centru' },
+              { id: 'top', name: 'Sus' },
+              { id: 'bottom', name: 'Jos' },
+              { id: 'top-left', name: 'Sus stânga' },
+              { id: 'top-right', name: 'Sus dreapta' },
+              { id: 'bottom-left', name: 'Jos stânga' },
+              { id: 'bottom-right', name: 'Jos dreapta' }
+            ]
+          },
+
+          // === EFFECT ===
+          {
+            type: 'select', label: '✨ Entrance effect', name: 'data-entrance',
+            options: [
+              { id: 'fade', name: 'Fade' },
+              { id: 'slide-up', name: 'Slide up' },
+              { id: 'slide-down', name: 'Slide down' },
+              { id: 'zoom', name: 'Zoom' },
+              { id: 'none', name: 'Fără' }
+            ]
+          },
+
+          // === CLOSE BUTTON ===
+          {
+            type: 'select', label: '❌ Icon close', name: 'data-close-icon',
+            options: [
+              { id: 'x', name: '× (subțire)' },
+              { id: 'xbold', name: 'X bold' },
+              { id: 'circle', name: 'Cerc X' }
+            ]
+          },
+          { type: 'number', label: 'Close icon size', name: 'data-close-size', min: 8, max: 48 },
+          { type: 'color', label: 'Close icon color', name: 'data-close-color' },
+          { type: 'number', label: 'Close width', name: 'data-close-w', min: 16, max: 80 },
+          { type: 'number', label: 'Close height', name: 'data-close-h', min: 16, max: 80 },
+          { type: 'color', label: 'Close background', name: 'data-close-bg' }
         ]
       }
     }
   })
-  console.log('[unitone] popup type registered')
+
+  // INNER BODY — drop-zone pentru ORICE elemente (text, image, button, etc.)
+  // User dragneaza din sidebar Sections/Elements direct in interiorul popup-ului.
+  Components.addType('unitone-popup-body', {
+    isComponent: (el) => {
+      if (el && el.classList && el.classList.contains('unitone-popup-body')) {
+        return { type: 'unitone-popup-body' }
+      }
+    },
+    model: {
+      defaults: {
+        tagName: 'div',
+        name: 'Popup Body',
+        droppable: true,
+        draggable: false,
+        copyable: false,
+        removable: false,
+        selectable: true,
+        attributes: { class: 'unitone-popup-body' }
+      }
+    }
+  })
+
+  console.log('[unitone] popup + popup-body types registered')
 }
 
 // ─── addBlocks ────────────────────────────────────────────────────────────────
@@ -1382,37 +1566,42 @@ function addBlocks(editor, data) {
   // si configureaza trigger/delay/goal din panelul Settings (dreapta). La
   // publish, publish.js insereaza un script universal care citeste data-*
   // attributes si seteaza comportamentul (overlay + trigger).
-  // Inner content (everything inside .unitone-popup-block) ca HTML string.
-  // Outer div e specificat ca component object cu type explicit ca sa NU mai
-  // depinda de isComponent (care e flaky cand HTML-ul vine din block).
-  function popupInnerHTML() {
+  // Default inner content — userul edita TEXT direct in canvas, dragneaza
+  // alte elemente in zona popup-body (drop zone). Toate setarile vizuale
+  // (close btn, overlay, bg, position, etc.) vin din trait panel.
+  function popupBodyHTML() {
     return [
-      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center;line-height:1.4">⚠ POPUP — Click aici apoi vezi tab-ul <strong>Proprietăți</strong> (dreapta jos) pentru a configura Trigger / Secunde / Goal. Pe pagina publicată apare ca overlay (nu inline).</div>`,
-      `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
-      `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
+      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:600;text-align:center;line-height:1.4">⚠ POPUP — Click aici → tab <strong>Proprietăți</strong> (dreapta) pentru toate setările. Drop orice element în zona albă.</div>`,
       `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">Stai puțin!</h2>`,
-      `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 16px;line-height:1.55">Avem o reducere exclusivă pentru tine — folosește codul de mai jos la check-out.</p>`,
+      `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 16px;line-height:1.55">Avem o reducere exclusivă pentru tine — folosește codul la check-out.</p>`,
       `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">SAVE10</div></div>`,
-      `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">Aplică reducerea</button>`,
-      `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing.</p>`,
-      `</div>`
+      `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">Aplică reducerea</button>`
     ].join('')
   }
 
-  // Block content ca component object explicit — forteaza type='unitone-popup'
-  // FARA dependinta de isComponent. GrapesJS instantiaza direct tipul nostru.
+  // Block content explicit ca tree de componente (nu HTML string) ca tipurile
+  // sa fie aplicate direct. Outer = unitone-popup, inner = unitone-popup-body.
   function popupBlockContent() {
     return {
       type: 'unitone-popup',
-      tagName: 'div',
-      attributes: {
-        class: 'unitone-popup-block',
-        'data-trigger': 'time',
-        'data-delay': '30',
-        'data-goal': 'discount',
-        style: 'margin:24px auto;max-width:440px'
-      },
-      components: popupInnerHTML()
+      components: [
+        {
+          tagName: 'button',
+          attributes: {
+            class: 'unitone-popup-close',
+            style: 'position:absolute;top:10px;right:10px;background:#121212;border:0;color:#FFFFFF;font-size:16px;cursor:pointer;width:32px;height:32px;line-height:1;border-radius:50%;display:flex;align-items:center;justify-content:center',
+            'aria-label': 'Close'
+          },
+          components: '×',
+          selectable: false,
+          draggable: false,
+          removable: false
+        },
+        {
+          type: 'unitone-popup-body',
+          components: popupBodyHTML()
+        }
+      ]
     }
   }
 
