@@ -235,22 +235,49 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   ]
 
   function RoadmapView({ title }) {
+    const accent = '#1e40af'  // albastru profund (ca in pic)
     return (
       <Page narrowWidth>
         <style>{`
           @keyframes ue-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-          @keyframes ue-fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-          .ue-step-row{animation:ue-fadein .35s ease-out both}
-          .ue-step-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;transition:all .3s ease}
-          .ue-step-icon.pending{background:#f1f5f9;color:#94a3b8}
-          .ue-step-icon.active{background:linear-gradient(135deg,#2c6ecb,#5b8def);color:#fff;box-shadow:0 0 0 6px rgba(44,110,203,.15);animation:ue-pulse 1.6s ease-in-out infinite}
-          .ue-step-icon.done{background:#16a34a;color:#fff}
-          @keyframes ue-pulse{0%,100%{box-shadow:0 0 0 6px rgba(44,110,203,.15)}50%{box-shadow:0 0 0 12px rgba(44,110,203,.05)}}
+          /* Entrance animation REMOVED — fiecare update setStepStatus
+             retriggera-o si parea ca se reincarca tot roadmapul */
+          .ue-step-icon{
+            width:64px;height:64px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            flex-shrink:0;font-size:22px;font-weight:700;
+            transition:background .45s ease, color .45s ease, border-color .45s ease, transform .35s ease;
+            position:relative;z-index:2
+          }
+          /* PENDING + ACTIVE = cerc alb cu border albastru, icon albastru */
+          .ue-step-icon.pending,.ue-step-icon.active{
+            background:#fff;border:3px solid ${accent};color:${accent}
+          }
+          .ue-step-icon.active{transform:scale(1.08);box-shadow:0 0 0 6px ${accent}1f}
+          /* DONE = cerc plin albastru, icon alb */
+          .ue-step-icon.done{
+            background:${accent};border:3px solid ${accent};color:#fff
+          }
+          .ue-step-label{font-size:14px;line-height:1.4;color:#0f172a;transition:color .35s ease, text-decoration-color .35s ease}
           .ue-step-label.pending{color:#94a3b8}
-          .ue-step-label.active{color:#0f172a;font-weight:700}
-          .ue-step-label.done{color:#475569;text-decoration:line-through;text-decoration-color:#86efac}
+          .ue-step-label.active{color:${accent};font-weight:700}
+          .ue-step-label.done{color:#475569;text-decoration:line-through;text-decoration-color:${accent};text-decoration-thickness:2px}
           .ue-progress-track{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden}
-          .ue-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#2c6ecb);transition:width .8s cubic-bezier(.16,1,.3,1);border-radius:4px}
+          .ue-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,${accent});transition:width .8s cubic-bezier(.16,1,.3,1);border-radius:4px}
+          /* Zigzag layout — row 0/2/4 aliniat stanga, 1/3/5 cu offset spre dreapta */
+          .ue-step-row{display:flex;gap:18px;align-items:center;position:relative}
+          .ue-step-row.right{margin-left:80px}
+          /* Connector curbat intre cercuri — pseudo cu border-radius */
+          .ue-step-row::after{
+            content:'';position:absolute;left:32px;top:64px;
+            width:40px;height:40px;border-left:3px solid #e2e8f0;border-bottom:3px solid #e2e8f0;
+            border-radius:0 0 0 20px;z-index:1;pointer-events:none
+          }
+          .ue-step-row.right::after{
+            left:-48px;border-left:none;border-right:3px solid #e2e8f0;border-radius:0 0 20px 0
+          }
+          .ue-step-row:last-child::after{display:none}
+          .ue-step-row.done::after,.ue-step-row.partly-done::after{border-color:${accent}}
         `}</style>
         <Card>
           <BlockStack gap="500">
@@ -261,21 +288,23 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
                 <Text as="p" variant="bodySm" tone="subdued" alignment="center">{Math.round(progressPct)}% complete</Text>
               </div>
             </BlockStack>
-            <BlockStack gap="300">
+            <div style={{ padding: '10px 0 4px' }}>
               {roadmapSteps.map((s, i) => {
                 const status = stepStatus[s.key]
                 const icon = status === 'done' ? '✓' : (status === 'active' ? (
                   <span style={{ display: 'inline-block', animation: 'ue-spin 1.4s linear infinite' }}>↻</span>
                 ) : s.emoji)
+                const rowClass = ['ue-step-row', i % 2 === 1 ? 'right' : '', status === 'done' ? 'done' : '']
+                  .filter(Boolean).join(' ')
                 return (
-                  <div key={s.key} className="ue-step-row" style={{ display: 'flex', gap: 14, alignItems: 'center', animationDelay: (i * 0.05) + 's' }}>
+                  <div key={s.key} className={rowClass} style={{ paddingBottom: 32 }}>
                     <div className={'ue-step-icon ' + status}>{icon}</div>
-                    <div className={'ue-step-label ' + status} style={{ fontSize: 14, lineHeight: 1.4 }}>{s.label}</div>
+                    <div className={'ue-step-label ' + status}>{s.label}</div>
                   </div>
                 )
               })}
-            </BlockStack>
-            <div style={{ marginTop: 16, padding: 14, background: '#fafbfc', borderRadius: 10, border: '1px solid #e1e3e5' }}>
+            </div>
+            <div style={{ marginTop: 8, padding: 14, background: '#fafbfc', borderRadius: 10, border: '1px solid #e1e3e5' }}>
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
                 AI gândește adânc · 2-3 minute pentru calitate maximă
               </Text>
@@ -287,8 +316,13 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   }
 
   // ─── Loading screens dispatched per phase ────────────────────────────
-  if (phase === 'roadmap-research') return <RoadmapView title="Pregătim avatarul tău" />
-  if (phase === 'roadmap-generate') return <RoadmapView title="Construim pagina ta" />
+  // Apel direct ca FUNCTIE (nu JSX <RoadmapView/>): RoadmapView e definit
+  // inside Generator, deci type-ul lui se schimba la fiecare render parent.
+  // <RoadmapView/> ar fi vazut ca COMPONENT NOU de React → unmount+remount →
+  // animatia repornea la fiecare 1% progress. Apel direct returneaza JSX-ul
+  // ca element static, reconciliat dupa type (Page/Card), nu component.
+  if (phase === 'roadmap-research') return RoadmapView({ title: 'Pregătim avatarul tău' })
+  if (phase === 'roadmap-generate') return RoadmapView({ title: 'Construim pagina ta' })
 
   function goNext() {
     if (phase === 'pick') startResearch()
