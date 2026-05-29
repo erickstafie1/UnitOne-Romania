@@ -167,6 +167,16 @@ function buildPopupHandler() {
   return [
     '<script>(function(){',
     'function setupPopups(){',
+      // VISUAL DEBUG: red banner sus 5 sec daca handler a rulat. User vede
+      // fara DevTools. Va fi sters in commit-urile viitoare dupa diagnosticare.
+      'try{',
+        'var dbg=document.createElement("div");',
+        'dbg.style.cssText="position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px;text-align:center;z-index:999999;font:bold 13px monospace";',
+        'var blocks=document.querySelectorAll(".unitone-popup-block");',
+        'dbg.textContent="[UNITONE-POPUP DEBUG] handler ran, found "+blocks.length+" popup(s) in DOM";',
+        'document.body.appendChild(dbg);',
+        'setTimeout(function(){if(dbg.parentNode)dbg.parentNode.removeChild(dbg)},6000);',
+      '}catch(e){}',
       'var blocks=document.querySelectorAll(".unitone-popup-block");',
       'console.log("[unitone-popup] handler started, found "+blocks.length+" popup(s)");',
       'if(!blocks.length)return;',
