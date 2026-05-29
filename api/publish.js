@@ -301,6 +301,12 @@ function buildPopupHandler() {
           'overlay.style.display="flex";',
           'try{localStorage.setItem(storageKey,String(Date.now()))}catch(e){}',
         '}',
+        // DEBUG: ?popup=now in URL forteaza popup imediat (ocoleste delay + frequency)
+        'if(location.search.indexOf("popup=now")>=0){',
+          'console.log("[unitone-popup] force-show via ?popup=now");',
+          'setTimeout(function(){overlay.style.display="flex";shown=true},200);',
+          'return;',
+        '}',
         // Trigger setup
         'if(trigger==="time"){',
           'setTimeout(show,delay*1000);',
@@ -613,8 +619,10 @@ module.exports = async function handler(req, res) {
           return '<div' + attrs + ' style="' + forceHide + '">'
         }
       )
-      console.log('[publish] popup found, regex applied, handler appended')
-      finalHtml = '<style>.unitone-popup-block{display:none!important;visibility:hidden!important}.unitone-popup-clone{display:block!important;visibility:visible!important}</style>' + finalHtml + buildPopupHandler()
+      console.log('[publish] popup found, regex applied, handler prepended')
+      // Handler script PREPENDED nu appended — daca Shopify trunchiaza
+      // body_html la 65535 chars, scriptul ramane intact la inceput.
+      finalHtml = buildPopupHandler() + '<style>.unitone-popup-block{display:none!important;visibility:hidden!important}.unitone-popup-clone{display:block!important;visibility:visible!important}</style>' + finalHtml
     }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
