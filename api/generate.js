@@ -399,81 +399,136 @@ FRAZE BANNED (NU folosi NICIODATA, oriunde in JSON):
 - "experienta unica" / "moment magic" / "alegerea inteligenta"
 ============================================================
 
-REGULI CRITICE:
+============================================================
+REGULI DIRECT-RESPONSE (verificate pe fiecare camp text):
+- VOCE ACTIVA OBLIGATORIE — zero diateza pasiva ("este facut" → "facem", "a fost descoperit" → "am descoperit")
+- ADRESARE LA PERS. 2 SINGULAR — "tu", "tau", "ai", "vei", NU "dumneavoastra", NU "voi", NU plurale.
+- FARA WEASEL WORDS — interzis "foarte", "destul de", "poate", "doar" (cand inseamna "numai"), "in general", "deobicei", "probabil", "cumva"
+- PARAGRAFE max 300 CARACTERE (testimoniale, descrieri lungi: rupe in fraze scurte)
+- LIZIBILITATE clasa 6 — propozitii scurte, cuvinte simple, fara jargon
+- NU em-dashes (—) excesive: maxim 1 per fraza, prefera punct + propozitie noua
+- 1 SINGUR CTA IMPERATIV per sectiune (verbe: "Comanda", "Profita", "Vreau", "Adauga"; NU "Click aici", "Continua")
+============================================================
 
-1. **HEADLINE — formula AIDA**: [BENEFICIU CONCRET CU CIFRE/TIMP] + [AUDIENTA] + [ELIMINARE OBIECTIE]. Maxim 70 chars.
-   BUN: "Curata 47 m² in 22 minute — Aspirator wireless, fara fire incurcate" (cifra + audienta implicita + diferentiator)
-   PROST: "Aspiratorul ideal pentru casa ta" (vag)
-   PROST: "Calitate premium, pret accesibil" (banned + generic)
+REGULI CRITICE PE STRUCTURA + COPYWRITING:
 
-2. **SUBHEADLINE — UVP cu proof point concret**: 1 fraza max 100 chars cu DOVADA, nu promisiune.
-   BUN: "Folosit deja de 14.000 familii din Romania, evaluare 4.8★/5 pe 12 luni"
+1. **HEADLINE — alege framework H1 conform LEVEL DE SOFISTICARE A PIETEI** (decizi tu pe baza nisei + descrierii produsului):
+   - **Level 1 (piata noua, fara competitie)**: claim direct. Ex: "Cum sa cureti masina in 15 minute"
+   - **Level 2 (competitie directa)**: claim marit. Ex: "Cum sa cureti masina in 15 minute MAI BINE decat la spalatorie"
+   - **Level 3 (focus pe mecanism)**: cum functioneaza. Ex: "Cum sa cureti masina folosind jetul cu presiune reglabila 50 bar"
+   - **Level 4 (mecanism marit)**: detaliu mecanism. Ex: "Noua tehnologie de jet variabil 30-50 bar curata interiorul masinii in 15 minute"
+   - **Level 5 (identificare emotionala)**: conectare cu durerea audientei. Ex: "Pentru parintii care obosesc sa duca masina la spalatorie in fiecare saptamana"
+   APLICA cel mai potrivit Level conform contextului produsului. Maxim 70 chars.
+
+2. **HEADLINE — STACK 3 HOOK LEVERS din 7** (Curiosity, Pain, Promise, Specificity, Credibility, Timeframe, Simplicity):
+   - Combina 3-4 maxim, NU toate 7. Frankenhook = mort.
+   - Exemple bune (stack 3 levers):
+     "Curata masina in 15 minute fara sa ridici degetul" (Promise + Specificity + Timeframe)
+     "De ce 14.000 mame au scapat de mizeria de la masa in 7 zile?" (Curiosity + Specificity + Pain)
+     "Aspirator 800W care prinde mai mult par decat Dyson - testat 30 zile" (Specificity + Credibility + Pain)
+   - QA: < 15 cuvinte, 1 idee clara, audienta recunoscuta, fara mecanism dezvaluit
+
+3. **SUBHEADLINE — formula "So That, Without"**: [PROMISIUNE concreta] + "Without" [OBIECTIE PRINCIPALA eliminata]. Max 100 chars.
+   BUN: "Fixezi orice piesa rupta in 8 minute - fara scule, fara dezordine, fara experienta"
+   BUN: "Functioneaza pe orice masina fabricata dupa 1996 - fara montaj la mecanic, fara abonament"
    PROST: "Solutia care iti transforma rutina" (vag + banned)
 
-3. **quickBullets — EXACT 4, max 8 cuvinte fiecare**: Beneficii MASURABILE sau VIZIBILE.
-   BUN: "Prinde 5+ soareci la o singura activare"
-   BUN: "Bateria tine 40 ore continuu"
+4. **quickBullets — EXACT 4, max 8 cuvinte, beneficii MASURABILE/VIZIBILE**:
+   BUN: "Reduce consumul cu 15-25% pe ruta urbana"
+   BUN: "Functioneaza pe orice masina fabricata dupa 1996"
    PROST: "Calitate superioara garantata" (banned)
-   PROST: "Confort si eleganta" (banned)
 
-4. **topBenefits + benefits — framework PAS**: PROBLEMA (in CAPS, 1-3 cuvinte) → "—" → REZOLVARE (concret, cu cifre/mecanism daca posibil).
-   Foloseste topBenefits pentru TOP 3 dureri ale audientei + rezolvari.
-   Foloseste benefits (5-8 items per lengthMode) pentru caracteristici secundare.
-   BUN: "NU SE RASTOARNA — 4 ventuze cu vacuum activ tin farfuria fixa pe masa"
-   BUN: "FARA MIZERIE — baveta colectoare 360° prinde tot ce cade in farfurioara dedesubt"
-   BUN: "INCERCARE FARA RISC — 30 zile retur fara intrebari, costul de courier inclus"
-   PROST: "Foarte util pentru copii" (nu PAS, nu concret)
+5. **STRUCTURA SECTIUNILOR "The Question Ladder"** — fiecare sectiune raspunde la o obiectie naturala in MINTEA cumparatorului:
+   - Hero (headline + subheadline + price + CTA) → "Sunt in locul potrivit?"
+   - quickBullets → "Ce primesc concret?"
+   - topBenefits (3 PAS) → "Ma intelege cineva?"
+   - featureSections (image + bullets) → "Cum functioneaza?"
+   - howItWorks (3 pasi) → "Cat de simplu e?"
+   - benefits lista completa → "Ce mai primesc?"
+   - testimoniale → "De ce sa te cred?"
+   - objections (rebuttals) → "Care sunt riscurile?"
+   - risk reversal → "Ce daca nu merge?"
+   - faq → "Mai am 6 intrebari rapide"
+   - urgency banner + final CTA → "Ce fac acum?"
 
-5. **Testimoniale — structura obligatorie 4-part**: [SITUATIE INITIALA: ce facea/avea inainte] + [ACTIUNE: cum a aflat / cand a comandat] + [REZULTAT SPECIFIC: ce s-a schimbat, cu cifre/timeline] + [EMOTIE FINALA: o fraza scurta cu sentimentul actual].
-   Nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti/Craiova/Pitesti/Arad).
-   BUN: "Aveam aceeasi problema cu farfuria varsata de fiecare data la masa. Am gasit ASTA pe Facebook, am comandat de incercare. In prima zi cand am pus-o, copilul a mancat tot fara sa dea nimic jos. Acum sunt mai relaxata la masa."
-   PROST: "Produs excelent, recomand cu incredere." (lipseste 4-part)
-   PROST: "Foarte multumita, calitate buna." (generic + lipseste 4-part)
+6. **topBenefits (TOP 3) si benefits (5-7) — framework PAS strict**: [PROBLEMA in CAPS 1-3 cuvinte] + "—" + [REZOLVARE concreta cu cifre/mecanism].
+   BUN: "FARA SCURGERI — sistem de garnitura tripla testat la 50 bar fara nici o picatura"
+   BUN: "MONTAJ IN 8 MINUTE — strecuratoare standard, fara chei speciale, fara experienta"
+   BUN: "PRINDE TOTUL — vacuum la 800W aspira par de caine, cereale, lichid in acelasi timp"
+   PROST: "Foarte util" (nu PAS, banned word "foarte")
 
-6. **FAQ exact 6 intrebari in ordinea fixa**: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur? Raspunsuri concrete + scurte (2-3 fraze).
+7. **featureSections — mini-articole IMG+TEXT cu UN beneficiu CHEIE explicat**:
+   - title in CAPS, max 40 chars, focus pe BENEFICIU (NU pe feature).
+   - bullets: 3 puncte concrete (cifre, mecanism, comparison).
+   BUN title: "AJUNGI ACOLO UNDE FURTUNUL NU AJUNGE"
+   BUN bullets: ["Prelungire 1.2m pivotanta 360°", "Reaches under bancheta + portbagaj", "Inox 304 - rezista la presiune 50 bar"]
+   PROST title: "CALITATE PREMIUM" (banned + vag)
 
-7. **Risk reversal — garantie CONDITIONALA cu detaliu concret**, NU generic "30 zile money back":
-   BUN: "Daca dupa 30 zile copilul tau inca varsa mai mult de 2 ori pe masa, returnam integral + iti dam un bonus de 20 LEI pentru bataia de cap."
-   PROST: "30 de zile garantie de returnare." (generic + plat)
+8. **howItWorks — exact 3 pasi, MOTIVATOR sa cumpere ACUM, nu manual tehnic**:
+   - Fiecare pas: title scurt 3-5 cuvinte (verb imperativ) + desc 1 fraza concreta.
+   - Format: [ACTIUNEA USOARA] → [REZULTATUL IMEDIAT] → [BENEFICIUL DURABIL]
+   BUN: [{title:"Comanzi azi", desc:"Plata la livrare cu curierul, fara card, fara abonament"}, {title:"Primesti in 2-3 zile", desc:"Ambalaj sigilat, instructiuni in romana"}, {title:"Folosesti din prima zi", desc:"Setup in 8 minute, vezi rezultate de la prima utilizare"}]
 
-8. **objections** (daca cerut): 4 obiectii standard cu rebuttals contextuale + cifre/detaliu specifice produsului. NU defensive.
-   BUN: {objection: "E prea scump pentru ce ofera", rebuttal: "Calculeaza: 5 LEI / utilizare pentru durata medie de 18 luni. O cafea costa 12 LEI dar dispare in 10 minute."}
-   PROST: {objection: "E prea scump", rebuttal: "Avem cele mai bune preturi." } (defensive + generic)
+9. **Testimoniale — structura "Wall of Love" 4-part** (stack vertical, NU carousel):
+   [SITUATIE INITIALA: ce avea inainte, durerea concreta] + [ACTIUNE: cum a aflat / cand a comandat] + [REZULTAT cu CIFRA/TIMELINE concret] + [EMOTIE finala sintetica].
+   Nume real RO + oras (Bucuresti, Cluj, Constanta, Iasi, Timisoara, Brasov, Oradea, Sibiu, Galati, Ploiesti, Craiova, Pitesti, Arad, Bacau, Buzau).
+   BUN: "Plateam 80 LEI pe spalat la mana o data pe luna. Am vazut clipul si am comandat. In prima zi cand am incercat la masina, am terminat in 18 minute fata de 50 minute la mana. Acum nu mai duc masina niciunde."
+   PROST: "Produs excelent recomand." (lipsa 4-part, weasel "excelent")
+   FIECARE testimonial maxim 300 caractere total.
 
-9. **CTA microcopy — verbe puternice + actiune clara**:
-   BUN: "Comanda acum" / "Profita de oferta" / "Vreau si eu"
-   EVITA: "Click aici" / "Trimite" / "Continua" / "Mai multe info"
+10. **FAQ exact 6 intrebari in ordinea fixa**:
+    (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
+    Raspunsuri concrete, 1-2 fraze, sub 200 char.
 
-10. **Tot textul in romana corecta cu diacritice obligatoriu** (a, i, s, t, ts).
+11. **objections (4 items daca cerute) — STACK obiectie + rebuttal CONTEXTUAL**:
+    BUN: {objection: "E prea scump pentru ce ofera", rebuttal: "Calculezi: 5 LEI / utilizare pentru durata 18 luni. O cafea costa 12 LEI dar dispare in 10 minute."}
+    BUN: {objection: "Nu functioneaza la masinile vechi", rebuttal: "Compatibil OBD-II standard - orice masina fabricata dupa 1996. Verifica priza diagnostic dedesubtul volanului."}
+    PROST: {objection: "E prea scump", rebuttal: "Avem cele mai bune preturi."} (defensive + banned)
 
-11. **LENGTH MODE adherence — STRICT**:
-    - scurt: EXACT 3 benefits, 3 testimoniale, 4 FAQ, 1 featureSection
-    - mediu: EXACT 5 benefits, 4 testimoniale, 6 FAQ, 2 featureSections
-    - lung: EXACT 7 benefits, 6 testimoniale, 8 FAQ, 3 featureSections
-    NU livra mai putin. NU livra mai mult.${personalizationBlock}${briefBlock}${competitorBlock}${matrixBlock}
+12. **riskReversalText — garantie CONDITIONALA cu BANI INAPOI + bonus pentru deranj**:
+    BUN: "Daca dupa 30 zile combustibilul tau nu a scazut cu cel putin 10%, rambursam integral + 20 LEI pentru bataia de cap. Returnezi fara intrebari, fara argumente."
+    PROST: "30 de zile garantie de returnare." (generic, banned)
+
+13. **urgencyMessage — concret + cifra credibila**:
+    BUN: "ULTIMELE 47 BUC din stocul lunii octombrie"
+    BUN: "OFERTA 1+1 GRATIS valabila pana la epuizare"
+    PROST: "STOC LIMITAT" (generic, vag)
+
+14. **CTA — 1 imperativ scurt + actionabil**:
+    BUN: "Comanda acum" / "Profita acum" / "Vreau si eu"
+    EVITA: "Click aici" / "Mai multe info" / "Continua"
+
+15. **DIACRITICE OBLIGATORII** (a, i, s, t, ts) + ortografie corecta.
+
+16. **LENGTH MODE — STRICT exact N items**:
+    - scurt: 3 benefits, 3 testimoniale, 4 FAQ, 1 featureSection, 3 quickBullets
+    - mediu: 5 benefits, 4 testimoniale, 6 FAQ, 2 featureSections, 4 quickBullets
+    - lung: 7 benefits, 6 testimoniale, 8 FAQ, 3 featureSections, 4 quickBullets
+    NU MAI PUTIN. NU MAI MULT.${personalizationBlock}${briefBlock}${competitorBlock}${matrixBlock}
 
 Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
 
   const schema = `{
-  "productName": "Nume scurt produs (max 60 char)",
-  "headline": "Titlu mare cu PROMISIUNEA pentru client (max 70 char). Ex: 'Copilul Mananca Singur, Fara Mizerie La Masa'",
-  "subheadline": "1 fraza scurta sub titlu cu UVP (max 100 char)",
+  "productName": "Nume specific al produsului (max 60 char). NU 'Produsul nostru' — foloseste numele real.",
+  "headline": "H1 — alege Level sofisticare 1-5, stack 3 hook levers, max 70 char. APLICA Regula 1+2 din REGULI CRITICE.",
+  "subheadline": "Formula 'So That, Without': promisiune + obiectie eliminata. Max 100 char. APLICA Regula 3.",
   "price": ${rp},
   "oldPrice": ${Math.round(rp*1.6)},
   "bumpPrice": ${Math.round(rp*0.2)},
+  "bumpName": "Numele accesoriului bump (max 40 char). Ex: 'Setul de Curatare Suplimentar', 'Cartus de Schimb'. Doar daca bumpPrice > 0.",
   "giftValue": 0,
   "stock": 7,
   "timerMinutes": 14,
   "reviewCount": 1247,
   "phoneNumber": "0700 000 000",
-  "urgencyMessage": "STOC LIMITAT - SE EPUIZEAZA RAPID",
-  "riskReversalText": "Iti oferim 30 de zile sa incerci produsul. Daca nu esti multumit, iti facem rambursul integral, fara intrebari.",
+  "urgencyMessage": "Concret + cifra credibila. NU 'STOC LIMITAT' generic. Ex: 'ULTIMELE 47 BUC din stocul lunii octombrie'.",
+  "riskReversalText": "Garantie CONDITIONALA cu detaliu specific + bonus pentru deranj. Ex: 'Daca dupa 30 zile X nu e Y, rambursam integral + 20 LEI pentru bataia de cap.' APLICA Regula 12.",
   "style": {"primaryColor": "#dc2626", "secondaryColor": "#111111"},
   "quickBullets": [
-    "MAXIM 8 CUVINTE — beneficiu concret scurt",
-    "MAXIM 8 CUVINTE — alt beneficiu",
-    "MAXIM 8 CUVINTE — al treilea",
-    "MAXIM 8 CUVINTE — al patrulea"
+    "MAX 8 cuvinte. Beneficiu MASURABIL/VIZIBIL cu cifra cand posibil. APLICA Regula 4.",
+    "MAX 8 cuvinte. Beneficiu specific produsului.",
+    "MAX 8 cuvinte. NU vag — concret.",
+    "MAX 8 cuvinte."
   ],
   "topBenefits": [
     "PROBLEMA1 — rezolvarea concreta scurta",
@@ -481,30 +536,30 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
     "PROBLEMA3 — rezolvarea concreta scurta"
   ],
   "benefits": [
-    "BENEFICIU 1 cu detaliu",
-    "BENEFICIU 2 cu detaliu",
-    "BENEFICIU 3 cu detaliu",
-    "BENEFICIU 4 cu detaliu",
-    "BENEFICIU 5 cu detaliu"
+    "PAS format: PROBLEMA — REZOLVARE concreta cu cifra/mecanism. APLICA Regula 6.",
+    "Exemplu: 'FARA SCURGERI — garnitura tripla testata la 50 bar fara picatura'",
+    "5/7 items per lengthMode. Caracteristici secundare dar specifice.",
+    "...",
+    "..."
   ],
   "featureSections": [
     {
-      "title": "TITLU SCURT CU CAPS (max 40 char) — descrie UN beneficiu",
-      "bullets": ["punct 1 concret", "punct 2 concret", "punct 3 concret"]
+      "title": "TITLU CAPS max 40 char — focus pe BENEFICIU. APLICA Regula 7.",
+      "bullets": ["punct 1: cifra/mecanism concret", "punct 2: comparison sau spec", "punct 3: rezultat tangibil"]
     },
     {
-      "title": "TITLU SCURT 2 CU CAPS — alt beneficiu",
-      "bullets": ["punct 1", "punct 2", "punct 3"]
+      "title": "Alt beneficiu cheie",
+      "bullets": ["...", "...", "..."]
     }
   ],
   "howItWorks": [
-    {"title": "Pas 1 (3-5 cuvinte)", "desc": "1 fraza cu actiunea concreta"},
-    {"title": "Pas 2", "desc": "1 fraza"},
-    {"title": "Pas 3", "desc": "1 fraza"}
+    {"title": "Pas 1 — 3-5 cuvinte verb imperativ", "desc": "[ACTIUNEA USOARA] o fraza. APLICA Regula 8."},
+    {"title": "Pas 2", "desc": "[REZULTATUL IMEDIAT] o fraza."},
+    {"title": "Pas 3", "desc": "[BENEFICIUL DURABIL] o fraza."}
   ],
   "testimonials": [
-    {"text": "2-3 fraze cu detaliu concret. Cum am folosit, ce s-a schimbat, recomandare scurta.", "name": "Nume RO", "city": "Oras RO", "stars": 5},
-    {"text": "...", "name": "...", "city": "...", "stars": 5},
+    {"text": "4-part: [situatie initiala cu durere] + [actiune: cum a aflat/cand comandat] + [REZULTAT cu cifra/timeline] + [emotie finala]. Max 300 char. APLICA Regula 9.", "name": "Nume real RO", "city": "Oras real RO", "stars": 5},
+    {"text": "Exemplu: 'Plateam 80 LEI pe spalat la mana o data pe luna. Am vazut clipul si am comandat. In prima zi cand am incercat, am terminat in 18 minute fata de 50 minute la mana. Acum nu mai duc masina niciunde.'", "name": "Marius D.", "city": "Cluj-Napoca", "stars": 5},
     {"text": "...", "name": "...", "city": "...", "stars": 5},
     {"text": "...", "name": "...", "city": "...", "stars": 5}
   ],
@@ -517,10 +572,10 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
     {"q": "Pot returna produsul?", "a": "Ai 30 de zile pentru retur fara intrebari. Banii inapoi integral."}
   ],
   "objections": [
-    {"objection": "E prea scump", "rebuttal": "Rebuttal scurt si concret bazat pe valoarea reala"},
-    {"objection": "Nu functioneaza la fel cum scrie", "rebuttal": "Mentioneaza garantia + numar specific de clienti multumiti"},
-    {"objection": "Deja am ceva similar", "rebuttal": "Compara cu alternativa, evidentiaza diferenta cheie"},
-    {"objection": "E fragil / nu rezista mult", "rebuttal": "Mentioneaza materialul, testele, garantia"}
+    {"objection": "Formuleaza obiectia in cuvintele cumparatorului real, NU vag.", "rebuttal": "Rebuttal CONTEXTUAL cu cifra/spec/comparison concreta. APLICA Regula 11."},
+    {"objection": "Exemplu: 'E prea scump pentru ce ofera'", "rebuttal": "Calculezi: 5 LEI / utilizare pe durata 18 luni. O cafea costa 12 LEI dar dispare in 10 minute."},
+    {"objection": "Exemplu: 'Nu functioneaza la masinile mele vechi'", "rebuttal": "Compatibil OBD-II standard - orice masina dupa 1996. Verifica priza diagnostic dedesubtul volanului."},
+    {"objection": "...", "rebuttal": "..."}
   ],
   "popup": ${popupEnabled ? `{
     "goal": "${popupGoal || 'discount'}",
