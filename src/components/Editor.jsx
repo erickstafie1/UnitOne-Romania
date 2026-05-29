@@ -31,6 +31,58 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   const [blocksSearch, setBlocksSearch] = useState('')
   // Popup-uri detectate in canvas — pentru side tab (clickabil ca sa selectezi popup-ul)
   const [popups, setPopups] = useState([])
+  // Popup edit mode — cand activ, ascunde restul LP din canvas, lasa doar popup-ul
+  // afisat centrat pe overlay gri (ca in GemPages cand editezi un popup).
+  const [editPopupId, setEditPopupId] = useState(null)
+  const editPopupIdRef = useRef(null)
+  useEffect(() => { editPopupIdRef.current = editPopupId }, [editPopupId])
+
+  // Inject CSS in canvas iframe cand edit mode activ — ascunde restul LP-ului,
+  // centreaza popup-ul pe overlay gri (GemPages-style edit experience).
+  useEffect(() => {
+    if (!gjsRef.current) return
+    try {
+      const doc = gjsRef.current.Canvas.getDocument()
+      if (!doc) return
+      const STYLE_ID = 'unitone-popup-edit-mode-style'
+      let styleEl = doc.getElementById(STYLE_ID)
+      if (!editPopupId) {
+        if (styleEl) styleEl.remove()
+        return
+      }
+      const css = `
+        body { background: rgba(0,0,0,0.55) !important; min-height: 100vh; }
+        body > * { display: none !important; }
+        body > [data-popup-edit-id="${editPopupId}"],
+        body [data-popup-edit-id="${editPopupId}"] {
+          display: block !important;
+          position: fixed !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          z-index: 9999 !important;
+        }
+      `
+      if (!styleEl) {
+        styleEl = doc.createElement('style')
+        styleEl.id = STYLE_ID
+        doc.head.appendChild(styleEl)
+      }
+      styleEl.textContent = css
+      // Mark popup with data attr so CSS can target it
+      const wrapper = gjsRef.current.getWrapper()
+      wrapper.find('.unitone-popup-block').forEach(c => {
+        const el = c.getEl && c.getEl()
+        if (!el) return
+        if (c.getId() === editPopupId) {
+          el.setAttribute('data-popup-edit-id', editPopupId)
+        } else {
+          el.removeAttribute('data-popup-edit-id')
+        }
+      })
+    } catch (e) { console.warn('popup edit-mode CSS failed:', e.message) }
+  }, [editPopupId, popups])
 
   // Filtru pe textul de search — ascunde block-urile care nu match-uiesc
   useEffect(() => {
@@ -130,6 +182,26 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       editor.on('component:add', refreshPopups)
       editor.on('component:remove', refreshPopups)
       editor.on('component:update:attributes', refreshPopups)
+
+      // Expose editor instance for popup edit-mode CSS injection (in JSX below)
+      // Hook event listener pentru click-out-popup → exit edit mode
+      editor.on('component:selected', (model) => {
+        try {
+          // Daca user click pe alt component decat popup-ul curent in edit mode,
+          // iesim din edit mode (asa user-ul scapa de mode fara button special).
+          if (editPopupIdRef.current) {
+            const sel = model
+            const isPopupOrChild = sel && (
+              sel.get('type') === 'unitone-popup' ||
+              sel.parent() && sel.parents().some(p => p.get('type') === 'unitone-popup')
+            )
+            if (!isPopupOrChild) {
+              // user clicked outside popup → stay in edit mode (don't auto-exit)
+              // because component:selected fires for in-canvas clicks
+            }
+          }
+        } catch (e) {}
+      })
 
       if (data.fromDashboard && data.editorHtml) {
         // BEST PATH: the page was published with the metafield-source pipeline
@@ -770,7 +842,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
         <div className="ue-canvas" style={{ position: 'relative' }}>
           <div ref={editorRef} style={{ width:'100%', height:'100%' }} />
-          {/* Side tab flotant pentru popup-uri — click selecteaza popup-ul */}
+          {/* Side tab flotant pentru popup-uri — click intra in popup edit mode (GemPages-style) */}
           {popups.length > 0 && (
             <div style={{
               position: 'absolute',
@@ -779,41 +851,53 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
               zIndex: 50,
               display: 'flex',
               flexDirection: 'column',
-              gap: 6
+              gap: 6,
+              width: 'auto',
+              alignItems: 'flex-end',
+              pointerEvents: 'none'
             }}>
-              {popups.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    try {
-                      if (gjsRef.current && p.component) {
-                        gjsRef.current.select(p.component)
-                        // Scroll selectat in view
-                        const el = p.component.getEl && p.component.getEl()
-                        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                      }
-                    } catch (e) {}
-                  }}
-                  title={`Selectează ${p.name}`}
-                  style={{
-                    writingMode: 'vertical-rl',
-                    transform: 'rotate(180deg)',
-                    background: '#2c6ecb',
-                    color: '#fff',
-                    border: 0,
-                    borderRadius: '6px 0 0 6px',
-                    padding: '12px 6px',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    letterSpacing: 0.5,
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-                  }}
-                >
-                  {p.name}
-                </button>
-              ))}
+              {popups.map(p => {
+                const isEditing = editPopupId === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      try {
+                        if (isEditing) {
+                          setEditPopupId(null)
+                        } else {
+                          setEditPopupId(p.id)
+                          if (gjsRef.current && p.component) {
+                            gjsRef.current.select(p.component)
+                          }
+                        }
+                      } catch (e) {}
+                    }}
+                    title={isEditing ? 'Ieși din editare popup' : `Editează ${p.name}`}
+                    style={{
+                      writingMode: 'vertical-rl',
+                      transform: 'rotate(180deg)',
+                      background: isEditing ? '#dc2626' : '#2c6ecb',
+                      color: '#fff',
+                      border: 0,
+                      borderRadius: '6px 0 0 6px',
+                      padding: '14px 8px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      letterSpacing: 0.5,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      width: 32,
+                      flex: '0 0 auto',
+                      pointerEvents: 'auto',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {isEditing ? `✕ Închide ${p.name}` : p.name}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -1969,7 +2053,7 @@ function EditorStyles() {
         padding: 0;
         position: relative;
       }
-      .ue-canvas > div {
+      .ue-canvas > div:first-child {
         width: 100% !important;
         height: 100% !important;
       }
