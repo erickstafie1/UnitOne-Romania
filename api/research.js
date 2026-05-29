@@ -337,6 +337,7 @@ function callClaudeResearch(productInfo) {
 Misiune: pornind de la un produs (descriere + specs), GANDESTE PROFUND (foloseste extended thinking) ca un consumer researcher care a citit zeci de review-uri Amazon, mii de comentarii forum si zeci de reclame de la competitori. Apoi creeaza un AVATAR PSIHOLOGIC complet — nu generic.
 
 Avatarul include:
+0. ARCHETYPE LABEL — eticheta scurta 2-3 cuvinte care surprinde esenta tipului de cumparator + prenume. Format: "[Adjectiv]-[Driven/Focused/Seeking/First] [Prenume]". Exemple: "Utility-Driven Victor", "Skeptical-Bargain Maria", "Status-Seeking Andrei", "Family-First Ioana", "Comfort-Seeking Cristina". Folosit ca tag vizual pe card.
 1. UN NUME DE PERSOANA (prenume romanesc real) + varsta concreta + rol/identitate (ex: "Maria, 38, mama unica din Cluj-Napoca")
 2. BIO scurt (2-3 fraze: cine e + ce situatie + ce o macina ZILNIC) — scrii ca si cum ai descrie-o intr-o intalnire de research
 3. DEMOGRAFICE complete (varsta exacta, sex, locatie, venit lunar in LEI, ocupatie, status familial, identitati culturale)
@@ -375,6 +376,7 @@ Returneaza DOAR JSON valid (fara markdown, fara backtick-uri, fara explicatii).`
         (productInfo.specs?.length ? 'Specificatii:\n- ' + productInfo.specs.join('\n- ') + '\n' : '') + '\n' +
         'Construieste AVATARUL complet si returneaza JSON cu aceasta schema EXACTA:\n' +
         '{\n' +
+        '  "archetype": "[Adjectiv]-[Driven/Focused/Seeking/First] [Prenume] (2-3 cuvinte, ex: Utility-Driven Victor, Skeptical-Bargain Maria)",\n' +
         '  "name": "Prenume RO + varsta + rol (ex: Maria, 38, mama din Cluj)",\n' +
         '  "bio": "2-3 fraze descriere: cine e + situatie + ce o macina zilnic",\n' +
         '  "productSummary": "1-2 fraze: ce e produsul si pentru cine",\n' +

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, ProgressBar, Box, Select, Divider } from '@shopify/polaris'
+import { Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, ProgressBar, Box, Select, Divider, Modal } from '@shopify/polaris'
 
 // Mic chip pentru demografice (varsta, oras, ocupatie)
 function Chip({ text }) {
@@ -128,7 +128,7 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   const [icp, setIcp] = useState(null)
   const [productInfo, setProductInfo] = useState(null)
   const [researchImages, setResearchImages] = useState([])
-  const [showEditDetails, setShowEditDetails] = useState(false)
+  const [icpModalOpen, setIcpModalOpen] = useState(false)
 
   // Phases — 'pick' | 'roadmap-research' | 'icp-review' | 'roadmap-generate' | 'done'
   const [phase, setPhase] = useState('pick')
@@ -583,7 +583,7 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">Avatar cumpărător</Text>
                 <Text as="p" tone="subdued">
-                  AI a analizat produsul și a construit avatarul psihologic. Verifică-l rapid și apasă Generează.
+                  AI a construit avatarul psihologic. Click pe card pentru a vedea / edita toate detaliile.
                 </Text>
               </BlockStack>
 
@@ -593,115 +593,123 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
                 </Text>
               </Banner>
 
-              {/* Persona card — Atlas-style */}
-              <div style={{
-                background: '#fff',
-                border: '1px solid #e1e3e5',
-                borderRadius: 12,
-                padding: 24,
-                display: 'flex',
-                gap: 18,
-                alignItems: 'flex-start'
-              }}>
+              <style>{`
+                .ue-icp-preview {
+                  text-align:left; background:#fff; border:1px solid #e1e3e5;
+                  border-radius:12px; padding:18px; display:flex; gap:16px;
+                  align-items:flex-start; cursor:pointer; font-family:inherit;
+                  width:100%; transition:border-color .15s, box-shadow .15s, transform .15s;
+                }
+                .ue-icp-preview:hover {
+                  border-color:#2c6ecb; box-shadow:0 4px 14px rgba(44,110,203,.14);
+                  transform:translateY(-1px);
+                }
+                .ue-icp-preview:hover .ue-icp-arrow { transform:translateX(3px); color:#2c6ecb; }
+                .ue-icp-arrow { transition:transform .15s, color .15s; }
+              `}</style>
+
+              {/* Preview card compact — click → modal cu toate detaliile */}
+              <button type="button" onClick={() => setIcpModalOpen(true)} className="ue-icp-preview">
                 <div style={{
-                  width: 64, height: 64,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#2c6ecb,#5b8def)',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 28,
-                  fontWeight: 700,
-                  flexShrink: 0
+                  width: 56, height: 56, borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#eef2ff,#c7d2fe)',
+                  color: '#4338ca', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
-                  {(icp.name || 'A').charAt(0).toUpperCase()}
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
                 </div>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">{icp.name || 'Avatar'}</Text>
-                  <Text as="p" variant="bodySm" tone="subdued">{icp.bio || ''}</Text>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {icp.demographics?.age && <Chip text={'Vârstă: ' + icp.demographics.age} />}
-                    {icp.demographics?.occupation && <Chip text={icp.demographics.occupation} />}
-                    {icp.demographics?.location && <Chip text={icp.demographics.location} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
+                    {icp.archetype || 'Avatar cumpărător'}
                   </div>
-                </BlockStack>
-              </div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 6 }}>
+                    {icp.name || 'Avatar fără nume'}
+                  </div>
+                  <div style={{
+                    fontSize: 13, color: '#6b7280', lineHeight: 1.5,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                  }}>
+                    {icp.bio || ''}
+                  </div>
+                </div>
+                <div className="ue-icp-arrow" style={{ color: '#9ca3af', fontSize: 13, flexShrink: 0, marginTop: 6, fontWeight: 600 }}>
+                  Detalii →
+                </div>
+              </button>
 
-              {/* Compact summary cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                <InfoCard
-                  emoji="🚩"
-                  label="Top 3 dureri"
-                  items={(icp.pains || icp.painPoints?.map(p => p.title) || []).slice(0, 3)}
-                />
-                <InfoCard
-                  emoji="🌟"
-                  label="Top 3 dorințe"
-                  items={(icp.desires || icp.longTermAspirations || []).slice(0, 3)}
-                />
-                <InfoCard
-                  emoji="🧠"
-                  label="Frici principale"
-                  items={(icp.keyFears || icp.beliefBarriers || []).slice(0, 3)}
-                />
-              </div>
-
-              {/* Edit details toggle */}
-              <Button
-                variant="plain"
-                onClick={() => setShowEditDetails(!showEditDetails)}
-                disclosure={showEditDetails ? 'up' : 'down'}
+              {/* Modal cu toate detaliile editabile */}
+              <Modal
+                open={icpModalOpen}
+                onClose={() => setIcpModalOpen(false)}
+                title={icp.archetype || 'Avatar cumpărător'}
+                size="large"
+                primaryAction={{ content: 'Gata', onAction: () => setIcpModalOpen(false) }}
+                secondaryActions={[{ content: 'Anulează', onAction: () => setIcpModalOpen(false) }]}
               >
-                {showEditDetails ? 'Ascunde editarea detaliilor' : 'Editează în detaliu'}
-              </Button>
+                <Modal.Section>
+                  <BlockStack gap="500">
+                    {/* Persona header — gradient cu icon mare */}
+                    <div style={{
+                      background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)',
+                      border: '1px solid #ddd6fe',
+                      borderRadius: 14, padding: 22,
+                      display: 'flex', gap: 20, alignItems: 'center'
+                    }}>
+                      <div style={{
+                        width: 72, height: 72, borderRadius: '50%',
+                        background: 'linear-gradient(135deg,#6366f1,#4338ca)',
+                        color: '#fff', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 14px rgba(67,56,202,.28)'
+                      }}>
+                        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                          <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
+                          {icp.archetype || 'Avatar'}
+                        </div>
+                        <Text as="h3" variant="headingLg">{icp.name || 'Avatar'}</Text>
+                        <div style={{ marginTop: 4 }}>
+                          <Text as="p" variant="bodyMd" tone="subdued">{icp.bio || ''}</Text>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                          {icp.demographics?.age && <Chip text={'Vârstă: ' + icp.demographics.age} />}
+                          {icp.demographics?.occupation && <Chip text={icp.demographics.occupation} />}
+                          {icp.demographics?.location && <Chip text={icp.demographics.location} />}
+                          {icp.demographics?.income && <Chip text={icp.demographics.income} />}
+                        </div>
+                      </div>
+                    </div>
 
-              {showEditDetails && (
-                <BlockStack gap="400">
-                  <Divider />
-                  <TextField
-                    label="Nume avatar"
-                    value={icp.name || ''}
-                    onChange={(v) => updateIcpField('name', v)}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Bio scurt"
-                    value={icp.bio || ''}
-                    onChange={(v) => updateIcpField('bio', v)}
-                    multiline={2}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Dureri (una per linie)"
-                    value={(icp.pains || []).join('\n')}
-                    onChange={(v) => updateIcpField('pains', v.split('\n').filter(s => s.trim()))}
-                    multiline={4}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Dorințe (una per linie)"
-                    value={(icp.desires || []).join('\n')}
-                    onChange={(v) => updateIcpField('desires', v.split('\n').filter(s => s.trim()))}
-                    multiline={3}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Frici / credințe limitative (una per linie)"
-                    value={(icp.beliefBarriers || []).join('\n')}
-                    onChange={(v) => updateIcpField('beliefBarriers', v.split('\n').filter(s => s.trim()))}
-                    multiline={3}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Unique Angle"
-                    value={icp.uniqueAngle || ''}
-                    onChange={(v) => updateIcpField('uniqueAngle', v)}
-                    multiline={2}
-                    autoComplete="off"
-                  />
-                </BlockStack>
-              )}
+                    {/* Quick-scan cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+                      <InfoCard emoji="🚩" label="Top 3 dureri" items={(icp.pains || icp.painPoints?.map(p => p.title) || []).slice(0, 3)} />
+                      <InfoCard emoji="🌟" label="Top 3 dorințe" items={(icp.desires || icp.longTermAspirations || []).slice(0, 3)} />
+                      <InfoCard emoji="🧠" label="Frici principale" items={(icp.keyFears || icp.beliefBarriers || []).slice(0, 3)} />
+                    </div>
+
+                    <Divider />
+
+                    {/* Editable fields */}
+                    <Text as="h4" variant="headingMd">Editează detaliile</Text>
+                    <BlockStack gap="300">
+                      <TextField label="Etichetă archetype" value={icp.archetype || ''} onChange={(v) => updateIcpField('archetype', v)} autoComplete="off" helpText="Ex: Utility-Driven Victor, Skeptical-Bargain Maria" />
+                      <TextField label="Nume avatar" value={icp.name || ''} onChange={(v) => updateIcpField('name', v)} autoComplete="off" />
+                      <TextField label="Bio scurt" value={icp.bio || ''} onChange={(v) => updateIcpField('bio', v)} multiline={2} autoComplete="off" />
+                      <TextField label="Dureri (una per linie)" value={(icp.pains || []).join('\n')} onChange={(v) => updateIcpField('pains', v.split('\n').filter(s => s.trim()))} multiline={4} autoComplete="off" />
+                      <TextField label="Dorințe (una per linie)" value={(icp.desires || []).join('\n')} onChange={(v) => updateIcpField('desires', v.split('\n').filter(s => s.trim()))} multiline={3} autoComplete="off" />
+                      <TextField label="Frici / credințe limitative (una per linie)" value={(icp.beliefBarriers || []).join('\n')} onChange={(v) => updateIcpField('beliefBarriers', v.split('\n').filter(s => s.trim()))} multiline={3} autoComplete="off" />
+                      <TextField label="Unique Angle" value={icp.uniqueAngle || ''} onChange={(v) => updateIcpField('uniqueAngle', v)} multiline={2} autoComplete="off" />
+                    </BlockStack>
+                  </BlockStack>
+                </Modal.Section>
+              </Modal>
             </BlockStack>
           )}
         </div>
