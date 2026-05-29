@@ -443,11 +443,6 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
                 )}
               </div>
 
-              {researching && (
-                <Banner tone="info">
-                  AI face research pe produs și construiește ICP-ul... Durează ~30-60 secunde.
-                </Banner>
-              )}
             </BlockStack>
           )}
 
