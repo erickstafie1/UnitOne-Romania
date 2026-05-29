@@ -159,7 +159,7 @@ function buildCodFormUniversal() {
 // Trigger types:
 //   - data-trigger="time" + data-delay=N → arata dupa N secunde
 //   - data-trigger="scroll" → arata cand userul scrolleaza peste pozitia block-ului
-function buildPopupHandler() {
+function buildPopupHandler(hadPopupInFinalHtml) {
   // Citeste TOATE traits-urile (data-*) de pe .unitone-popup-block si
   // construieste overlay-ul cu styles aplicate (overlay color/opacity,
   // popup bg/corner/shadow/position, entrance effect, close btn config).
@@ -173,7 +173,7 @@ function buildPopupHandler() {
         'var dbg=document.createElement("div");',
         'dbg.style.cssText="position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px;text-align:center;z-index:999999;font:bold 13px monospace";',
         'var blocks=document.querySelectorAll(".unitone-popup-block");',
-        'dbg.textContent="[UNITONE-POPUP DEBUG] handler ran, found "+blocks.length+" popup(s) in DOM";',
+        'dbg.textContent="[UNITONE-POPUP DEBUG] handler ran. DOM popups: "+blocks.length+" | server detected popup in finalHtml: ' + (hadPopupInFinalHtml ? 'YES' : 'NO') + '";',
         'document.body.appendChild(dbg);',
         'setTimeout(function(){if(dbg.parentNode)dbg.parentNode.removeChild(dbg)},6000);',
       '}catch(e){}',
@@ -608,7 +608,13 @@ module.exports = async function handler(req, res) {
     // Daca user-ul a adaugat popup-uri (block "unitone-popup-block"), atasam
     // scriptul universal care le transforma in overlay + trigger. Skip daca
     // nu exista popup pe pagina ca sa nu poluam DOM-ul cu script nefolosit.
-    if (finalHtml.includes('unitone-popup-block')) {
+    // DIAGNOSTIC: log if popup detected in finalHtml. User reports popup
+    // missing from storefront DOM → suspect getHtml() not exporting it.
+    const hasPopup = finalHtml.includes('unitone-popup-block')
+    console.log('[publish] popup detected in finalHtml:', hasPopup, 'html size KB:', Math.round(finalHtml.length / 1024))
+    // ALWAYS add handler + visible banner for debug — confirms script
+    // execution on storefront regardless of popup presence.
+    if (true) {
       // Anti-flash + force-hide: chiar daca theme-ul Shopify strip-uieste
       // <style> tag-ul, fortam inline display:none pe TOATE elementele
       // .unitone-popup-block prin regex. Handler-ul ruleaza, cloneaza in
@@ -629,10 +635,10 @@ module.exports = async function handler(req, res) {
           return '<div' + attrs + ' style="' + forceHide + '">'
         }
       )
-      console.log('[publish] popup found, regex applied, handler prepended')
+      console.log('[publish] handler always prepended for diagnostic, popup found in finalHtml:', hasPopup)
       // Handler script PREPENDED nu appended — daca Shopify trunchiaza
       // body_html la 65535 chars, scriptul ramane intact la inceput.
-      finalHtml = buildPopupHandler() + '<style>.unitone-popup-block{display:none!important;visibility:hidden!important}.unitone-popup-clone{display:block!important;visibility:visible!important}</style>' + finalHtml
+      finalHtml = buildPopupHandler(hasPopup) + '<style>.unitone-popup-block{display:none!important;visibility:hidden!important}.unitone-popup-clone{display:block!important;visibility:visible!important}</style>' + finalHtml
     }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
