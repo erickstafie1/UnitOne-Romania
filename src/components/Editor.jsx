@@ -1304,25 +1304,34 @@ function addBlocks(editor, data) {
   // data-attributes care publish.js le citeste si seteaza comportamentul.
   try {
     editor.DomComponents.addType('unitone-popup', {
-      isComponent: el => el && el.classList && el.classList.contains('unitone-popup-block'),
+      isComponent: el => {
+        if (el && el.classList && el.classList.contains('unitone-popup-block')) {
+          return { type: 'unitone-popup' }
+        }
+      },
       model: {
         defaults: {
           name: 'Popup',
           droppable: true,
+          selectable: true,
+          hoverable: true,
+          attributes: { 'data-trigger': 'time', 'data-delay': '30', 'data-goal': 'discount' },
           traits: [
             {
-              type: 'select', label: 'Trigger', name: 'data-trigger', changeProp: 0,
+              type: 'select', label: 'Trigger',
+              name: 'data-trigger',
               options: [
-                { id: 'time', name: 'După X secunde' },
-                { id: 'scroll', name: 'La scroll past popup' }
+                { value: 'time', name: 'După X secunde' },
+                { value: 'scroll', name: 'La scroll past popup' }
               ]
             },
-            { type: 'number', label: 'Secunde (doar pentru trigger Time)', name: 'data-delay', placeholder: '30', min: 1, max: 600 },
+            { type: 'number', label: 'Secunde (delay)', name: 'data-delay', placeholder: '30', min: 1, max: 600 },
             {
-              type: 'select', label: 'Goal', name: 'data-goal', changeProp: 0,
+              type: 'select', label: 'Goal',
+              name: 'data-goal',
               options: [
-                { id: 'discount', name: 'Reducere (cod)' },
-                { id: 'order', name: 'Formular comandă (scroll la COD)' }
+                { value: 'discount', name: 'Reducere (cod)' },
+                { value: 'order', name: 'Formular comandă (scroll la COD)' }
               ]
             }
           ]
@@ -1344,7 +1353,7 @@ function addBlocks(editor, data) {
     //   2. cloneaza in overlay fixed-position
     //   3. wireaza trigger (time / scroll past) si CTA (discount / order)
     return [
-      `<div class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="discount" style="margin:24px auto;max-width:440px">`,
+      `<div data-gjs-type="unitone-popup" class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="discount" style="margin:24px auto;max-width:440px">`,
       `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center">⚠ POPUP — Configurează trigger/delay/goal în panelul Settings (dreapta). Pe pagina publicată apare ca overlay.</div>`,
       `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
       `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
