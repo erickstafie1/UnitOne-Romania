@@ -9,7 +9,77 @@ const https = require('https')
 const http = require('http')
 const { prepareShopifyAuth } = require('./_shopifyAuth')
 
-// ─── Scraping helpers (re-used / adapted din generate.js) ───
+// ─── Claude web_search ca scraper pentru URL sources ───
+// Inlocuieste ScraperAPI cu tool-ul web_search build-in al Claude (sonnet 4.5).
+// Claude face cautare web pentru URL/produs si returneaza JSON structurat cu
+// title/description/specs/priceUSD/images. Fara dependinte externe.
+function scrapeViaClaude(url, sourceHint) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
+  const sourceLabel = {
+    aliexpress: 'AliExpress',
+    amazon: 'Amazon',
+    alibaba: 'Alibaba',
+    competitor: 'magazin online (RO)'
+  }[sourceHint] || sourceHint || 'magazin online'
+  const body = JSON.stringify({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 6000,
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+    messages: [{
+      role: 'user',
+      content: 'Trebuie sa extragi informatii reale despre acest produs de pe ' + sourceLabel + '.\n' +
+        'URL: ' + url + '\n\n' +
+        'Foloseste tool-ul web_search ca sa gasesti pagina si extragi info. Daca pagina e blocata, cauta produsul dupa nume sau ID din URL ca sa gasesti aceleasi date pe alt site.\n\n' +
+        'Returneaza DOAR JSON valid (fara markdown, fara explicatii):\n' +
+        '{\n' +
+        '  "title": "Numele produsului in romana sau engleza (max 100 char)",\n' +
+        '  "description": "Descriere a produsului in 3-5 fraze: ce face, caracteristici principale, public tinta",\n' +
+        '  "specs": ["Spec 1 (ex: \'Baterie 40h\')", "Spec 2", "..." 3-8 specs concrete],\n' +
+        '  "priceUSD": pret_in_USD_sau_0_daca_nu_stii,\n' +
+        '  "images": ["url_imagine_1", "..."] (0-6 url-uri publice)\n' +
+        '}'
+    }]
+  })
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
+        'Content-Length': Buffer.byteLength(body)
+      },
+      timeout: 120000
+    }, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString())
+          if (data.error) return reject(new Error('Claude scraper: ' + data.error.message))
+          const blocks = data.content || []
+          const text = blocks.filter(c => c.type === 'text').map(c => c.text || '').join('')
+          const parsed = extractFirstJSON({ text })
+          resolve({
+            title: String(parsed.title || '').slice(0, 100),
+            description: String(parsed.description || '').slice(0, 1500),
+            specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(String) : [],
+            priceUSD: Number(parsed.priceUSD) || 0,
+            images: Array.isArray(parsed.images) ? parsed.images.filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 6) : []
+          })
+        } catch (e) { reject(e) }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('Claude scraper timeout 120s')) })
+    req.write(body)
+    req.end()
+  })
+}
+
+// ─── Scraping helpers (kept for fallback path) ───
 function fetchWithScraper(url) {
   const apiKey = process.env.SCRAPER_API_KEY
   if (!apiKey) return fetchDirect(url)
@@ -332,28 +402,33 @@ module.exports = async function handler(req, res) {
       images = (p.images || []).map(i => i.src).filter(Boolean).slice(0, 6)
     } else {
       // URL-based sources: aliexpress, amazon, alibaba, competitor
+      // Folosim Claude web_search (sonnet 4.5) — gratis fata de ScraperAPI,
+      // nu necesita config. Daca esueaza, fallback la fetchWithScraper.
       if (!url) return res.status(400).json({ error: 'Lipseste URL' })
-      const hasScraperKey = !!process.env.SCRAPER_API_KEY
-      console.log('[research] fetching URL:', url.slice(0, 80), 'scraperKey:', hasScraperKey ? 'YES' : 'NO (using direct)')
-      const html = await fetchWithScraper(url).catch(e => { console.log('[research] fetch error:', e.message); return '' })
-      console.log('[research] HTML length:', html.length)
-      if (html.length < 500) {
-        return res.status(502).json({
-          error: hasScraperKey
-            ? 'Site-ul ne-a blocat (' + html.length + ' bytes returnati). Incearca alt URL, foloseste poza, sau pune un link Shopify din magazinul tau.'
-            : 'SCRAPER_API_KEY lipseste — fetch direct la AliExpress/Amazon e blocat. Configureaza cheia in Vercel env vars sau foloseste upload poza/Shopify product.'
-        })
+      console.log('[research] scraping via Claude web_search:', url.slice(0, 80))
+      try {
+        const claudeData = await scrapeViaClaude(url, source)
+        productInfo.title = claudeData.title
+        productInfo.description = claudeData.description
+        productInfo.specs = claudeData.specs
+        productInfo.priceUSD = claudeData.priceUSD
+        images = claudeData.images
+        console.log('[research] Claude extracted:', { title: productInfo.title.slice(0, 60), priceUSD: productInfo.priceUSD, descLen: productInfo.description.length, specs: productInfo.specs.length, images: images.length })
+      } catch (e) {
+        console.log('[research] Claude scraper failed:', e.message, '— fallback to fetchWithScraper')
+        // Fallback: direct fetch + regex extract (works if SCRAPER_API_KEY exista)
+        const html = await fetchWithScraper(url).catch(() => '')
+        if (html.length > 500) {
+          const aliMeta = extractAliMeta(html)
+          const genericMeta = extractGenericMeta(html)
+          const pick = (aliMeta.title?.length > 5 && aliMeta.description?.length > 30) ? aliMeta : genericMeta
+          productInfo.title = pick.title || aliMeta.title || genericMeta.title || ''
+          productInfo.priceUSD = pick.priceUSD || aliMeta.priceUSD || genericMeta.priceUSD || 0
+          productInfo.description = pick.description || aliMeta.description || genericMeta.description || ''
+          productInfo.specs = pick.specs?.length ? pick.specs : (aliMeta.specs?.length ? aliMeta.specs : genericMeta.specs)
+          images = extractImages(html)
+        }
       }
-      // Try BOTH extractors si pick best (cel cu titlu valid + cel mai mult continut)
-      const aliMeta = extractAliMeta(html)
-      const genericMeta = extractGenericMeta(html)
-      const pick = (aliMeta.title?.length > 5 && aliMeta.description?.length > 30) ? aliMeta : genericMeta
-      productInfo.title = pick.title || aliMeta.title || genericMeta.title || ''
-      productInfo.priceUSD = pick.priceUSD || aliMeta.priceUSD || genericMeta.priceUSD || 0
-      productInfo.description = pick.description || aliMeta.description || genericMeta.description || ''
-      productInfo.specs = pick.specs?.length ? pick.specs : (aliMeta.specs?.length ? aliMeta.specs : genericMeta.specs)
-      images = extractImages(html)
-      console.log('[research] extracted:', { title: productInfo.title.slice(0, 60), priceUSD: productInfo.priceUSD, descLen: productInfo.description.length, specs: productInfo.specs.length, images: images.length })
     }
 
     // Detect scraping failures BUT pass through if we got SOMETHING usable.
