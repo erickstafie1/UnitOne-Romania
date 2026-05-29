@@ -128,13 +128,16 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
       // Click delegat pe popup-body empty → schimba tab-ul Sections/Elements
       // pe Elements (asa cum face GemPages — "add elements" hint clickabil).
+      // Folosim closest() ca click-urile pe ::before/::after pseudo sau pe
+      // copii sa fie capturate corect.
       const EMPTY_HANDLER_FLAG = '__unitoneEmptyHandlerBound'
       if (!doc[EMPTY_HANDLER_FLAG]) {
         doc[EMPTY_HANDLER_FLAG] = true
-        doc.addEventListener('click', (ev) => {
-          const target = ev.target
-          if (!target || !target.classList) return
-          if (target.classList.contains('unitone-popup-body') && target.children.length === 0) {
+        doc.addEventListener('mousedown', (ev) => {
+          const t = ev.target
+          if (!t || !t.closest) return
+          const popupBody = t.closest('.unitone-popup-body')
+          if (popupBody && popupBody.children.length === 0) {
             ev.preventDefault()
             ev.stopPropagation()
             setBlocksTab('element')

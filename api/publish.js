@@ -587,17 +587,20 @@ module.exports = async function handler(req, res) {
       finalHtml = finalHtml.replace(
         /<div\b([^>]*\bclass="[^"]*\bunitone-popup-block\b[^"]*"[^>]*)>/gi,
         (match, attrs) => {
-          // Daca are deja display:none in style, nu mai duplicam
-          if (/style="[^"]*display\s*:\s*none/i.test(attrs)) return match
-          // Daca are style attr existent, prepend display:none
+          // Folosim display:none !important inline ca sa invingem ORICE
+          // theme CSS care ar putea forta display:block (Dawn etc.)
+          const forceHide = 'display:none !important;visibility:hidden !important;'
+          if (/style="[^"]*display\s*:\s*none\s*!important/i.test(attrs)) return match
           if (/style="/i.test(attrs)) {
-            return '<div' + attrs.replace(/style="/i, 'style="display:none;') + '>'
+            // Inlocuieste eventual display:none simplu si prepend cu !important
+            const cleaned = attrs.replace(/display\s*:\s*none\s*;?/gi, '')
+            return '<div' + cleaned.replace(/style="/i, 'style="' + forceHide) + '>'
           }
-          // Fara style attr — adaugam
-          return '<div' + attrs + ' style="display:none">'
+          return '<div' + attrs + ' style="' + forceHide + '">'
         }
       )
-      finalHtml = '<style>.unitone-popup-block{display:none!important}.unitone-popup-clone{display:block!important}</style>' + finalHtml + buildPopupHandler()
+      console.log('[publish] popup found, regex applied, handler appended')
+      finalHtml = '<style>.unitone-popup-block{display:none!important;visibility:hidden!important}.unitone-popup-clone{display:block!important;visibility:visible!important}</style>' + finalHtml + buildPopupHandler()
     }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
