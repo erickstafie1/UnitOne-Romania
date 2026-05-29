@@ -518,6 +518,89 @@ REGULI DIRECT-RESPONSE (verificate pe fiecare camp text):
 - 1 SINGUR CTA IMPERATIV per sectiune (verbe: "Comanda", "Profita", "Vreau", "Adauga"; NU "Click aici", "Continua")
 ============================================================
 
+============================================================
+STRUCTURA CANONICA LP COD ROMANIA — observata pe 9 LP-uri reale de high-conversion (CarEco, Plasa Magnetica, CleanPro, Furtun Gradina 60m/45m, Set Presiune, StopFisuri Adeziv, Stickere). Fiecare LP genereat trebuie sa respecte ACEASTA ORDINE + sa includa elementele marcate "obligatoriu".
+
+ORDINE SECTIUNI (Question Ladder — fiecare raspunde la o obiectie naturala in mintea cumparatorului):
+
+1. STICKY TOP BAR (telefon + livrare rapida) — "0700 XXX XXX · 🚚 LIVRARE RAPIDA · PLATA LA LIVRARE"
+   Raspunde: "Cum comand?" Construieste credibilitate brand.
+
+2. HERO SECTION (obligatoriu):
+   - Promo badge top-left ("1+1 GRATIS" / "REDUCERE -50%" / "OFERTA ASTAZI")
+   - Product image dominant + small thumbnails 3-4
+   - Star rating (5★) + N reviews count: "5★ 1.247+ Clienti Multumiti"
+   - HEADLINE H1 (Sophistication Level adaptat) — pattern dovedit:
+     * "INCEPE SA [BENEFICIU] CU [PRODUS]" (pattern interrupt)
+     * "[BENEFICIU SPECIFIC IN CIFRE] CU UN SIMPLU [PRODUS]"
+     * "[VERB IMPERATIV] [DURERE] IN [TIMEFRAME]"
+   - Subheadline cu UVP + 1 obiectie eliminata (formula "So That, Without")
+   - Price block: OLDPRICE TAIAT + price MARE colorat + procent reducere badge + "X LEI economisesti"
+   - CTA principal — BUTON VERDE/PORTOCALIU MARE "🛒 COMANDA ACUM"
+   - Trust micro-strip: ✓ Livrare 24-48h · 🚚 Plata ramburs · ↩ Retur 30 zile
+   Raspunde: "Sunt in locul potrivit?"
+
+3. QUICK BULLETS — 4 beneficii MASURABILE max 8 cuvinte fiecare cu icon ✓
+   Raspunde: "Ce primesc concret?"
+
+4. TESTIMONIAL SOCIAL PROOF EARLY (sub fold) — 1-2 carduri cu FOTO real customer + nume + oras + 5★ + text scurt cu DETALIU CONCRET
+   Raspunde: "Mai a folosit cineva asta?"
+
+5. TOP 3 BENEFITS (PAS framework) — fiecare in card cu icon mare + headline CAPS + descriere 1-2 fraze
+   Raspunde: "Ma intelege cineva?"
+
+6. FEATURE SECTION 1 (IMG + TEXT bullets) — un beneficiu cheie explicat
+   Optional sublinie CAPS gen "EASY TO INSTALL" / "FUNCTIONEAZA PE ORICE..."
+   Raspunde: "Cum functioneaza?"
+
+7. RISK REVERSAL BOX — banner verde cu "✓ COMANZI FARA GRIJI!" + garantie conditionala
+   Raspunde: "Ce daca nu merge?"
+
+8. FEATURE SECTION 2 (IMG + TEXT, alternant fata de S6)
+   Raspunde: "Ce mai pot face cu el?"
+
+9. COMPARISON STRIP "Cu vs Fara" sau "Concurenta vs Noi" — 2 col grid cu ✗ rosu si ✓ verde
+   Raspunde: "De ce voi si nu concurenta?"
+
+10. TESTIMONIALE GRID (4-6 carduri vertical, NU CAROUSEL) — fiecare cu avatar + nume + oras + 5★ + text 4-part (situatie/actiune/rezultat/emotie) + badge verde "✓ Comanda Livrata"
+    Raspunde: "De ce sa te cred pe tine?"
+
+11. FB SOCIAL PROOF (optional dar foarte puternic in RO) — "Mai multe comentarii pe Facebook" cu screenshot-uri 3-4 comentarii avatar+text autentic gen "Sotia mea le iubeste!", "Comanda primita rapid"
+    Raspunde: "Cine MAI mai foloseste asta?"
+
+12. HOW IT WORKS — 3 pasi cu numere + iconite + 1 fraza fiecare
+    Pas 1 = ACTIUNEA usoara | Pas 2 = REZULTATUL imediat | Pas 3 = BENEFICIUL durabil
+    Raspunde: "Cat de simplu e?"
+
+13. OBJECTIONS TRATATE (daca cerut) — 4 carduri 2x2 grid cu ✗ obiectie + ✓ rebuttal cu cifra/spec specifica
+    Raspunde: "Care sunt riscurile?"
+
+14. URGENCY BANNER ROSU LIGHT — "⚠ STOC LIMITAT — ULTIMELE X BUC din lotul [luna]" + "Comanda Acum, Primesti si Cadou Surpriza 🎁" + buton CTA repeat
+    Raspunde: "De ce ACUM?"
+
+15. FAQ ACCORDION — 6 intrebari FIXE: plata / livrare / curier / garantie / telefon / retur
+    Raspunde: "Mai am 6 intrebari rapide"
+
+16. PHONE CONTACT BANNER — "Ai nevoie de ajutor? Suna la 0700 XXX XXX"
+
+17. FOOTER
+
+PATTERN-URI COPY OBSERVATE PE LP-URILE WIN:
+- "INCEPE SA [verb] [beneficiu]" (CarEco)
+- "[Beneficiu] cu un simplu [produs]" (CarEco - "Economiseste mult cu un simplu dispozitiv")
+- "Functioneaza pe ORICE [target] [conditie specifica]" (CarEco - "orice masina fabricata dupa 1996")
+- "Easy to Install" / "Plata simpla" (Plasa) - English sub-headlines pentru impact
+- "[X] CULORI DISPONIBILE" (StopFisuri)
+- "Material REZISTENT" / "Plasa AUTOINCHIDERE" — CAPS keyword + atribut
+- Stickere: "100% Multumire garantata" badge mare verde
+- CleanPro: "ROBOTUL 3-IN-1 care schimba totul" — numeric power claim
+- Plasa: "1+1 GRATIS" badge mare ROZ in colt + pret incrucisat
+- Furtun 60m: "7 motive PUTERNICE" — combinare cifra + intensifier
+- "Mai multe comentarii pe Facebook..." footer social proof — screenshot review-uri FB
+- "30 de zile - GARANTIE DE RETURNARE A BANILOR" - explicit, fara complicat
+- "Recenzii clienti" sectiune cu foto real, nu emoji avatari
+============================================================
+
 REGULI CRITICE PE STRUCTURA + COPYWRITING:
 
 1. **HEADLINE — alege framework H1 conform LEVEL DE SOFISTICARE A PIETEI** (decizi tu pe baza nisei + descrierii produsului):
@@ -616,6 +699,8 @@ REGULI CRITICE PE STRUCTURA + COPYWRITING:
 
 ============================================================
 CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
+[ ] STRUCTURA CANONICA respectata: hero (badge+rating+price+CTA+trust strip), quickBullets, testimonial early, topBenefits, featureSection 1, riskReversalText explicit conditional, featureSection 2, comparison/objections, full testimonials list, howItWorks 3 pasi, urgencyMessage cu cifra concreta, FAQ 6 standard
+[ ] Min 3 din PATTERN-URILE WIN incluse: pattern interrupt headline ("INCEPE SA X"), CAPS keyword sub-headline ("FUNCTIONEAZA PE ORICE..."), numeric proof claim ("Folosit deja de X.XXX"), explicit garantia "30 zile - GARANTIE DE RETURNARE A BANILOR", urgency cu cifra ("ULTIMELE X BUC din lotul [luna]")
 [ ] Headline = Sophistication Level identificat + 3 hook levers stack + <70 char
 [ ] Subheadline = "So That, Without" + obiectie principala eliminata
 [ ] FIECARE camp text in VOCE ACTIVA, pers 2 singular, ZERO weasel words
