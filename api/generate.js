@@ -663,7 +663,13 @@ Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markd
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 12000,
+    max_tokens: 24000,
+    // Extended thinking — Sonnet 4.5 isi rezerva 12k tokens pentru
+    // RATIONAMENT INVIZIBIL inainte de a returna JSON-ul final. Permite
+    // sa analizeze in profunzime cele 16 reguli, sa identifice Sophistication
+    // Level, hook levers de stack, Hawkins state al audientei + sa
+    // self-verifice CHECKLIST FINAL inainte de output.
+    thinking: { type: 'enabled', budget_tokens: 12000 },
     system: system,
     messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru ACEST produs concret:
 
@@ -676,6 +682,13 @@ Reguli specifice produsului:
 - testimoniale sa mentioneze cum au folosit ACEST produs (nu generic "produs bun").
 - Daca descrierea spune ceva specific (gen "5 niveluri rezistenta", "bateriile dureaza 40 ore"), foloseste exact in featureSections.
 
+IMPORTANT — FOLOSESTE EXTENDED THINKING (max 12000 tokens) pentru:
+1. Analizeaza profil cumparator + Hawkins state in care intra mesajul tau
+2. Decide Sophistication Level (1-5) al pietei pe baza nisei + produsului
+3. Selecteaza 3-4 hook levers din cele 7 + construieste 3 variante de headline, alege cea mai buna
+4. Mapeaza Feel→Think→Act per sectiune
+5. Verifica CHECKLIST FINAL inainte de a returna JSON-ul
+
 Returneaza EXACT acest JSON schema completat:
 ${schema}` }]
   })
@@ -683,7 +696,7 @@ ${schema}` }]
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 150000
+      timeout: 240000
     }, (res) => {
       const chunks = []
       res.on('data', c => chunks.push(c))
@@ -696,7 +709,16 @@ ${schema}` }]
             console.log('Claude API error:', JSON.stringify(data.error))
             throw new Error('Claude API: ' + data.error.message)
           }
-          const text = (data.content || []).map(c => c.text || '').join('')
+          // Extended thinking — `content` array contine 'thinking' blocks
+          // (rationamentul intern) + 'text' blocks (output-ul final). Filtram
+          // doar text blocks pentru JSON. thinking blocks raman in log debug.
+          const blocks = data.content || []
+          const thinkingBlocks = blocks.filter(c => c.type === 'thinking')
+          if (thinkingBlocks.length) {
+            const thinkLen = thinkingBlocks.reduce((s, b) => s + (b.thinking || '').length, 0)
+            console.log('Claude thinking length:', thinkLen, 'blocks:', thinkingBlocks.length)
+          }
+          const text = blocks.filter(c => c.type === 'text').map(c => c.text || '').join('')
           console.log('Claude text length:', text.length, 'stop_reason:', data.stop_reason)
           // Smart JSON extractor — handle braces in strings, escapes, etc.
           // indexOf/lastIndexOf method failed when Claude included {} in example text.
@@ -716,7 +738,7 @@ ${schema}` }]
       })
     })
     req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout after 150s')) })
+    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout after 240s')) })
     req.write(body)
     req.end()
   })

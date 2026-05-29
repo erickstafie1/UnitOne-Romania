@@ -3,14 +3,19 @@ import { Page, Card, TextField, Button, Banner, BlockStack, InlineStack, Text, P
 import { ArrowLeftIcon, ChevronRightIcon, MagicIcon, WandIcon } from '@shopify/polaris-icons'
 
 const STEPS = [
-  { pct: 12, msg: 'Conectare la AliExpress', delay: 700 },
-  { pct: 28, msg: 'Extragere imagini produs', delay: 900 },
-  { pct: 46, msg: 'Generare copywriting în română', delay: 1100 },
-  { pct: 62, msg: 'Imagini AI · Studio', delay: 1100 },
-  { pct: 78, msg: 'Imagini AI · Lifestyle', delay: 1200 },
-  { pct: 86, msg: 'Imagini AI · Detaliu', delay: 6500 },
-  { pct: 92, msg: 'Imagini AI · Social proof', delay: 8500 },
-  { pct: 97, msg: 'Finalizare pagină', delay: 14000 },
+  { pct: 8, msg: 'Conectare la sursă produs', delay: 800 },
+  { pct: 16, msg: 'Extragere imagini produs', delay: 1200 },
+  { pct: 24, msg: 'Analiză profil cumpărător', delay: 2000 },
+  { pct: 32, msg: 'Identificare Sophistication Level (1-5)', delay: 4000 },
+  { pct: 42, msg: 'Selectare hook levers din 7', delay: 8000 },
+  { pct: 52, msg: 'Construire 3 variante de headline', delay: 12000 },
+  { pct: 60, msg: 'Mapare Feel → Think → Act per secțiune', delay: 14000 },
+  { pct: 68, msg: 'Generare copy direct-response în română', delay: 18000 },
+  { pct: 75, msg: 'Imagini AI · Studio', delay: 14000 },
+  { pct: 82, msg: 'Imagini AI · Lifestyle', delay: 16000 },
+  { pct: 88, msg: 'Imagini AI · Detaliu', delay: 18000 },
+  { pct: 93, msg: 'Imagini AI · Social proof', delay: 20000 },
+  { pct: 97, msg: 'Verificare CHECKLIST FINAL + asamblare pagină', delay: 25000 },
 ]
 
 export default function Generator({ onGenerated, onBack, presetStyle }) {
@@ -156,7 +161,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
               <Text as="h2" variant="headingXl" alignment="center">Pregătim pagina ta</Text>
               <Text as="p" variant="bodyMd" alignment="center">{loadMsg}</Text>
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                Imaginile AI durează ~1 minut · Calitate maximă
+                AI gândește adânc · 2-3 minute pentru calitate maximă
               </Text>
             </BlockStack>
 
