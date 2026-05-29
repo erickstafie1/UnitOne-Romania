@@ -22,22 +22,45 @@ function scrapeViaClaude(url, sourceHint) {
     alibaba: 'Alibaba',
     competitor: 'magazin online (RO)'
   }[sourceHint] || sourceHint || 'magazin online'
+  // Strip query params + tracking — pastreaza doar path-ul de produs.
+  // Helps web_search index pe URL canonic.
+  let cleanUrl = url
+  try {
+    const u = new URL(url)
+    cleanUrl = u.origin + u.pathname
+  } catch (e) {}
+  // Extract probable product ID din URL (AliExpress: /item/12345.html, Amazon: /dp/B0XXXX/)
+  let productHint = ''
+  const aliId = cleanUrl.match(/\/item\/(\d+)/)
+  const amzId = cleanUrl.match(/\/dp\/([A-Z0-9]{8,12})/)
+  const albId = cleanUrl.match(/\/product-detail\/[^/]+_(\d+)/)
+  if (aliId) productHint = ' AliExpress item ID ' + aliId[1]
+  else if (amzId) productHint = ' Amazon ASIN ' + amzId[1]
+  else if (albId) productHint = ' Alibaba product ID ' + albId[1]
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 6000,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8 }],
     messages: [{
       role: 'user',
-      content: 'Trebuie sa extragi informatii reale despre acest produs de pe ' + sourceLabel + '.\n' +
-        'URL: ' + url + '\n\n' +
-        'Foloseste tool-ul web_search ca sa gasesti pagina si extragi info. Daca pagina e blocata, cauta produsul dupa nume sau ID din URL ca sa gasesti aceleasi date pe alt site.\n\n' +
-        'Returneaza DOAR JSON valid (fara markdown, fara explicatii):\n' +
+      content: 'Cauta acest produs pe internet si extrage informatii REALE despre el. Daca pagina sursa e blocata, foloseste web_search ca sa gasesti pagini de listing alternative, reviews, comparisons, anything cu informatii reale.\n\n' +
+        'URL: ' + cleanUrl + '\n' +
+        'Sursa: ' + sourceLabel + productHint + '\n\n' +
+        'STRATEGII (incearca-le pe rand pana gasesti info reala):\n' +
+        '1. web_search cu URL-ul direct\n' +
+        '2. web_search cu ID-ul produsului + numele site-ului (ex: "AliExpress 1005006789012345")\n' +
+        '3. web_search dupa keywords vizibile din URL slug\n' +
+        '4. Cauta produsul pe site-uri de review-uri / comparatii\n\n' +
+        'CRITIC:\n' +
+        '- Daca gasesti info reala, populeaza JSON cu detalii CONCRETE (nume produs, descriere reala, specs reale).\n' +
+        '- Daca DUPA toate cele 4 strategii NU gasesti nimic, returneaza JSON cu title="" (string GOL) — NU "Product information unavailable" sau alt placeholder. Vom gestiona cazul ne-found separat.\n\n' +
+        'Returneaza DOAR JSON valid (fara markdown, fara backtick-uri, fara explicatii):\n' +
         '{\n' +
-        '  "title": "Numele produsului in romana sau engleza (max 100 char)",\n' +
-        '  "description": "Descriere a produsului in 3-5 fraze: ce face, caracteristici principale, public tinta",\n' +
-        '  "specs": ["Spec 1 (ex: \'Baterie 40h\')", "Spec 2", "..." 3-8 specs concrete],\n' +
+        '  "title": "Numele REAL al produsului in romana sau engleza (max 100 char). String GOL daca nu poti gasi.",\n' +
+        '  "description": "Descriere REALA in 3-5 fraze: ce face, caracteristici principale, public tinta. String GOL daca nu poti gasi.",\n' +
+        '  "specs": ["Spec REALA 1 (ex: \'Baterie 40h\')", "Spec 2", "..." 3-8 specs concrete. Array gol [] daca nu poti gasi.],\n' +
         '  "priceUSD": pret_in_USD_sau_0_daca_nu_stii,\n' +
-        '  "images": ["url_imagine_1", "..."] (0-6 url-uri publice)\n' +
+        '  "images": ["url_imagine_1", "..."] (0-6 url-uri publice, array gol daca nu poti gasi)\n' +
         '}'
     }]
   })
@@ -431,16 +454,20 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Detect scraping failures BUT pass through if we got SOMETHING usable.
-    // Title can be "Error 404" if Google block but we might have description/specs.
-    const titleBad = /^(error|not\s+found|404|page\s+not|forbidden|access\s+denied|robot|captcha|just\s+a\s+moment)/i.test(productInfo.title || '')
+    // Detect scraping failures — both technical (404/captcha) and LLM
+    // placeholders ("Product information unavailable" / "Not found" / etc.)
+    const titleBad = /^(error|not\s+found|404|page\s+not|forbidden|access\s+denied|robot|captcha|just\s+a\s+moment|product\s+information\s+unavailable|information\s+unavailable|unavailable|n\/a|unknown|cannot\s+(access|find|retrieve)|unable\s+to)/i.test(productInfo.title || '')
     if (titleBad) productInfo.title = ''
+    // Description placeholders too
+    if (productInfo.description && /^(product\s+information\s+unavailable|information\s+unavailable|unavailable|cannot|unable)/i.test(productInfo.description)) {
+      productInfo.description = ''
+    }
     const hasUsableInfo = (productInfo.title && productInfo.title.length >= 5) ||
                          (productInfo.description && productInfo.description.length >= 50) ||
                          (productInfo.specs && productInfo.specs.length >= 2)
     if (!hasUsableInfo) {
       return res.status(422).json({
-        error: 'Pagina raspunde dar nu putem extrage produsul (probabil JS heavy / login wall). Incearca alt URL sau foloseste upload poza.'
+        error: 'Nu am putut extrage info despre produs. AI a incercat web search dar pagina e blocata sau nu e indexata. Solutii: 1) Foloseste upload poza, 2) Foloseste Shopify product (daca-l ai in magazin), 3) Incearca alt URL (varianta canonica, fara tracking params).'
       })
     }
     // If title bad but description ok, derive title from description first sentence
