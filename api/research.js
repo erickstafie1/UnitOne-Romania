@@ -333,24 +333,44 @@ module.exports = async function handler(req, res) {
     } else {
       // URL-based sources: aliexpress, amazon, alibaba, competitor
       if (!url) return res.status(400).json({ error: 'Lipseste URL' })
-      const html = await fetchWithScraper(url).catch(() => '')
+      const hasScraperKey = !!process.env.SCRAPER_API_KEY
+      console.log('[research] fetching URL:', url.slice(0, 80), 'scraperKey:', hasScraperKey ? 'YES' : 'NO (using direct)')
+      const html = await fetchWithScraper(url).catch(e => { console.log('[research] fetch error:', e.message); return '' })
+      console.log('[research] HTML length:', html.length)
       if (html.length < 500) {
-        return res.status(500).json({ error: 'Nu am putut citi pagina sursa. Verifica URL-ul.' })
+        return res.status(502).json({
+          error: hasScraperKey
+            ? 'Site-ul ne-a blocat (' + html.length + ' bytes returnati). Incearca alt URL, foloseste poza, sau pune un link Shopify din magazinul tau.'
+            : 'SCRAPER_API_KEY lipseste — fetch direct la AliExpress/Amazon e blocat. Configureaza cheia in Vercel env vars sau foloseste upload poza/Shopify product.'
+        })
       }
-      const meta = source === 'aliexpress' ? extractAliMeta(html) : extractGenericMeta(html)
-      productInfo.title = meta.title || ''
-      productInfo.priceUSD = meta.priceUSD || 0
-      productInfo.description = meta.description || ''
-      productInfo.specs = meta.specs || []
+      // Try BOTH extractors si pick best (cel cu titlu valid + cel mai mult continut)
+      const aliMeta = extractAliMeta(html)
+      const genericMeta = extractGenericMeta(html)
+      const pick = (aliMeta.title?.length > 5 && aliMeta.description?.length > 30) ? aliMeta : genericMeta
+      productInfo.title = pick.title || aliMeta.title || genericMeta.title || ''
+      productInfo.priceUSD = pick.priceUSD || aliMeta.priceUSD || genericMeta.priceUSD || 0
+      productInfo.description = pick.description || aliMeta.description || genericMeta.description || ''
+      productInfo.specs = pick.specs?.length ? pick.specs : (aliMeta.specs?.length ? aliMeta.specs : genericMeta.specs)
       images = extractImages(html)
+      console.log('[research] extracted:', { title: productInfo.title.slice(0, 60), priceUSD: productInfo.priceUSD, descLen: productInfo.description.length, specs: productInfo.specs.length, images: images.length })
     }
 
-    // Detect scraping failures — Google 404 pages, error pages, blocked etc.
-    if (/^(error|not\s+found|404|page\s+not|forbidden|access|robot|captcha)/i.test(productInfo.title || '') ||
-        !productInfo.title || productInfo.title.length < 5) {
+    // Detect scraping failures BUT pass through if we got SOMETHING usable.
+    // Title can be "Error 404" if Google block but we might have description/specs.
+    const titleBad = /^(error|not\s+found|404|page\s+not|forbidden|access\s+denied|robot|captcha|just\s+a\s+moment)/i.test(productInfo.title || '')
+    if (titleBad) productInfo.title = ''
+    const hasUsableInfo = (productInfo.title && productInfo.title.length >= 5) ||
+                         (productInfo.description && productInfo.description.length >= 50) ||
+                         (productInfo.specs && productInfo.specs.length >= 2)
+    if (!hasUsableInfo) {
       return res.status(422).json({
-        error: 'Nu am putut citi produsul de la URL-ul dat. Site-ul ne-a blocat sau pagina nu exista. Incearca alt URL sau foloseste upload poza.'
+        error: 'Pagina raspunde dar nu putem extrage produsul (probabil JS heavy / login wall). Incearca alt URL sau foloseste upload poza.'
       })
+    }
+    // If title bad but description ok, derive title from description first sentence
+    if (!productInfo.title && productInfo.description) {
+      productInfo.title = productInfo.description.split(/[.\n]/)[0].slice(0, 80)
     }
 
     console.log('[research] productInfo:', { title: productInfo.title.slice(0, 60), priceUSD: productInfo.priceUSD, descLen: productInfo.description.length, specs: productInfo.specs.length, images: images.length })
