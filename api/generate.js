@@ -209,6 +209,19 @@ Niciun text in afara JSON. Fara markdown, fara backtick-uri. Daca vezi un produs
   })
 }
 
+// Helper — transforms ICP into freetext salesAngle (folosit deja in
+// personalizationBlock pentru briefBlock). Concentreaza persona + pain principal +
+// dorinta principala intr-un blurb scurt.
+function buildSalesAngleFromIcp(icp) {
+  if (!icp || typeof icp !== 'object') return ''
+  const parts = []
+  if (icp.persona) parts.push(icp.persona)
+  if (Array.isArray(icp.pains) && icp.pains.length) parts.push('Dureri principale: ' + icp.pains.slice(0, 3).join('; '))
+  if (Array.isArray(icp.desires) && icp.desires.length) parts.push('Dorinte: ' + icp.desires.slice(0, 3).join('; '))
+  if (icp.uniqueAngle) parts.push('Angle: ' + icp.uniqueAngle)
+  return parts.join('. ')
+}
+
 function callClaude(productInfo, styleDesc, opts = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
@@ -287,6 +300,23 @@ function callClaude(productInfo, styleDesc, opts = {}) {
   }
   const nicheInstruction = nicheMap[niche] || nicheMap.generic
 
+  // ICP block — daca research agent a construit ICP, foloseste-l DIRECT in
+  // headlines + topBenefits + testimoniale + objections. Aceasta e SURSA
+  // PRIMARA de truth pentru cine e cumparatorul.
+  const icp = opts.icp || {}
+  const icpBlock = (icp && (icp.persona || icp.pains || icp.desires)) ? `
+
+=== ICP (Ideal Customer Profile — CONSTRUIT DE RESEARCH AGENT, RESPECTA-L EXACT) ===
+PRODUS: ${icp.productSummary || ''}
+PERSONA: ${icp.persona || ''}
+DEMOGRAFICE: ${JSON.stringify(icp.demographics || {})}
+DURERI (folose in topBenefits + testimoniale): ${(icp.pains || []).map((p,i)=>`(${i+1}) ${p}`).join(' | ')}
+DORINTE (folose in subheadline + benefits + final CTA): ${(icp.desires || []).map((d,i)=>`(${i+1}) ${d}`).join(' | ')}
+CREDINTE LIMITATIVE (TREBUIE DARAMATE in objections sau riskReversal): ${(icp.beliefBarriers || []).map((b,i)=>`(${i+1}) ${b}`).join(' | ')}
+HAWKINS LEVEL: ${icp.hawkinsLevel || 'fear'} — INTRA in copy la acest nivel emotional (sub linia 200), NU sari direct la hope/courage.
+SOPHISTICATION LEVEL: ${icp.sophisticationLevel || 3} — APLICA Regula 1 (formula H1 conform Level)
+UNIQUE ANGLE: ${icp.uniqueAngle || ''} — DIFERENTIATORUL CHEIE, reflecta-l in headline + featureSections[0]` : ''
+
   const personalizationBlock = `
 
 === PERSONALIZARE LP (RESPECTA EXACT) ===
@@ -296,7 +326,7 @@ NIVEL URGENTA: ${urgencyMap[urgencyLevel]}
 LUNGIME CONTINUT: ${lengthMap[lengthMode]}
 OBIECTII: ${objectionsInstruction}
 POPUP: ${popupInstruction}
-NISA: ${nicheInstruction}`
+NISA: ${nicheInstruction}${icpBlock}`
 
   // styleDesc e CONTEXT COMERCIAL OPTIONAL din partea user-ului (audienta tinta,
   // ton, unghi specific de vanzare, features pe care vrea sa le accentueze).
@@ -926,82 +956,63 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections, popupEnabled, popupGoal, niche, productImage } = req.body
-    // Acceptam fie aliUrl, fie competitorUrl — cel putin unul. Daca user-ul
-    // a dat doar competitor URL, il folosim ca sursa primara pentru scrape.
-    if (!aliUrl && !competitorUrl && !productImage) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link sau o poza' })
-    const primaryUrl = aliUrl || competitorUrl || ''
+    // V6 INPUT — accept productInfo + icp from /api/research, OR legacy fields
+    // for back-compat. New flow: frontend calls /api/research first which scrapes
+    // product + builds ICP, then passes both here.
+    const { productInfo: incomingProductInfo, icp, images: researchImages, presetStyle } = req.body
+
+    // Legacy fallback fields (kept for back-compat with old clients)
+    const legacy = req.body
+
+    let productInfo = incomingProductInfo || { title: '', priceUSD: 0, description: '', specs: [] }
+    let aliImages = Array.isArray(researchImages) ? researchImages.slice(0, 6) : []
+
+    // Legacy URL/photo path — only if productInfo missing
+    if (!productInfo.title || productInfo.title.length < 5) {
+      const primaryUrl = legacy.aliUrl || legacy.competitorUrl || ''
+      if (legacy.productImage) {
+        try { productInfo = await callClaudeVision(legacy.productImage); aliImages = [legacy.productImage] } catch (e) { console.log('Legacy vision fail:', e.message) }
+      }
+      if (primaryUrl && (!productInfo.title || productInfo.title.length < 5)) {
+        const html = await fetchWithScraper(primaryUrl).catch(() => '')
+        if (html.length > 1000) {
+          const scraped = extractImages(html)
+          if (scraped.length) aliImages = aliImages.concat(scraped)
+          const meta = extractMeta(html)
+          if (meta.title?.length > 5) productInfo.title = meta.title.substring(0, 100)
+          if (meta.priceUSD > 0) productInfo.priceUSD = meta.priceUSD
+          if (meta.description) productInfo.description = meta.description
+          if (meta.specs?.length) productInfo.specs = meta.specs
+        }
+      }
+    }
+
+    if (!productInfo.title || productInfo.title.length < 5) {
+      return res.status(400).json({ error: 'Lipsesc informatii despre produs. Reia research-ul.' })
+    }
 
     const geminiKey = process.env.GEMINI_API_KEY
-    console.log('=== GENERATE v5 ===')
+    console.log('=== GENERATE v6 (ICP-based) ===')
     console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
-    console.log('Input source:', productImage ? 'PHOTO' : (aliUrl ? 'aliUrl' : 'competitorUrl'))
+    console.log('Product:', productInfo.title.slice(0, 50), '| ICP hawkins:', icp?.hawkinsLevel, '| soph:', icp?.sophisticationLevel, '| niche:', icp?.niche)
 
-    // STEP 1: Identifica produsul.
-    //   A) Photo upload → Claude Vision extrage title + description + specs
-    //   B) URL → scrape (AliExpress meta sau generic)
-    let aliImages = []
-    let productInfo = { title: '', priceUSD: 0, description: '', specs: [] }
-    if (productImage) {
-      try {
-        console.log('Calling Claude Vision...')
-        productInfo = await callClaudeVision(productImage)
-        console.log('Vision result:', { title: productInfo.title, descLen: productInfo.description?.length, specsCount: productInfo.specs?.length })
-        // Folosim poza uploadata ca imagine sursa pentru Gemini lifestyle gen
-        aliImages = [productImage]
-      } catch (e) {
-        console.log('Vision failed:', e.message)
-      }
-    }
-    if (primaryUrl && (!productInfo.title || productInfo.title.length < 5)) {
-      const html = await fetchWithScraper(primaryUrl).catch(() => '')
-      if (html.length > 1000) {
-        const scraped = extractImages(html)
-        if (scraped.length) aliImages = aliImages.concat(scraped)
-        const meta = extractMeta(html)
-        if (meta.title?.length > 5) productInfo.title = meta.title.substring(0, 100)
-        if (meta.priceUSD > 0) productInfo.priceUSD = meta.priceUSD
-        if (meta.description) productInfo.description = meta.description
-        if (meta.specs?.length) productInfo.specs = meta.specs
-      }
-      console.log('URL scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length })
-    }
-
-    // STEP 1.5: Scrape competitor URL pentru context — doar daca e DIFERIT de
-    // primaryUrl (altfel duplicate fetch). Best-effort, max 5s.
-    let competitorContext = ''
-    if (competitorUrl && competitorUrl !== primaryUrl && /^https?:\/\//i.test(competitorUrl)) {
-      try {
-        const compHtml = await Promise.race([
-          fetchWithScraper(competitorUrl),
-          new Promise(r => setTimeout(() => r(''), 5000))  // max 5s sa nu blocam
-        ])
-        if (compHtml && compHtml.length > 500) {
-          // Extrage doar text vizibil: titlu, meta description, primele headings + paragrafe
-          const titleMatch = compHtml.match(/<title[^>]*>([^<]+)<\/title>/i)
-          const metaDesc = compHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']{50,500})["']/i)
-          const h1s = (compHtml.match(/<h[12][^>]*>([^<]{5,150})<\/h[12]>/gi) || []).slice(0, 5).map(h => h.replace(/<[^>]+>/g, '').trim())
-          const paragraphs = (compHtml.match(/<p[^>]*>([^<]{30,250})<\/p>/gi) || []).slice(0, 6).map(p => p.replace(/<[^>]+>/g, '').trim())
-          competitorContext = [
-            titleMatch?.[1] ? 'Titlu: ' + titleMatch[1].trim() : '',
-            metaDesc?.[1] ? 'Meta: ' + metaDesc[1] : '',
-            h1s.length ? 'Headings: ' + h1s.join(' | ') : '',
-            paragraphs.length ? 'Paragrafe: ' + paragraphs.join(' / ') : ''
-          ].filter(Boolean).join('\n').slice(0, 2000)
-          console.log('Competitor scraped:', compHtml.length, 'bytes →', competitorContext.length, 'chars context')
-        }
-      } catch (e) { console.log('Competitor scrape fail (non-blocking):', e.message) }
-    }
-
-    // STEP 2: Claude cu produsul REAL + personalizarea + competitor context.
-    // Cu retry + fallback skelet — nu mai dam 500 cand Claude e flaky.
-    const copy = await callClaudeWithRetry(productInfo, styleDesc || '', {
-      tone, salesAngle, urgencyLevel, lengthMode, includeObjections,
-      customObjections: Array.isArray(customObjections) ? customObjections : [],
-      competitorContext,
-      popupEnabled: !!popupEnabled,
-      popupGoal: popupEnabled ? (popupGoal || 'discount') : null,
-      niche: niche || 'generic'
+    // STEP 2: Claude cu produsul + ICP-ul EDITAT de user (mai puternic decat
+    // parametrii izolati pe care ii avea inainte — ICP-ul include persona,
+    // dureri, dorinte, beliefBarriers, Hawkins level, sophisticationLevel +
+    // recomandari pentru tone/urgency/length/niche/includeObjections).
+    const copy = await callClaudeWithRetry(productInfo, '', {
+      // ICP-driven params
+      icp: icp || {},
+      tone: icp?.recommendedTone || 'direct',
+      salesAngle: icp ? buildSalesAngleFromIcp(icp) : '',
+      urgencyLevel: icp?.recommendedUrgency || 'medie',
+      lengthMode: icp?.recommendedLength || 'mediu',
+      niche: icp?.niche || 'generic',
+      includeObjections: icp?.includeObjections !== false,
+      customObjections: [],
+      competitorContext: '',
+      popupEnabled: false,
+      popupGoal: null
     })
     // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
