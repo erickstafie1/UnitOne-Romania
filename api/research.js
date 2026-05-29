@@ -9,6 +9,62 @@ const https = require('https')
 const http = require('http')
 const { prepareShopifyAuth } = require('./_shopifyAuth')
 
+// ─── Jina Reader fallback — gratis, fara auth, headless Chrome ───
+// r.jina.ai face fetch + render JS al URL-ului si returneaza markdown
+// curat. Functioneaza pe AliExpress/Amazon/Alibaba unde fetch direct
+// e blocat. Usage: GET https://r.jina.ai/{url}
+function fetchViaJina(url) {
+  const encoded = encodeURIComponent(url)
+  return new Promise((resolve) => {
+    https.get('https://r.jina.ai/' + encoded, {
+      headers: { 'Accept': 'text/plain', 'User-Agent': 'Mozilla/5.0' },
+      timeout: 30000
+    }, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+    }).on('error', () => resolve(''))
+  })
+}
+
+// Haiku Vision text — primeste text bogat (markdown din Jina) si extrage
+// JSON structurat. Mult mai ieftin si rapid decat web_fetch tool.
+function extractWithHaiku(rawText, sourceLabel, productHint) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
+  const trimmed = (rawText || '').slice(0, 12000)
+  const body = JSON.stringify({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: 'Acesta e continutul brut al unei pagini de produs (' + sourceLabel + productHint + '):\n\n' +
+        '"""\n' + trimmed + '\n"""\n\n' +
+        'Extrage informatiile REALE din text si returneaza DOAR JSON:\n' +
+        '{\n' +
+        '  "title": "nume real produs (string gol daca nu se vede)",\n' +
+        '  "description": "descriere reala 3-5 fraze (string gol daca nu se poate)",\n' +
+        '  "specs": ["spec1","spec2","..."] (3-8 specs sau []),\n' +
+        '  "priceUSD": numar (0 daca nu vezi pret),\n' +
+        '  "images": ["url1","..."] (0-6 URL-uri publice imagini)\n' +
+        '}\n\n' +
+        'CRITIC: nu inventa. Daca textul e gol/eroare/captcha, returneaza title="" si description="".'
+    }]
+  })
+  return apiCall(body, 60000).then(data => {
+    const blocks = data.content || []
+    const text = blocks.filter(c => c.type === 'text').map(c => c.text || '').join('')
+    const parsed = extractFirstJSON({ text })
+    return {
+      title: String(parsed.title || '').slice(0, 100),
+      description: String(parsed.description || '').slice(0, 1500),
+      specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(String) : [],
+      priceUSD: Number(parsed.priceUSD) || 0,
+      images: Array.isArray(parsed.images) ? parsed.images.filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 6) : []
+    }
+  })
+}
+
 // ─── Claude web_search ca scraper pentru URL sources ───
 // Inlocuieste ScraperAPI cu tool-ul web_search build-in al Claude (sonnet 4.5).
 // Claude face cautare web pentru URL/produs si returneaza JSON structurat cu
@@ -460,21 +516,62 @@ module.exports = async function handler(req, res) {
       images = (p.images || []).map(i => i.src).filter(Boolean).slice(0, 6)
     } else {
       // URL-based sources: aliexpress, amazon, alibaba, competitor
-      // Folosim Claude web_search (sonnet 4.5) — gratis fata de ScraperAPI,
-      // nu necesita config. Daca esueaza, fallback la fetchWithScraper.
+      // Strategie multi-layer:
+      //   1. Jina Reader (r.jina.ai) — gratis, headless Chrome render, fara API key
+      //   2. Haiku Vision Text — extrage JSON din markdown-ul Jina
+      //   3. Claude web_fetch+web_search tool — daca Jina blocked
+      //   4. ScraperAPI direct — daca avem SCRAPER_API_KEY
       if (!url) return res.status(400).json({ error: 'Lipseste URL' })
-      console.log('[research] scraping via Claude web_search:', url.slice(0, 80))
-      try {
-        const claudeData = await scrapeViaClaude(url, source)
-        productInfo.title = claudeData.title
-        productInfo.description = claudeData.description
-        productInfo.specs = claudeData.specs
-        productInfo.priceUSD = claudeData.priceUSD
-        images = claudeData.images
-        console.log('[research] Claude extracted:', { title: productInfo.title.slice(0, 60), priceUSD: productInfo.priceUSD, descLen: productInfo.description.length, specs: productInfo.specs.length, images: images.length })
-      } catch (e) {
-        console.log('[research] Claude scraper failed:', e.message, '— fallback to fetchWithScraper')
-        // Fallback: direct fetch + regex extract (works if SCRAPER_API_KEY exista)
+      const cleanUrl = (() => {
+        try { const u = new URL(url); return u.origin + u.pathname } catch (e) { return url }
+      })()
+      let productHint = ''
+      const aliId = cleanUrl.match(/\/item\/(\d+)/)
+      const amzId = cleanUrl.match(/\/dp\/([A-Z0-9]{8,12})/)
+      if (aliId) productHint = ' AliExpress item ID ' + aliId[1]
+      else if (amzId) productHint = ' Amazon ASIN ' + amzId[1]
+      const sourceLabel = { aliexpress: 'AliExpress', amazon: 'Amazon', alibaba: 'Alibaba', competitor: 'magazin online' }[source] || source
+
+      // Try 1: Jina Reader + Haiku extract
+      console.log('[research] try 1 — Jina Reader:', cleanUrl.slice(0, 80))
+      const jinaText = await fetchViaJina(cleanUrl)
+      console.log('[research] Jina returned', jinaText.length, 'chars')
+      if (jinaText.length > 300) {
+        try {
+          const extracted = await extractWithHaiku(jinaText, sourceLabel, productHint)
+          if (extracted.title && extracted.title.length > 5) {
+            productInfo.title = extracted.title
+            productInfo.description = extracted.description
+            productInfo.specs = extracted.specs
+            productInfo.priceUSD = extracted.priceUSD
+            images = extracted.images
+            console.log('[research] Jina+Haiku OK:', { title: productInfo.title.slice(0, 60), descLen: productInfo.description.length, specs: productInfo.specs.length })
+          }
+        } catch (e) {
+          console.log('[research] Haiku extract failed on Jina text:', e.message)
+        }
+      }
+
+      // Try 2: Claude web_fetch+search tool (daca Jina n-a dat nimic)
+      if (!productInfo.title || productInfo.title.length < 5) {
+        console.log('[research] try 2 — Claude web_fetch')
+        try {
+          const claudeData = await scrapeViaClaude(cleanUrl, source)
+          if (claudeData.title && claudeData.title.length > 5) {
+            productInfo.title = claudeData.title
+            productInfo.description = claudeData.description
+            productInfo.specs = claudeData.specs
+            productInfo.priceUSD = claudeData.priceUSD
+            images = claudeData.images
+          }
+        } catch (e) {
+          console.log('[research] Claude scraper failed:', e.message)
+        }
+      }
+
+      // Try 3: legacy fetch + regex extract (daca SCRAPER_API_KEY exista)
+      if (!productInfo.title || productInfo.title.length < 5) {
+        console.log('[research] try 3 — fetchWithScraper (legacy)')
         const html = await fetchWithScraper(url).catch(() => '')
         if (html.length > 500) {
           const aliMeta = extractAliMeta(html)
