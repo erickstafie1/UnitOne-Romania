@@ -155,7 +155,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         }, true)
       }
     } catch (e) { console.warn('popup edit-mode CSS failed:', e.message) }
-  }, [editPopupId, popups])
+  }, [editPopupId])
 
   // Filtru pe textul de search — ascunde block-urile care nu match-uiesc
   useEffect(() => {
@@ -254,7 +254,18 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       editor.on('load', refreshPopups)
       editor.on('component:add', refreshPopups)
       editor.on('component:remove', refreshPopups)
-      editor.on('component:update:attributes', refreshPopups)
+      // refreshPopups DOAR la rename (data-popup-name) — NU pe orice attr update
+      // (altfel loop infinit: sync style → update attrs → refresh → re-mark →
+      // sync style → ... flicker continuu).
+      editor.on('component:update:attributes', (comp) => {
+        if (!comp || comp.get('type') !== 'unitone-popup') return
+        const last = comp.previousAttributes && comp.previousAttributes()
+        // Skip daca doar `style` s-a schimbat
+        const attrs = comp.getAttributes()
+        if (!last || last['data-popup-name'] !== attrs['data-popup-name']) {
+          refreshPopups()
+        }
+      })
 
       // Sync data-* attributes → inline style pe canvas. Recursion guard
       // via _unitoneSyncing flag — fara el, addAttributes({style}) declanseaza
@@ -292,15 +303,15 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           syncBusy = false
         } catch (e) { syncBusy = false }
       }
-      // Doar pe selected (ruleaza o data cand user clickeaza popup) +
-      // pe debounced update — fara loop infinit.
+      // DOAR pe debounced update (trait change explicit). NU pe selected —
+      // selection ar declansa rescrieri repetate ale style attr → flicker
+      // continuu in canvas pentru popup in edit mode.
       let syncTimer = null
       editor.on('component:update:attributes', (comp) => {
         if (!comp || comp.get('type') !== 'unitone-popup') return
         if (syncTimer) clearTimeout(syncTimer)
-        syncTimer = setTimeout(() => syncPopupStyles(comp), 100)
+        syncTimer = setTimeout(() => syncPopupStyles(comp), 200)
       })
-      editor.on('component:selected', syncPopupStyles)
 
       // Expose editor instance for popup edit-mode CSS injection (in JSX below)
       // Hook event listener pentru click-out-popup → exit edit mode
