@@ -136,18 +136,19 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       // pe Elements (asa cum face GemPages — "add elements" hint clickabil).
       // Folosim closest() ca click-urile pe ::before/::after pseudo sau pe
       // copii sa fie capturate corect.
+      // CLICK (nu mousedown) ca sa NU blocam drag-drop GrapesJS — mousedown
+      // capture-fased + preventDefault impiedica initierea drag-ului din popup
+      // catre orice element. Click fires doar dupa mousedown+mouseup fara
+      // miscare, deci interactiuni de drag nu sunt afectate.
       const EMPTY_HANDLER_FLAG = '__unitoneEmptyHandlerBound'
       if (!doc[EMPTY_HANDLER_FLAG]) {
         doc[EMPTY_HANDLER_FLAG] = true
-        doc.addEventListener('mousedown', (ev) => {
+        doc.addEventListener('click', (ev) => {
           const t = ev.target
           if (!t || !t.closest) return
           const popupBody = t.closest('.unitone-popup-body')
           if (popupBody && popupBody.children.length === 0) {
-            ev.preventDefault()
-            ev.stopPropagation()
             setBlocksTab('element')
-            // Scroll blocks-panel sus
             setTimeout(() => {
               try {
                 const panel = document.getElementById('blocks-panel')
@@ -157,7 +158,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
               } catch (e) {}
             }, 30)
           }
-        }, true)
+        })
       }
     } catch (e) { console.warn('popup edit-mode CSS failed:', e.message) }
   }, [editPopupId])
@@ -246,15 +247,22 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
       // Side-tab refresh — scaneaza canvas dupa popup-uri si update-aza lista
       // pentru tab-ul flotant din dreapta canvas-ului.
+      // Delay 80ms ca GrapesJS sa termine update-ul DOM + model dupa drop;
+      // fara delay, chip-ul nu apare la primul drag (component:add fires
+      // INAINTE ca .unitone-popup-block sa fie disponibil in wrapper.find).
+      let refreshTimer = null
       const refreshPopups = () => {
-        try {
-          const found = []
-          editor.getWrapper().find('.unitone-popup-block').forEach((c, i) => {
-            const name = (c.getAttributes() && c.getAttributes()['data-popup-name']) || `Popup ${i + 1}`
-            found.push({ id: c.getId(), name, component: c })
-          })
-          setPopups(found)
-        } catch (e) {}
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          try {
+            const found = []
+            editor.getWrapper().find('.unitone-popup-block').forEach((c, i) => {
+              const name = (c.getAttributes() && c.getAttributes()['data-popup-name']) || `Popup ${i + 1}`
+              found.push({ id: c.getId(), name, component: c })
+            })
+            setPopups(found)
+          } catch (e) {}
+        }, 80)
       }
       editor.on('load', refreshPopups)
       editor.on('component:add', refreshPopups)
@@ -1657,14 +1665,14 @@ function registerPopupType(editor) {
         tagName: 'div',
         name: 'Popup',
         draggable: true,
-        droppable: false,  // outer NU primeste drop direct — doar inner body
+        droppable: true,  // accept drops — altfel GrapesJS routeaza drops in afara popup-ului
         selectable: true,
         hoverable: true,
         copyable: true,
         removable: true,
-        // Toolbar GrapesJS (move/copy/delete + arrow parent) ascuns — apareau
-        // suprapuse peste close button-ul nostru in edit mode → vizual buguit.
-        toolbar: [],
+        // Toolbar custom — doar Delete (default avea arrow parent + move + copy
+        // care se suprapuneau cu close button). User trebuie sa poate sterge popup.
+        toolbar: [{ command: 'tlb-delete', attributes: { class: 'fa fa-trash-o', title: 'Șterge popup' }, label: '🗑' }],
         attributes: {
           class: 'unitone-popup-block',
           style: 'display:none;background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
