@@ -77,20 +77,25 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   const [icp, setIcp] = useState(null)
   const [productInfo, setProductInfo] = useState(null)
   const [researchImages, setResearchImages] = useState([])
-  const [researching, setResearching] = useState(false)
   const [showEditDetails, setShowEditDetails] = useState(false)
 
-  // Generation
-  const [loading, setLoading] = useState(false)
-  const [loadMsg, setLoadMsg] = useState('')
-  const [loadPct, setLoadPct] = useState(0)
+  // Phases — 'pick' | 'roadmap-research' | 'icp-review' | 'roadmap-generate' | 'done'
+  const [phase, setPhase] = useState('pick')
+  // Roadmap state — fiecare step are status pending/active/done
+  // Steps: import-data, market-research, icp-confirm, sales-copy, images, finalize
+  const [stepStatus, setStepStatus] = useState({
+    importData: 'pending',
+    marketResearch: 'pending',
+    icpConfirm: 'pending',
+    salesCopy: 'pending',
+    images: 'pending',
+    finalize: 'pending'
+  })
+  const [progressPct, setProgressPct] = useState(0)
   const [error, setError] = useState('')
   const cancelRef = useRef(false)
-
-  // Wizard state
-  const STEPS_COUNT = 2
-  const [step, setStep] = useState(0)
-  const [direction, setDirection] = useState('forward')
+  // ICP review animation direction (slide-in-right / slide-out-left)
+  const [icpSlide, setIcpSlide] = useState('in')
 
   // Load Shopify products when source = shopify
   useEffect(() => {
@@ -119,7 +124,21 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
 
   async function startResearch() {
     setError('')
-    setResearching(true)
+    setPhase('roadmap-research')
+    // Activate step 1
+    setStepStatus(s => ({ ...s, importData: 'active' }))
+    setProgressPct(8)
+
+    // Fake progressive feedback while research runs (real time ~30-90s)
+    let fakeProgress = 8
+    const advance = setInterval(() => {
+      fakeProgress = Math.min(35, fakeProgress + 0.7)
+      setProgressPct(fakeProgress)
+      if (fakeProgress >= 18 && stepStatus.importData !== 'done') {
+        setStepStatus(s => ({ ...s, importData: 'done', marketResearch: 'active' }))
+      }
+    }, 1000)
+
     try {
       const body = { source }
       if (source === 'photo') body.productImage = productImage
@@ -131,38 +150,47 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
+      clearInterval(advance)
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Eroare la analiza')
       setProductInfo(json.productInfo)
       setIcp(json.icp)
       setResearchImages(json.images || [])
-      setDirection('forward')
-      setStep(1)
+      // Mark research steps complete, jump to ICP review
+      setStepStatus(s => ({ ...s, importData: 'done', marketResearch: 'done', icpConfirm: 'active' }))
+      setProgressPct(40)
+      setTimeout(() => {
+        setIcpSlide('in')
+        setPhase('icp-review')
+      }, 600)
     } catch (e) {
+      clearInterval(advance)
       setError('Cercetare esuata: ' + e.message)
-    } finally {
-      setResearching(false)
+      setPhase('pick')
     }
   }
 
-  function updateIcpField(field, value) {
-    setIcp({ ...icp, [field]: value })
-  }
-
-  async function generate() {
+  async function confirmIcpAndGenerate() {
     if (!icp || !productInfo) return
-    setError(''); setLoading(true); setLoadPct(STEPS[0].pct); setLoadMsg(STEPS[0].msg)
-    cancelRef.current = false
+    setError('')
+    // Slide ICP out left, return to roadmap
+    setIcpSlide('out')
+    setStepStatus(s => ({ ...s, icpConfirm: 'done', salesCopy: 'active' }))
+    setProgressPct(45)
+    setTimeout(() => setPhase('roadmap-generate'), 350)
 
-    let i = 1
-    const advance = () => {
-      if (cancelRef.current || i >= STEPS.length) return
-      const s = STEPS[i]
-      setLoadPct(s.pct); setLoadMsg(s.msg)
-      i++
-      setTimeout(advance, s.delay)
-    }
-    setTimeout(advance, STEPS[0].delay)
+    // Fake progress while generate runs (~120s real)
+    let fakeProgress = 45
+    const advance = setInterval(() => {
+      fakeProgress = Math.min(97, fakeProgress + 0.4)
+      setProgressPct(fakeProgress)
+      if (fakeProgress >= 65 && stepStatus.salesCopy !== 'done') {
+        setStepStatus(s => ({ ...s, salesCopy: 'done', images: 'active' }))
+      }
+      if (fakeProgress >= 88 && stepStatus.images !== 'done') {
+        setStepStatus(s => ({ ...s, images: 'done', finalize: 'active' }))
+      }
+    }, 1200)
 
     try {
       const res = await apiFetch('/api/generate', {
@@ -176,86 +204,111 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
           presetStyle: presetStyle?.style || null
         })
       })
+      clearInterval(advance)
       cancelRef.current = true
       if (!res.ok) throw new Error('Server error ' + res.status)
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Eroare')
-      setLoadPct(100); setLoadMsg('Pagina ta este gata')
+      setStepStatus(s => ({ ...s, salesCopy: 'done', images: 'done', finalize: 'done' }))
+      setProgressPct(100)
       await new Promise(r => setTimeout(r, 700))
       onGenerated(json.data)
     } catch (e) {
-      cancelRef.current = true
-      setError(e.message); setLoading(false)
+      clearInterval(advance)
+      setError(e.message)
+      setPhase('icp-review')  // back to ICP so user can retry
     }
   }
 
-  // ─── Loading screen ────────────────────────────────────────────────────
-  if (loading) {
+  function updateIcpField(field, value) {
+    setIcp({ ...icp, [field]: value })
+  }
+
+  // ─── ROADMAP UI (phases: research + generate) ────────────────────────
+  const roadmapSteps = [
+    { key: 'importData', label: 'Importăm datele produsului', emoji: '📦' },
+    { key: 'marketResearch', label: 'AI face research de piață + ICP', emoji: '🔬' },
+    { key: 'icpConfirm', label: 'Confirmi avatarul cumpărător', emoji: '✅' },
+    { key: 'salesCopy', label: 'AI scrie copy direct-response', emoji: '✍️' },
+    { key: 'images', label: 'AI generează imagini lifestyle', emoji: '🎨' },
+    { key: 'finalize', label: 'Finalizăm pagina ta', emoji: '🚀' }
+  ]
+
+  function RoadmapView({ title }) {
     return (
-      <Page narrowWidth title="Generare in curs">
+      <Page narrowWidth>
+        <style>{`
+          @keyframes ue-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+          @keyframes ue-fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+          .ue-step-row{animation:ue-fadein .35s ease-out both}
+          .ue-step-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;transition:all .3s ease}
+          .ue-step-icon.pending{background:#f1f5f9;color:#94a3b8}
+          .ue-step-icon.active{background:linear-gradient(135deg,#2c6ecb,#5b8def);color:#fff;box-shadow:0 0 0 6px rgba(44,110,203,.15);animation:ue-pulse 1.6s ease-in-out infinite}
+          .ue-step-icon.done{background:#16a34a;color:#fff}
+          @keyframes ue-pulse{0%,100%{box-shadow:0 0 0 6px rgba(44,110,203,.15)}50%{box-shadow:0 0 0 12px rgba(44,110,203,.05)}}
+          .ue-step-label.pending{color:#94a3b8}
+          .ue-step-label.active{color:#0f172a;font-weight:700}
+          .ue-step-label.done{color:#475569;text-decoration:line-through;text-decoration-color:#86efac}
+          .ue-progress-track{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden}
+          .ue-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#2c6ecb);transition:width .8s cubic-bezier(.16,1,.3,1);border-radius:4px}
+        `}</style>
         <Card>
-          <BlockStack gap="500" inlineAlign="center">
-            <Box background="bg-fill-brand" padding="500" borderRadius="400" minWidth="84px" minHeight="84px">
-              <InlineStack align="center" blockAlign="center">
-                <Box minWidth="44px" minHeight="44px">
-                  <span style={{ display: 'inline-block', animation: 'spin 2s linear infinite' }}>
-                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-                    </svg>
-                  </span>
-                </Box>
-              </InlineStack>
-            </Box>
+          <BlockStack gap="500">
             <BlockStack gap="200" inlineAlign="center">
-              <Text as="h2" variant="headingXl" alignment="center">Construim pagina ta</Text>
-              <Text as="p" variant="bodyMd" alignment="center">{loadMsg}</Text>
-              <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                AI gandeste adanc · 2-3 minute pentru calitate maxima
-              </Text>
+              <Text as="h2" variant="headingLg" alignment="center">{title || 'Construim pagina ta'}</Text>
+              <div style={{ width: '100%' }}>
+                <div className="ue-progress-track"><div className="ue-progress-fill" style={{ width: progressPct + '%' }} /></div>
+                <Text as="p" variant="bodySm" tone="subdued" alignment="center">{Math.round(progressPct)}% complete</Text>
+              </div>
             </BlockStack>
-            <Box width="100%">
-              <BlockStack gap="100">
-                <ProgressBar progress={loadPct} size="small" />
-                <Text as="p" variant="bodySm" tone="subdued" alignment="end">{loadPct}%</Text>
-              </BlockStack>
-            </Box>
+            <BlockStack gap="300">
+              {roadmapSteps.map((s, i) => {
+                const status = stepStatus[s.key]
+                const icon = status === 'done' ? '✓' : (status === 'active' ? (
+                  <span style={{ display: 'inline-block', animation: 'ue-spin 1.4s linear infinite' }}>↻</span>
+                ) : s.emoji)
+                return (
+                  <div key={s.key} className="ue-step-row" style={{ display: 'flex', gap: 14, alignItems: 'center', animationDelay: (i * 0.05) + 's' }}>
+                    <div className={'ue-step-icon ' + status}>{icon}</div>
+                    <div className={'ue-step-label ' + status} style={{ fontSize: 14, lineHeight: 1.4 }}>{s.label}</div>
+                  </div>
+                )
+              })}
+            </BlockStack>
+            <div style={{ marginTop: 16, padding: 14, background: '#fafbfc', borderRadius: 10, border: '1px solid #e1e3e5' }}>
+              <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+                AI gândește adânc · 2-3 minute pentru calitate maximă
+              </Text>
+            </div>
           </BlockStack>
         </Card>
       </Page>
     )
   }
 
-  // ─── Wizard ────────────────────────────────────────────────────────────
-  function goNext() {
-    if (step === 0) startResearch()
-  }
+  // ─── Loading screens dispatched per phase ────────────────────────────
+  if (phase === 'roadmap-research') return <RoadmapView title="Pregătim avatarul tău" />
+  if (phase === 'roadmap-generate') return <RoadmapView title="Construim pagina ta" />
 
-  function goBack() {
-    setDirection('backward')
-    setStep(s => Math.max(0, s - 1))
+  function goNext() {
+    if (phase === 'pick') startResearch()
   }
 
   return (
     <Page
       title="Generator AI"
-      subtitle={'Pasul ' + (step + 1) + ' din ' + STEPS_COUNT}
+      subtitle={phase === 'pick' ? 'Pasul 1 din 2 — alege sursa' : 'Pasul 2 din 2 — confirmă avatarul'}
       backAction={{ content: 'Anulează', onAction: onBack }}
     >
       <style>{`
-        @keyframes ue-slide-in-right { from {opacity:0;transform:translateX(40px)} to {opacity:1;transform:translateX(0)} }
-        @keyframes ue-slide-in-left { from {opacity:0;transform:translateX(-40px)} to {opacity:1;transform:translateX(0)} }
-        .ue-wizard-step { animation: ue-slide-in-right 0.35s cubic-bezier(0.16,1,0.3,1); }
-        .ue-wizard-step.back { animation: ue-slide-in-left 0.35s cubic-bezier(0.16,1,0.3,1); }
-        .ue-progress-bar { height: 4px; background: #f1f2f4; border-radius: 2px; overflow: hidden; margin-bottom: 24px; }
-        .ue-progress-fill { height: 100%; background: linear-gradient(90deg,#2c6ecb 0%,#5b8def 100%); transition: width 0.4s cubic-bezier(0.16,1,0.3,1); border-radius: 2px; }
+        @keyframes ue-slide-in-right { from {opacity:0;transform:translateX(60px)} to {opacity:1;transform:translateX(0)} }
+        @keyframes ue-slide-out-left { from {opacity:1;transform:translateX(0)} to {opacity:0;transform:translateX(-60px)} }
+        .ue-wizard-step { animation: ue-slide-in-right 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .ue-wizard-step.out { animation: ue-slide-out-left 0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
       `}</style>
 
       <Card>
-        <div className="ue-progress-bar">
-          <div className="ue-progress-fill" style={{ width: (((step + 1) / STEPS_COUNT) * 100) + '%' }} />
-        </div>
-
-        {presetStyle && step === 0 && (
+        {presetStyle && phase === 'pick' && (
           <div style={{ marginBottom: 16 }}>
             <Banner tone="info">
               Stil pre-selectat: <strong>{presetStyle.templateName}</strong>
@@ -263,8 +316,8 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
           </div>
         )}
 
-        <div className={'ue-wizard-step' + (direction === 'backward' ? ' back' : '')} key={step}>
-          {step === 0 && (
+        <div className={'ue-wizard-step' + (icpSlide === 'out' ? ' out' : '')} key={phase}>
+          {phase === 'pick' && (
             <BlockStack gap="400">
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">De unde luăm produsul?</Text>
@@ -398,7 +451,7 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
             </BlockStack>
           )}
 
-          {step === 1 && icp && (
+          {phase === 'icp-review' && icp && (
             <BlockStack gap="400">
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">Avatar cumpărător</Text>
@@ -530,14 +583,14 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
 
         {/* Navigation footer */}
         <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid #e1e3e5', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-          <Button onClick={goBack} disabled={step === 0 || researching || loading}>← Înapoi</Button>
-          {step === 0 ? (
-            <Button variant="primary" size="large" onClick={goNext} disabled={!canStartResearch() || researching} loading={researching}>
+          <Button onClick={() => { setIcpSlide('out'); setTimeout(() => setPhase('pick'), 300) }} disabled={phase === 'pick'}>← Înapoi</Button>
+          {phase === 'pick' ? (
+            <Button variant="primary" size="large" onClick={goNext} disabled={!canStartResearch()}>
               Analizează produsul →
             </Button>
           ) : (
-            <Button variant="primary" size="large" icon={MagicIcon} onClick={generate}>
-              Generează pagina
+            <Button variant="primary" size="large" icon={MagicIcon} onClick={confirmIcpAndGenerate}>
+              Confirm & Generează pagina
             </Button>
           )}
         </div>
