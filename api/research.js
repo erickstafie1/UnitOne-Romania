@@ -37,69 +37,84 @@ function scrapeViaClaude(url, sourceHint) {
   if (aliId) productHint = ' AliExpress item ID ' + aliId[1]
   else if (amzId) productHint = ' Amazon ASIN ' + amzId[1]
   else if (albId) productHint = ' Alibaba product ID ' + albId[1]
+  // Haiku 4.5 — 50k rate limit / min (tier 1) vs Sonnet 30k. Scraping nu necesita
+  // gandire profunda, Haiku descurca + e mai rapid si mai ieftin.
   const body = JSON.stringify({
-    model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 6000,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8 }],
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 3000,
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
     messages: [{
       role: 'user',
-      content: 'Cauta acest produs pe internet si extrage informatii REALE despre el. Daca pagina sursa e blocata, foloseste web_search ca sa gasesti pagini de listing alternative, reviews, comparisons, anything cu informatii reale.\n\n' +
+      content: 'Foloseste web_search ca sa gasesti acest produs:\n' +
         'URL: ' + cleanUrl + '\n' +
         'Sursa: ' + sourceLabel + productHint + '\n\n' +
-        'STRATEGII (incearca-le pe rand pana gasesti info reala):\n' +
-        '1. web_search cu URL-ul direct\n' +
-        '2. web_search cu ID-ul produsului + numele site-ului (ex: "AliExpress 1005006789012345")\n' +
-        '3. web_search dupa keywords vizibile din URL slug\n' +
-        '4. Cauta produsul pe site-uri de review-uri / comparatii\n\n' +
-        'CRITIC:\n' +
-        '- Daca gasesti info reala, populeaza JSON cu detalii CONCRETE (nume produs, descriere reala, specs reale).\n' +
-        '- Daca DUPA toate cele 4 strategii NU gasesti nimic, returneaza JSON cu title="" (string GOL) — NU "Product information unavailable" sau alt placeholder. Vom gestiona cazul ne-found separat.\n\n' +
-        'Returneaza DOAR JSON valid (fara markdown, fara backtick-uri, fara explicatii):\n' +
+        (sourceHint === 'aliexpress' ?
+          'AliExpress paginile nu sunt indexate direct. Strategie:\n' +
+          '1. Cauta pe Google "' + (productHint.trim() || cleanUrl) + '" + review-uri si comparatii\n' +
+          '2. Cauta produsul dupa keywords din URL slug pe alte site-uri\n' +
+          '3. Cauta categoria de produs + ID-ul pe AliExpress aggregators\n\n'
+          : 'Strategii: search URL direct, search ID + nume site, search slug keywords, cauta pe review sites.\n\n') +
+        'Returneaza DOAR JSON valid:\n' +
         '{\n' +
-        '  "title": "Numele REAL al produsului in romana sau engleza (max 100 char). String GOL daca nu poti gasi.",\n' +
-        '  "description": "Descriere REALA in 3-5 fraze: ce face, caracteristici principale, public tinta. String GOL daca nu poti gasi.",\n' +
-        '  "specs": ["Spec REALA 1 (ex: \'Baterie 40h\')", "Spec 2", "..." 3-8 specs concrete. Array gol [] daca nu poti gasi.],\n' +
-        '  "priceUSD": pret_in_USD_sau_0_daca_nu_stii,\n' +
-        '  "images": ["url_imagine_1", "..."] (0-6 url-uri publice, array gol daca nu poti gasi)\n' +
-        '}'
+        '  "title": "Nume real produs sau string gol",\n' +
+        '  "description": "Descriere reala 3-5 fraze sau string gol",\n' +
+        '  "specs": ["spec1", ...] sau [],\n' +
+        '  "priceUSD": numar sau 0,\n' +
+        '  "images": ["url1", ...] sau []\n' +
+        '}\n\n' +
+        'CRITIC: daca NU gasesti nimic dupa search, returneaza string gol / array gol. NU inventa, NU folosi placeholder gen "Product information unavailable".'
     }]
   })
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05',
-        'Content-Length': Buffer.byteLength(body)
-      },
-      timeout: 120000
-    }, (res) => {
-      const chunks = []
-      res.on('data', c => chunks.push(c))
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(Buffer.concat(chunks).toString())
-          if (data.error) return reject(new Error('Claude scraper: ' + data.error.message))
-          const blocks = data.content || []
-          const text = blocks.filter(c => c.type === 'text').map(c => c.text || '').join('')
-          const parsed = extractFirstJSON({ text })
-          resolve({
-            title: String(parsed.title || '').slice(0, 100),
-            description: String(parsed.description || '').slice(0, 1500),
-            specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(String) : [],
-            priceUSD: Number(parsed.priceUSD) || 0,
-            images: Array.isArray(parsed.images) ? parsed.images.filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 6) : []
-          })
-        } catch (e) { reject(e) }
+  // scrapeApiCall e similar cu apiCall dar trimite header-ul anthropic-beta
+  // pentru web_search tool, si retry pe rate limit.
+  function scrapeApiCall(attempt = 0) {
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'web-search-2025-03-05',
+          'Content-Length': Buffer.byteLength(body)
+        },
+        timeout: 120000
+      }, (res) => {
+        const chunks = []
+        res.on('data', c => chunks.push(c))
+        res.on('end', async () => {
+          try {
+            const data = JSON.parse(Buffer.concat(chunks).toString())
+            if (data.error) {
+              const msg = data.error.message || ''
+              if (/rate\s*limit|429|overload|usage\s+tier/i.test(msg) && attempt < 2) {
+                const delay = 12000 + attempt * 18000
+                console.log('[scrape] rate-limited, retry in', delay, 'ms')
+                await new Promise(r => setTimeout(r, delay))
+                return scrapeApiCall(attempt + 1).then(resolve, reject)
+              }
+              return reject(new Error('Claude scraper: ' + msg))
+            }
+            const blocks = data.content || []
+            const text = blocks.filter(c => c.type === 'text').map(c => c.text || '').join('')
+            const parsed = extractFirstJSON({ text })
+            resolve({
+              title: String(parsed.title || '').slice(0, 100),
+              description: String(parsed.description || '').slice(0, 1500),
+              specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(String) : [],
+              priceUSD: Number(parsed.priceUSD) || 0,
+              images: Array.isArray(parsed.images) ? parsed.images.filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 6) : []
+            })
+          } catch (e) { reject(e) }
+        })
       })
+      req.on('error', reject)
+      req.on('timeout', () => { req.destroy(); reject(new Error('Claude scraper timeout 120s')) })
+      req.write(body)
+      req.end()
     })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Claude scraper timeout 120s')) })
-    req.write(body)
-    req.end()
-  })
+  }
+  return scrapeApiCall()
 }
 
 // ─── Scraping helpers (kept for fallback path) ───
@@ -249,10 +264,14 @@ function callClaudeVisionForResearch(imageDataUri) {
 function callClaudeResearch(productInfo) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
+  // Trimmed budget vs prior commit (24k+12k thinking) — tier 1 rate limit
+  // pe Sonnet e 30k input tokens/min, deci research call mare + scrape =
+  // peste limita rapid. Aici reducem la 12k output + 5k thinking ca sa
+  // ramana loc pentru scrape + retry.
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 24000,
-    thinking: { type: 'enabled', budget_tokens: 12000 },
+    max_tokens: 12000,
+    thinking: { type: 'enabled', budget_tokens: 5000 },
     system: `Esti un research strategist expert care construieste AVATARE / ICP-uri pentru produse COD vandute in Romania, dupa metodologia MARK BUILDS BRANDS.
 
 Misiune: pornind de la un produs (descriere + specs), GANDESTE PROFUND (foloseste extended thinking) ca un consumer researcher care a citit zeci de review-uri Amazon, mii de comentarii forum si zeci de reclame de la competitori. Apoi creeaza un AVATAR PSIHOLOGIC complet — nu generic.
@@ -339,7 +358,7 @@ Returneaza DOAR JSON valid (fara markdown, fara backtick-uri, fara explicatii).`
   })
 }
 
-function apiCall(body, timeoutMs) {
+function apiCall(body, timeoutMs, attempt = 0) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -349,10 +368,22 @@ function apiCall(body, timeoutMs) {
     }, (res) => {
       const chunks = []
       res.on('data', c => chunks.push(c))
-      res.on('end', () => {
+      res.on('end', async () => {
         try {
-          const data = JSON.parse(Buffer.concat(chunks).toString())
-          if (data.error) return reject(new Error('Claude: ' + data.error.message))
+          const raw = Buffer.concat(chunks).toString()
+          const data = JSON.parse(raw)
+          if (data.error) {
+            const msg = data.error.message || ''
+            // Retry on rate limit / overload (max 3 attempts with backoff)
+            const isRateLimit = /rate\s*limit|429|overload|usage\s+tier/i.test(msg)
+            if (isRateLimit && attempt < 2) {
+              const delay = 12000 + attempt * 18000  // 12s, 30s
+              console.log('[research] rate-limited, retry in', delay, 'ms (attempt', attempt + 1, ')')
+              await new Promise(r => setTimeout(r, delay))
+              return apiCall(body, timeoutMs, attempt + 1).then(resolve, reject)
+            }
+            return reject(new Error('Claude: ' + msg))
+          }
           resolve(data)
         } catch (e) { reject(e) }
       })
