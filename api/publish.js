@@ -608,38 +608,14 @@ module.exports = async function handler(req, res) {
     // Daca user-ul a adaugat popup-uri (block "unitone-popup-block"), atasam
     // scriptul universal care le transforma in overlay + trigger. Skip daca
     // nu exista popup pe pagina ca sa nu poluam DOM-ul cu script nefolosit.
-    // DIAGNOSTIC: log if popup detected in finalHtml. User reports popup
-    // missing from storefront DOM → suspect getHtml() not exporting it.
+    // DIAGNOSTIC FAZA 2: scoatem TOATA logica de hide. Daca popup apare
+    // ca section pe storefront → popup E in body_html, deci publish path
+    // OK. Bug e doar in hide+handler script. Daca tot nu apare → popup
+    // NU e in finalHtml → bug in frontend getHtml() sau Shopify reject.
     const hasPopup = finalHtml.includes('unitone-popup-block')
     console.log('[publish] popup detected in finalHtml:', hasPopup, 'html size KB:', Math.round(finalHtml.length / 1024))
-    // ALWAYS add handler + visible banner for debug — confirms script
-    // execution on storefront regardless of popup presence.
-    if (true) {
-      // Anti-flash + force-hide: chiar daca theme-ul Shopify strip-uieste
-      // <style> tag-ul, fortam inline display:none pe TOATE elementele
-      // .unitone-popup-block prin regex. Handler-ul ruleaza, cloneaza in
-      // overlay (cu clasa redenumita .unitone-popup-clone) si seteaza style
-      // nou fara display:none cand vine trigger-ul.
-      finalHtml = finalHtml.replace(
-        /<div\b([^>]*\bclass="[^"]*\bunitone-popup-block\b[^"]*"[^>]*)>/gi,
-        (match, attrs) => {
-          // Folosim display:none !important inline ca sa invingem ORICE
-          // theme CSS care ar putea forta display:block (Dawn etc.)
-          const forceHide = 'display:none !important;visibility:hidden !important;'
-          if (/style="[^"]*display\s*:\s*none\s*!important/i.test(attrs)) return match
-          if (/style="/i.test(attrs)) {
-            // Inlocuieste eventual display:none simplu si prepend cu !important
-            const cleaned = attrs.replace(/display\s*:\s*none\s*;?/gi, '')
-            return '<div' + cleaned.replace(/style="/i, 'style="' + forceHide) + '>'
-          }
-          return '<div' + attrs + ' style="' + forceHide + '">'
-        }
-      )
-      console.log('[publish] handler always prepended for diagnostic, popup found in finalHtml:', hasPopup)
-      // Handler script PREPENDED nu appended — daca Shopify trunchiaza
-      // body_html la 65535 chars, scriptul ramane intact la inceput.
-      finalHtml = buildPopupHandler(hasPopup) + '<style>.unitone-popup-block{display:none!important;visibility:hidden!important}.unitone-popup-clone{display:block!important;visibility:visible!important}</style>' + finalHtml
-    }
+    // Banner ALWAYS injected ca diagnostic — confirma daca scriptul ruleaza
+    finalHtml = buildPopupHandler(hasPopup) + finalHtml
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
 
