@@ -256,10 +256,13 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       editor.on('component:remove', refreshPopups)
       editor.on('component:update:attributes', refreshPopups)
 
-      // Sync data-* attributes → inline style pe canvas asa user-ul VEDE
-      // modificarile din trait panel imediat (background color, width, etc.)
+      // Sync data-* attributes → inline style pe canvas. Recursion guard
+      // via _unitoneSyncing flag — fara el, addAttributes({style}) declanseaza
+      // alt component:update:attributes → freeze infinit.
+      let syncBusy = false
       function syncPopupStyles(comp) {
         try {
+          if (syncBusy) return
           if (!comp || comp.get('type') !== 'unitone-popup') return
           const el = comp.getEl && comp.getEl()
           if (!el) return
@@ -272,7 +275,6 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           const height = a['data-height'] || 'auto'
           const padding = parseInt(a['data-padding'] || '32', 10)
           const fullscreen = a['data-fullscreen'] === 'yes'
-          // Pastram display:none ca anti-flash sa fie ok, edit mode CSS il override
           let style = 'display:none;background:' + bgColor + ';'
           if (bgImage) style += 'background-image:url(\'' + bgImage + '\');background-size:cover;background-position:center;'
           style += 'border-radius:' + corner + 'px;padding:' + padding + 'px;box-shadow:' + shadow + ';position:relative;margin:24px auto;'
@@ -282,13 +284,22 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
             style += 'width:' + width + 'px;max-width:90vw;'
             if (height && height !== 'auto') style += 'height:' + height + (String(height).indexOf('px') >= 0 ? '' : 'px') + ';'
           }
-          // Setam direct pe element pentru update vizual imediat
+          // Skip daca style e deja la fel (mai evita un trigger inutil)
+          if (a.style === style) return
+          syncBusy = true
           el.setAttribute('style', style)
-          // Actualizam si model attributes ca sa fie salvat in body_html
           comp.addAttributes({ style })
-        } catch (e) {}
+          syncBusy = false
+        } catch (e) { syncBusy = false }
       }
-      editor.on('component:update:attributes', syncPopupStyles)
+      // Doar pe selected (ruleaza o data cand user clickeaza popup) +
+      // pe debounced update — fara loop infinit.
+      let syncTimer = null
+      editor.on('component:update:attributes', (comp) => {
+        if (!comp || comp.get('type') !== 'unitone-popup') return
+        if (syncTimer) clearTimeout(syncTimer)
+        syncTimer = setTimeout(() => syncPopupStyles(comp), 100)
+      })
       editor.on('component:selected', syncPopupStyles)
 
       // Expose editor instance for popup edit-mode CSS injection (in JSX below)
