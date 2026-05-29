@@ -824,13 +824,13 @@ Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markd
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 24000,
+    max_tokens: 16000,
     // Extended thinking — Sonnet 4.5 isi rezerva 12k tokens pentru
     // RATIONAMENT INVIZIBIL inainte de a returna JSON-ul final. Permite
     // sa analizeze in profunzime cele 16 reguli, sa identifice Sophistication
     // Level, hook levers de stack, Hawkins state al audientei + sa
     // self-verifice CHECKLIST FINAL inainte de output.
-    thinking: { type: 'enabled', budget_tokens: 12000 },
+    thinking: { type: 'enabled', budget_tokens: 8000 },
     system: system,
     messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru ACEST produs concret:
 
