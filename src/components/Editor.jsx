@@ -1265,20 +1265,39 @@ function buildHTML(data) {
   const reviewCount = Math.max(0, Number(data.reviewCount) || 1247)
   // imgTag — pune src ca atribut quoted, escape valorile
   const imgTag = (src, style) => src ? `<img src="${esc(src)}" style="${style || 'width:100%;display:block'}" alt="" />` : ''
-  const benefits = (data.benefits || []).slice(0, 5)
-  const testimonials = data.testimonials || []
+  // Length-mode driven slicing — AI livreaza arrays mai mari per lengthMode,
+  // dar render-uia hardcoded slice. Acum slice e dinamic conform meta.
+  const _lm = (data.meta && data.meta.lengthMode) || data.lengthMode || 'mediu'
+  const benefitsLimit = _lm === 'scurt' ? 3 : _lm === 'lung' ? 7 : 5
+  const testimonialsLimit = _lm === 'scurt' ? 3 : _lm === 'lung' ? 6 : 4
+  const featureLimit = _lm === 'scurt' ? 1 : _lm === 'lung' ? 3 : 2
+  const faqLimit = _lm === 'scurt' ? 4 : _lm === 'lung' ? 8 : 6
+  const benefits = (data.benefits || []).slice(0, benefitsLimit)
+  const testimonials = (data.testimonials || []).slice(0, testimonialsLimit)
   // New fields (with fallbacks pentru date generate inainte de schema noua)
   const giftValue = Number(data.giftValue) || 0  // 0 = banner ascuns
   const phoneNumber = String(data.phoneNumber || '0700 000 000')
   const phoneClean = phoneNumber.replace(/[^\d+]/g, '')
   const quickBullets = (data.quickBullets || []).slice(0, 4)
   const topBenefits = (data.topBenefits && data.topBenefits.length ? data.topBenefits : benefits.slice(0, 3)).slice(0, 3)
-  const featureSections = (data.featureSections || []).slice(0, 2)
+  const featureSections = (data.featureSections || []).slice(0, featureLimit)
   const objections = (data.objections || []).slice(0, 4)
+  const howItWorks = (data.howItWorks || []).slice(0, 3)
+  // meta = persistent wizard inputs (tone, niche, urgencyLevel, lengthMode)
+  // passed from /api/generate. Drives tone variants, niche icons, countdown.
+  const meta = (data.meta && typeof data.meta === 'object') ? data.meta : {}
   // Popup config — daca user a bifat in formularul Generator
   const popup = data.popup && typeof data.popup === 'object' ? data.popup : null
   const urgencyMessage = data.urgencyMessage || 'STOC LIMITAT — SE EPUIZEAZĂ RAPID'
   const riskReversalText = data.riskReversalText || 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.'
+  // Urgency widgets — countdown + stock pulse activate cand urgencyLevel='inalta'
+  const urgencyLevel = meta.urgencyLevel || data.urgencyLevel || 'medie'
+  const timerMinutes = Math.max(5, Math.min(60, Number(data.timerMinutes) || 14))
+  const stockCount = Math.max(1, Math.min(99, Number(data.stock) || 7))
+  const bumpPrice = Math.max(0, Number(data.bumpPrice) || 0)
+  const bumpName = data.bumpName || ('Accesoriu cadou')
+  const showCountdown = urgencyLevel === 'inalta'
+  const showStockPulse = urgencyLevel === 'inalta' && stockCount <= 20
   // Palette accents — generator assigns these per LP; fallback la galben default
   const secondary = data.style?.secondaryColor || '#111111'
   const bgAccent = data.style?.bgAccent || '#fffbeb'
@@ -1416,6 +1435,45 @@ function buildHTML(data) {
     return ''
   }).join('') : ''
 
+  // Beneficii complete — lista cu TOATE benefits (3/5/7 per lengthMode).
+  // Render-uit ca lista cu check-uri intr-un card single-column.
+  // Apare doar daca benefits are mai mult decat topBenefits (altfel duplicat).
+  const benefitsListHtml = benefits.length > topBenefits.length ? [
+    `<div style="padding:32px 20px;background:#f9fafb">`,
+    `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center;text-transform:uppercase;letter-spacing:0.5px">Toate beneficiile incluse</h2>`,
+    `<div style="max-width:720px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04)">`,
+    benefits.map(b => [
+      `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #f1f2f4">`,
+      `<span style="flex:0 0 22px;color:#16a34a;font-size:18px;font-weight:900;line-height:1.2">&#10003;</span>`,
+      `<span style="flex:1;font-size:14px;color:#222;line-height:1.55;font-weight:500">${esc(b)}</span>`,
+      `</div>`
+    ].join('')).join(''),
+    `</div></div>`
+  ].join('') : ''
+
+  // How-it-works — 3-step timeline cu numerotare + sageti intre pasi.
+  // AI populeaza data.howItWorks: [{title, desc}, {title, desc}, {title, desc}].
+  // Inserat dupa featureSections, inainte de objections.
+  const howItWorksHtml = howItWorks.length === 3 ? [
+    `<div style="padding:36px 20px;background:#fff">`,
+    `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;text-transform:uppercase;letter-spacing:0.5px">Cum funcționează — 3 pași simpli</h2>`,
+    `<p style="font-size:14px;color:#666;text-align:center;margin:0 0 28px">Comanda → Primești → Profiți</p>`,
+    `<div class="unitone-hiw-grid" style="display:grid;grid-template-columns:1fr;gap:18px;max-width:900px;margin:0 auto">`,
+    howItWorks.map((step, i) => {
+      if (!step || typeof step !== 'object') return ''
+      const title = esc(step.title || `Pasul ${i + 1}`)
+      const desc = esc(step.desc || '')
+      return [
+        `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px 20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative">`,
+        `<div style="width:54px;height:54px;background:${primary};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;margin:0 auto 16px;box-shadow:0 4px 12px ${primary}40">${i + 1}</div>`,
+        `<h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.3px">${title}</h3>`,
+        `<p style="font-size:14px;color:#555;line-height:1.55;margin:0">${desc}</p>`,
+        `</div>`
+      ].join('')
+    }).join(''),
+    `</div></div>`
+  ].join('') : ''
+
   const objectionsHtml = objections.length ? [
     `<div style="padding:36px 20px;background:#fafbfc">`,
     `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center">Răspundem îngrijorărilor tale</h2>`,
@@ -1430,14 +1488,30 @@ function buildHTML(data) {
     `</div></div>`
   ].join('') : ''
 
+  // Niche icons map — fiecare nisa are 3 emoji distincte rotite per topBenefit.
+  // Inlocuieste emoji-ul generic &#127775; cu unul potrivit nisei.
+  const nicheIconsMap = {
+    fashion: ['&#128091;', '&#128094;', '&#128096;'],          // 👛 👞 👠
+    electronics: ['&#9889;', '&#128268;', '&#128241;'],        // ⚡ 🔌 📱
+    beauty: ['&#10024;', '&#128144;', '&#127807;'],            // ✨ 💐 🌿
+    auto: ['&#128663;', '&#128296;', '&#9881;&#65039;'],       // 🚗 🔧 ⚙️
+    health: ['&#128138;', '&#129656;', '&#128137;'],           // 💊 🫀 💉
+    home: ['&#127968;', '&#128293;', '&#128722;'],             // 🏠 🔥 🛒
+    sports: ['&#127947;&#65039;', '&#128170;', '&#127942;'],   // 🏋️ 💪 🏆
+    baby: ['&#128118;', '&#129345;', '&#128098;'],             // 👶 🍼 👼
+    pet: ['&#128054;', '&#128062;', '&#129437;'],              // 🐶 🐾 🦴
+    generic: ['&#127775;', '&#9989;', '&#128640;']             // 🌟 ✅ 🚀
+  }
+  const nicheIcons = nicheIconsMap[meta.niche] || nicheIconsMap.generic
+
   // 3-card grid pentru top 3 beneficii (Section 5 din produsutil.ro)
   const topBenefitsHtml = topBenefits.length ? [
     `<div style="padding:32px 20px;background:#fff">`,
     `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center;text-transform:uppercase;letter-spacing:0.5px">Top 3 motive să comanzi acum</h2>`,
     `<div class="unitone-topben-grid" style="display:grid;grid-template-columns:1fr;gap:14px">`,
-    topBenefits.map(b => [
+    topBenefits.map((b, i) => [
       `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px 18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)">`,
-      `<div style="font-size:32px;line-height:1;margin-bottom:12px">&#127775;</div>`,
+      `<div style="font-size:32px;line-height:1;margin-bottom:12px">${nicheIcons[i % nicheIcons.length]}</div>`,
       `<p style="font-size:15px;font-weight:600;color:#111;line-height:1.5;margin:0">${esc(b)}</p>`,
       `</div>`
     ].join('')).join(''),
@@ -1460,6 +1534,7 @@ function buildHTML(data) {
       #unitone-lp .unitone-hero-overlay .unitone-hero-headline{font-size:42px !important}
       #unitone-lp .unitone-feature-grid{grid-template-columns:1fr 1fr !important;gap:40px !important}
       #unitone-lp .unitone-topben-grid{grid-template-columns:repeat(3,1fr) !important;gap:20px !important}
+      #unitone-lp .unitone-hiw-grid{grid-template-columns:repeat(3,1fr) !important;gap:24px !important}
       #unitone-lp .unitone-test-grid{grid-template-columns:repeat(3,1fr) !important;gap:18px !important}
       #unitone-lp .unitone-feature-row{padding:48px 32px !important}
       #unitone-lp .unitone-quickbullets{grid-template-columns:1fr 1fr !important;gap:14px !important}
@@ -1468,6 +1543,21 @@ function buildHTML(data) {
     }
     @keyframes unitone-gift-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
     #unitone-lp .unitone-gift{animation:unitone-gift-pulse 2.5s ease-in-out infinite}
+    /* Tone variants — applied via class on outer wrapper #unitone-lp */
+    #unitone-lp.tone-agresiv{}
+    @keyframes unitone-agro-pulse{0%,100%{box-shadow:0 0 0 0 ${primary}66}50%{box-shadow:0 0 0 8px ${primary}00}}
+    #unitone-lp.tone-agresiv [href="#unitone-cod-anchor"],
+    #unitone-lp.tone-agresiv .unitone-cod-fallback{
+      animation:unitone-agro-pulse 1.8s ease-in-out infinite !important;
+      letter-spacing:1px !important;
+      text-transform:uppercase !important;
+    }
+    #unitone-lp.tone-premium{letter-spacing:0.2px}
+    #unitone-lp.tone-premium h1,#unitone-lp.tone-premium h2,#unitone-lp.tone-premium h3{font-weight:700 !important;letter-spacing:-0.2px}
+    #unitone-lp.tone-premium [data-unitone-bind="price"]{font-weight:700 !important}
+    #unitone-lp.tone-premium .unitone-hero-priceblock{gap:18px !important}
+    #unitone-lp.tone-casual h1,#unitone-lp.tone-casual h2{font-weight:800}
+    #unitone-lp.tone-casual [style*="border-radius:8px"]{border-radius:14px !important}
     #unitone-lp details > summary{list-style:none}
     #unitone-lp details > summary::-webkit-details-marker{display:none}
     #unitone-lp details > summary::after{content:"+";float:right;font-size:20px;font-weight:900;color:#999;transition:transform 0.2s}
@@ -1487,7 +1577,12 @@ function buildHTML(data) {
   const savingsBlock = savings > 0 ? `<p data-unitone-bind="savings" style="font-size:12px;color:#999;text-align:center;margin:0 0 16px">Economisești ${savings} LEI</p>` : `<p style="margin:0 0 16px"></p>`
   const oldPriceSpan = savings > 0 ? `<span data-unitone-bind="compareAt" style="font-size:18px;color:#aaa;text-decoration:line-through">${oldPrice} LEI</span>` : ''
   const discBadge = disc > 0 ? `<span data-unitone-bind="discount" style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px">-${disc}%</span>` : ''
-  const priceBlock = `<div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">${oldPriceSpan}<span data-unitone-bind="price" style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:${primary}">LEI</span>${discBadge}</div>${savingsBlock}`
+  // Bump-price card — apare doar daca bumpPrice > 0 (AI a populat) si dispare
+  // automat altfel. Render-uit ca order-bump sub priceBlock pentru AOV crescut.
+  const bumpBlock = bumpPrice > 0
+    ? `<div style="margin:14px auto 0;max-width:380px;border:2px dashed ${primary};background:#fffdf5;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer"><span style="font-size:18px">&#127873;</span><div style="flex:1;text-align:left"><div style="font-size:13px;font-weight:800;color:#111">${esc(bumpName)} <span style="color:${primary}">+${bumpPrice} LEI</span></div><div style="font-size:11px;color:#666">Bifează la comandă pentru a-l adăuga la prețul redus.</div></div></div>`
+    : ''
+  const priceBlock = `<div class="unitone-hero-priceblock" style="display:flex;align-items:baseline;gap:12px;justify-content:center;margin-bottom:6px;flex-wrap:wrap">${oldPriceSpan}<span data-unitone-bind="price" style="font-size:42px;font-weight:900;color:${primary};line-height:1">${price}</span><span style="font-size:18px;font-weight:900;color:${primary}">LEI</span>${discBadge}</div>${savingsBlock}${bumpBlock}`
   const trustRowBlock = `<div style="display:flex;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap"><span style="font-size:12px;color:#16a34a;font-weight:700">&#10003; Livrare 24-48h</span><span style="font-size:12px;color:#16a34a;font-weight:700">&#128666; Plata ramburs</span><span style="font-size:12px;color:#16a34a;font-weight:700">&#8617; Retur 30 zile</span></div>`
   const heroImgFallback = '<div style="background:#f0f0f0;aspect-ratio:1;border-radius:8px;width:100%"></div>'
 
@@ -1514,7 +1609,7 @@ function buildHTML(data) {
   }
 
   return [
-    `<div id="unitone-lp">`,
+    `<div id="unitone-lp" class="tone-${esc(meta.tone || 'direct')} niche-${esc(meta.niche || 'generic')}">`,
     styleBlock,
     `<div style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;width:100%;background:#fff;color:#111;line-height:1.5">`,
 
@@ -1543,6 +1638,9 @@ function buildHTML(data) {
     // ─── 5. Top 3 feature grid (TEXT) ─────────────────────────────────
     topBenefitsHtml,
 
+    // ─── 5b. Lista completa beneficii (cand AI livreaza > 3 items) ────
+    benefitsListHtml,
+
     // ─── 6a. Feature section 1 (IMG + TEXT) ───────────────────────────
     renderFeatureSection(featureSections[0], 0),
 
@@ -1557,11 +1655,17 @@ function buildHTML(data) {
     // ─── 6b. Feature section 2 (IMG + TEXT, alternant) ────────────────
     renderFeatureSection(featureSections[1], 1),
 
+    // ─── 6c. Feature section 3 (doar pe lengthMode=lung) ──────────────
+    renderFeatureSection(featureSections[2], 2),
+
     // ─── 7b. Obiectii Tratate (TEXT) — daca user a cerut in form generator ─
     objectionsHtml,
 
     // ─── 7c. Nisa-specific sections (tabel marimi / specs / ingrediente / etc) ─
     nicheSectionsHtml,
+
+    // ─── 7d. How-it-works timeline (3 pasi numerotati) ─────────────────
+    howItWorksHtml,
 
     // ─── 8. Testimoniale (TEXT) ────────────────────────────────────────
     testimonials.length ? [
@@ -1576,12 +1680,29 @@ function buildHTML(data) {
     //         jumatatea de jos a paginii ───────────────────────────────
     renderLifestyleBanner(),
 
-    // ─── 9. Urgency banner rosu + CTA bonus ───────────────────────────
-    `<div style="background:#fef2f2;border-top:3px solid ${primary};border-bottom:3px solid ${primary};padding:24px 20px;text-align:center">`,
-    `<div style="font-size:18px;font-weight:900;color:${primary};margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">&#9888; ${esc(urgencyMessage)}</div>`,
-    `<p style="font-size:14px;color:#666;margin:0 0 18px">Comandă Acum, Primești și Cadou Surpriză &#127873;</p>`,
-    `<div style="display:inline-block">${scrollBtn}</div>`,
-    `</div>`,
+    // ─── 9. Urgency banner — varianta inalta are countdown + stock pulse ─
+    [
+      `<div style="background:#fef2f2;border-top:3px solid ${primary};border-bottom:3px solid ${primary};padding:24px 20px;text-align:center">`,
+      `<div style="font-size:18px;font-weight:900;color:${primary};margin-bottom:${showCountdown ? '14px' : '6px'};text-transform:uppercase;letter-spacing:0.5px">&#9888; ${esc(urgencyMessage)}</div>`,
+      showCountdown ? [
+        `<div style="display:flex;justify-content:center;gap:8px;margin:0 0 14px;flex-wrap:nowrap">`,
+        `<div style="text-align:center"><span id="ucd-h" style="background:${primary};color:#fff;border-radius:6px;padding:8px 12px;font-size:22px;font-weight:900;font-family:monospace;min-width:46px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;color:#666">ORE</div></div>`,
+        `<div style="font-size:22px;font-weight:900;color:${primary};padding-top:8px">:</div>`,
+        `<div style="text-align:center"><span id="ucd-m" style="background:${primary};color:#fff;border-radius:6px;padding:8px 12px;font-size:22px;font-weight:900;font-family:monospace;min-width:46px;display:inline-block">${timerMinutes}</span><div style="font-size:10px;margin-top:3px;color:#666">MIN</div></div>`,
+        `<div style="font-size:22px;font-weight:900;color:${primary};padding-top:8px">:</div>`,
+        `<div style="text-align:center"><span id="ucd-s" style="background:${primary};color:#fff;border-radius:6px;padding:8px 12px;font-size:22px;font-weight:900;font-family:monospace;min-width:46px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;color:#666">SEC</div></div>`,
+        `</div>`,
+        `<script>(function(){var t=${timerMinutes}*60;function r(){var h=String(Math.floor(t/3600)).padStart(2,"0"),m=String(Math.floor((t%3600)/60)).padStart(2,"0"),s=String(t%60).padStart(2,"0");var eh=document.getElementById("ucd-h"),em=document.getElementById("ucd-m"),es=document.getElementById("ucd-s");if(eh)eh.textContent=h;if(em)em.textContent=m;if(es)es.textContent=s}setInterval(function(){if(t>0)t--;r()},1000);r()})()<\/script>`
+      ].join('') : '',
+      showStockPulse ? [
+        `<style>@keyframes unitone-stock-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.85;transform:scale(1.03)}}</style>`,
+        `<div style="display:inline-block;background:#fff;border:2px solid ${primary};border-radius:24px;padding:8px 18px;margin:0 0 16px;animation:unitone-stock-pulse 1.4s ease-in-out infinite">`,
+        `<span style="font-size:13px;color:${primary};font-weight:800">&#128293; Doar ${stockCount} bucăți rămase în stoc</span>`,
+        `</div>`
+      ].join('') : `<p style="font-size:14px;color:#666;margin:0 0 18px">Comandă Acum, Primești și Cadou Surpriză &#127873;</p>`,
+      `<div style="display:inline-block">${scrollBtn}</div>`,
+      `</div>`
+    ].join(''),
 
     // ─── 10. FAQ accordion ────────────────────────────────────────────
     (data.faq || []).length ? [

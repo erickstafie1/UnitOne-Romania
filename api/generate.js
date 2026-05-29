@@ -159,14 +159,17 @@ function callClaudeVision(imageDataUri) {
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-        { type: 'text', text: `Analizeaza imaginea si returneaza DOAR un JSON cu:
+        { type: 'text', text: `Esti expert produs + copywriter. Analizeaza imaginea ATENT si returneaza DOAR un JSON cu:
 {
-  "title": "Numele produsului in romana (max 60 char, ex: 'Aspirator de mana wireless Pro')",
-  "description": "Descriere produsului in 2-4 fraze: ce face, caracteristici principale, public tinta. Romana corecta cu diacritice.",
-  "specs": ["Specificatie 1 (ex: 'Baterie 40 ore')", "Specificatie 2", "..." (3-6 specs vizibile din imagine)]
+  "title": "Numele specific al produsului in romana (max 60 char, ex: 'Aspirator de mana wireless Pro 2000W'). Include dimensiune/varianta vizibila daca exista.",
+  "description": "3-5 fraze in romana cu: (1) ce este produsul exact, (2) caracteristici tehnice vizibile (material, culoare, dimensiune), (3) functionalitate principala observata din imagine. Diacritice corecte.",
+  "specs": ["6-8 specs concrete extrase doar din ce SE VEDE in imagine. Format: 'Atribut: valoare'. Ex: 'Material: piele', 'Capacitate: 500ml', 'Culoare: negru mat'"],
+  "useCases": ["3-4 situatii concrete in care s-ar folosi produsul. Ex: 'Pentru curatarea masinii dupa lucrari grele', 'Pentru iesiri la sala'. Romana naturala, nu marketing-speak."],
+  "painPointSolved": "1-2 fraze: ce problema specifica rezolva produsul pentru un cumparator tipic. Ex: 'Elimina nevoia de a tara aspiratorul mare in masina. Curatarea interioarelor devine rapida si fara fire incurcate.'",
+  "audience": "1-2 fraze: cine cumpara probabil acest produs. Profile de varsta + situatie + motivatie. Ex: 'Soferi 25-45 ani care isi pretuiesc masina si vor sa o tina curata fara sa investeasca timp mult.'"
 }
 
-Niciun text in afara JSON. Fara markdown, fara backtick-uri.` }
+Niciun text in afara JSON. Fara markdown, fara backtick-uri. Daca vezi un produs, fii SPECIFIC, nu generic.` }
       ]
     }]
   })
@@ -191,7 +194,10 @@ Niciun text in afara JSON. Fara markdown, fara backtick-uri.` }
             title: String(parsed.title || '').slice(0, 100),
             priceUSD: 0,  // vision nu vede pret
             description: String(parsed.description || '').slice(0, 1500),
-            specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(s => String(s)) : []
+            specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(s => String(s)) : [],
+            useCases: Array.isArray(parsed.useCases) ? parsed.useCases.slice(0, 6).map(s => String(s)) : [],
+            painPointSolved: String(parsed.painPointSolved || '').slice(0, 500),
+            audience: String(parsed.audience || '').slice(0, 300)
           })
         } catch (e) { reject(e) }
       })
@@ -311,18 +317,140 @@ NISA: ${nicheInstruction}`
   // - testimoniale cu detalii CONCRETE despre cum a folosit produsul (nu "excelent")
   // - FAQ standard COD RO (plată, livrare, courier, garanție, telefon, retur)
   // - feature sections sunt mini-articole image+bullets care explică un beneficiu cheie
+  // Tone × Niche matrix — instructiuni emotional hooks specifice cand tone+niche
+  // se combina. AI primeste o linie din matrice pentru combo-ul concret, ca
+  // sa nu produca copy generic care suna la fel indiferent de combo.
+  const toneNicheMatrix = {
+    'agresiv|beauty': 'Frica de imbatranire / pielea care iti tradeaza varsta. Headline cu "10 ani in 30 zile" sau "ridurile dispar". Urgenta de schimbare ACUM, nu maine.',
+    'agresiv|electronics': 'FOMO pe tehnologie. "Toti foloseau deja asta in timp ce tu pierdeai timpul". Comparatie agresiva cu solutii vechi.',
+    'agresiv|fashion': 'Insecuritate sociala + statut. "Nu mai iesi imbracat ca acum 5 ani". Critica directa la modă veche.',
+    'agresiv|auto': 'Pericol + reparatii scumpe. "Inainte sa te coste 3000 LEI la service". Frica de defectiune costisitoare.',
+    'agresiv|health': 'Sanatatea care se degradeaza. "Inainte sa fie prea tarziu". Statistici cu boli specifice.',
+    'agresiv|home': 'Casa care arata neglijent + mizerie. "Vizita care iti iese pe gura". Rusine sociala.',
+    'agresiv|sports': 'Corp slab + judecata sociala. "Vara la plaja in 60 zile sau nimic". Deadline strict.',
+    'agresiv|baby': 'Vinovatia parintelui + siguranta copilului. "Lucruri pe care alti parinti le stiu deja". Comparatie cu "parintii buni".',
+    'agresiv|pet': 'Sanatatea animalului in pericol + costuri vet. "Inainte sa cheltui 2000 LEI la veterinar".',
+    'agresiv|generic': 'Urgenta directa cu pierdere clara. "X care e mort daca nu actionezi azi". Scarcity puternic.',
+
+    'premium|beauty': 'Rafinament + auto-ingrijire ca ritual. "Pentru cele care stiu sa aleaga". Vocabular ales, nu cuvinte de zi cu zi.',
+    'premium|electronics': 'Excelenta tehnica + design. "Inginereria detaliilor". Specs ca proof points, nu lista lunga.',
+    'premium|fashion': 'Statut + lifestyle aspirational. "Cel care recunoaste calitatea". Mentioneaza materiale rare/finisaje.',
+    'premium|auto': 'Statut social + grija pentru investitie. "Pentru cei care isi protejeaza investitia". Tehnologie de varf.',
+    'premium|health': 'Self-care premium + longevitate. "Investitie in tine peste 10 ani". Ingrediente top-shelf.',
+    'premium|home': 'Casa ca expresie a personalitatii + design rafinat. "Spatiul in care te identifici". Materiale durabile.',
+    'premium|sports': 'Performanta ca art form + dedicatie. "Disciplina celor care nu accepta mediocritatea".',
+    'premium|baby': 'Cel mai bun start pentru copil + standarde inalte. "Pentru parintii care vor ce e mai bun".',
+    'premium|pet': 'Animalul ca membru de familie + ingrijire premium. "Pentru companionul care merita totul".',
+    'premium|generic': 'Calitate fara compromis + experienta rafinata. "Pentru cei care fac diferenta intre bun si exceptional".',
+
+    'casual|beauty': 'Vorbeste ca prietena care recomanda. "Stii sentimentul cand iei o crema si nu vezi nici o diferenta? Asta e altceva." Confesional.',
+    'casual|electronics': 'Geek prieten care explica simplu. "Stii ce ma enerveaza la celelalte? Bateria moare in 2 ore." Frustari relatable.',
+    'casual|fashion': 'Stylist prieten care recomanda. "Asta e genul de chestie pe care o porti si TOATA lumea intreaba de unde o ai." Conversatie cu prietene.',
+    'casual|auto': 'Mecanic prieten care da sfat. "Stii cat de enervant e cand iti pica X? Astia eviti complet." Tehnic simplu.',
+    'casual|health': 'Prieten care a incercat si i-a mers. "Eu am avut aceeasi problema cu Y, am incercat asta si in 2 saptamani..." Storytelling.',
+    'casual|home': 'Prieten care decoreaza inteligent. "Am incercat sa-mi organizez bucataria de 5 ori. ASTA a fost ce a mers." Solutia care a functionat.',
+    'casual|sports': 'Antrenor prieten care a slabit X kg. "Eu am inceput cu 5 minute pe zi, in 30 zile aratam altfel." Personal proof.',
+    'casual|baby': 'Mama / tata cu experienta. "Cand am avut primul copil n-aveam nici o idee. Asta ne-a salvat noptile." Confesional parental.',
+    'casual|pet': 'Iubitor de animale care impartaseste. "Cainele meu refuza orice pana sa-i dau asta. Acum vrea numai asta."',
+    'casual|generic': 'Recomandare prieteneasca. "Stii cand cineva iti zice ceva si stii pe loc ca ai nevoie? Asa e si asta."',
+
+    'profesional|beauty': 'Limbaj dermatologic + studii. "Studii clinice arata o reducere de 47% a ridurilor in 8 saptamani". Citeaza ingrediente active cu procente.',
+    'profesional|electronics': 'Specs + benchmark-uri. "Testat la 10000 cicluri de incarcare". Comparatii numerice cu competitia.',
+    'profesional|fashion': 'Provenienta materialelor + tehnica. "Piele full-grain italiana, cusatura saddle stitch manuala". Detalii artizanale.',
+    'profesional|auto': 'Specs ingineresti + certificari. "Aprobat TUV / certificat ECE R-87". Cifre tehnice exacte.',
+    'profesional|health': 'Studii + dosaj clinic. "Eficacitate demonstrata in trial randomizat n=320". Ingredient activ cu mg specifice.',
+    'profesional|home': 'Material specs + standarde. "Inox AISI 304 alimentar / certificare contact alimentar". Durabilitate masurabila.',
+    'profesional|sports': 'Stiinta antrenamentului + biomechanics. "Activare 3 grupe musculare simultan / 1.7x mai eficient decat clasicul X".',
+    'profesional|baby': 'Certificari siguranta + studii pediatrice. "Recomandat de pediatri / certificare EN71". Procese de testare.',
+    'profesional|pet': 'Nutritionist veterinar + studii. "Formulat de medici veterinari / aprobat AAFCO". Nutritional facts.',
+    'profesional|generic': 'Date concrete + sursa autoritate. "Testat in laborator independent / rata satisfactie 96%". Cifre exacte cu sursa.',
+
+    'emotional|beauty': 'Imagineaza-ti senzatia + amintirea momentului. "Imagineaza-ti dimineata cand te uiti in oglinda si zambesti". Senzorial.',
+    'emotional|electronics': 'Conexiune + momente pierdute. "Cate apeluri ai ratat cu casti vechi? Cate momente ai pierdut?" Nostalgia.',
+    'emotional|fashion': 'Identitatea + cum te face sa te simti. "Stii momentul cand intri in camera si te simti TU completa?" Self-confidence.',
+    'emotional|auto': 'Siguranta familiei + responsabilitate. "Cand iti urci copiii in spate, stii ca ai facut tot ce ai putut." Grija parentala.',
+    'emotional|health': 'Vitalitatea pierduta + speranta. "Iti amintesti cand aveai energie pana seara? Inca poti." Recapatare.',
+    'emotional|home': 'Casa ca refugiu + amintiri create. "Locul in care familia ta isi traieste cele mai bune amintiri." Cuibar.',
+    'emotional|sports': 'Mandrie + corp redescoperit. "Sentimentul cand iti pui hainele de acum 5 ani si TI INTRA." Victory.',
+    'emotional|baby': 'Iubirea de parinte + momente unice. "Primul lui zambet dupa o noapte buna de somn. Asa s-a schimbat." Tendresse.',
+    'emotional|pet': 'Companion drag + grija. "Coada care se misca cand intri pe usa. Pentru ea, asta e diferenta." Loialitate.',
+    'emotional|generic': 'Conectare emotionala cu rezultatul. "Imagineaza-ti viata ta peste 30 zile. Asa arata diferenta."'
+  }
+  const matrixKey = (tone || 'direct') + '|' + (opts.niche || 'generic')
+  const matrixHook = toneNicheMatrix[matrixKey] || ''
+  const matrixBlock = matrixHook
+    ? `\n\n=== TON × NISA HOOK (FOLOSESTE in headline + benefits + testimoniale) ===\n${matrixHook}`
+    : ''
+
   const system = `Esti copywriter expert pentru landing page-uri COD din Romania. Scrii ca pentru produsutil.ro, nu ca un AI.
 
+============================================================
+FRAZE BANNED (NU folosi NICIODATA, oriunde in JSON):
+- "transforma-ti viata" / "te invitam sa descoperi" / "descopera magia"
+- "revolutioneaza" / "ridica-ti standardele" / "experienta transformatoare"
+- "solutie inovatoare" / "calitate premium" (folosit generic) / "ultimate experience"
+- "te ajuta sa..." (vag) / "iti ofera posibilitatea sa..." (vag)
+- "produsul nostru" (vag — foloseste numele real al produsului)
+- "pentru un stil de viata mai bun" / "pentru tine care meriti"
+- "comfort si eleganta" / "calitate si stil" / "performanta superioara"
+- "nu rata aceasta oportunitate" / "profita acum de oferta"
+- "schimba-ti viata" / "pielea/parul tau merita" / "esti la un click distanta"
+- "lider de piata" / "cel mai bun de pe piata" / "calitate ireprosabila"
+- "experienta unica" / "moment magic" / "alegerea inteligenta"
+============================================================
+
 REGULI CRITICE:
-1. ZERO fraze generic-AI gen "transforma-ti viata", "descopera magia", "revolutioneaza", "ultimate experience".
-2. quickBullets: EXACT 4 bullets sub imaginea principala. Fiecare MAXIM 8 cuvinte. Beneficiu CONCRET si specific produsului (NU "calitate premium" generic). Exemple bune: "Prinde 5+ soareci la o singura activare", "Bateria tine 40 ore continuu", "Pielea naturala 100%, nu se crapa". Exemple proaste: "Calitate superioara garantata", "Confort si eleganta".
-3. topBenefits si benefits in format PROBLEMA->REZOLVARE: incepi cu 1-2 cuvinte CAPITALIZATE care nominalizeaza problema, urmat de "—" si rezolvarea concreta.
-   Exemplu: "NU SE RASTOARNA — 4 ventuze tin farfuria fixa de masa"
-   Exemplu: "FARA MIZERIE — baveta colectoare prinde tot ce cade"
-4. Testimoniale: nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti) + text 2-3 fraze cu detaliu CONCRET despre utilizare (cum, cand, ce s-a schimbat). NU "produs excelent recomand".
-5. FAQ exact 6 intrebari in ordinea: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
-6. Tot textul in romana corecta cu diacritice (a, i, s, t, ts).
-7. objections (daca cerut): 4 obiectii standard cu rebuttals scurte si convingatoare. Format: {objection: "...", rebuttal: "..."}. Exemple bune: {objection: "E prea scump", rebuttal: "Costul pe folosire e <30 bani/zi — mai ieftin decat o cafea care nu rezolva nimic"}. NU rebuttals defensive ("avem cei mai buni..."); rebuttals contextuale.${personalizationBlock}${briefBlock}${competitorBlock}
+
+1. **HEADLINE — formula AIDA**: [BENEFICIU CONCRET CU CIFRE/TIMP] + [AUDIENTA] + [ELIMINARE OBIECTIE]. Maxim 70 chars.
+   BUN: "Curata 47 m² in 22 minute — Aspirator wireless, fara fire incurcate" (cifra + audienta implicita + diferentiator)
+   PROST: "Aspiratorul ideal pentru casa ta" (vag)
+   PROST: "Calitate premium, pret accesibil" (banned + generic)
+
+2. **SUBHEADLINE — UVP cu proof point concret**: 1 fraza max 100 chars cu DOVADA, nu promisiune.
+   BUN: "Folosit deja de 14.000 familii din Romania, evaluare 4.8★/5 pe 12 luni"
+   PROST: "Solutia care iti transforma rutina" (vag + banned)
+
+3. **quickBullets — EXACT 4, max 8 cuvinte fiecare**: Beneficii MASURABILE sau VIZIBILE.
+   BUN: "Prinde 5+ soareci la o singura activare"
+   BUN: "Bateria tine 40 ore continuu"
+   PROST: "Calitate superioara garantata" (banned)
+   PROST: "Confort si eleganta" (banned)
+
+4. **topBenefits + benefits — framework PAS**: PROBLEMA (in CAPS, 1-3 cuvinte) → "—" → REZOLVARE (concret, cu cifre/mecanism daca posibil).
+   Foloseste topBenefits pentru TOP 3 dureri ale audientei + rezolvari.
+   Foloseste benefits (5-8 items per lengthMode) pentru caracteristici secundare.
+   BUN: "NU SE RASTOARNA — 4 ventuze cu vacuum activ tin farfuria fixa pe masa"
+   BUN: "FARA MIZERIE — baveta colectoare 360° prinde tot ce cade in farfurioara dedesubt"
+   BUN: "INCERCARE FARA RISC — 30 zile retur fara intrebari, costul de courier inclus"
+   PROST: "Foarte util pentru copii" (nu PAS, nu concret)
+
+5. **Testimoniale — structura obligatorie 4-part**: [SITUATIE INITIALA: ce facea/avea inainte] + [ACTIUNE: cum a aflat / cand a comandat] + [REZULTAT SPECIFIC: ce s-a schimbat, cu cifre/timeline] + [EMOTIE FINALA: o fraza scurta cu sentimentul actual].
+   Nume real RO + oras real RO (Bucuresti/Cluj/Constanta/Iasi/Timisoara/Brasov/Oradea/Sibiu/Galati/Ploiesti/Craiova/Pitesti/Arad).
+   BUN: "Aveam aceeasi problema cu farfuria varsata de fiecare data la masa. Am gasit ASTA pe Facebook, am comandat de incercare. In prima zi cand am pus-o, copilul a mancat tot fara sa dea nimic jos. Acum sunt mai relaxata la masa."
+   PROST: "Produs excelent, recomand cu incredere." (lipseste 4-part)
+   PROST: "Foarte multumita, calitate buna." (generic + lipseste 4-part)
+
+6. **FAQ exact 6 intrebari in ordinea fixa**: (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur? Raspunsuri concrete + scurte (2-3 fraze).
+
+7. **Risk reversal — garantie CONDITIONALA cu detaliu concret**, NU generic "30 zile money back":
+   BUN: "Daca dupa 30 zile copilul tau inca varsa mai mult de 2 ori pe masa, returnam integral + iti dam un bonus de 20 LEI pentru bataia de cap."
+   PROST: "30 de zile garantie de returnare." (generic + plat)
+
+8. **objections** (daca cerut): 4 obiectii standard cu rebuttals contextuale + cifre/detaliu specifice produsului. NU defensive.
+   BUN: {objection: "E prea scump pentru ce ofera", rebuttal: "Calculeaza: 5 LEI / utilizare pentru durata medie de 18 luni. O cafea costa 12 LEI dar dispare in 10 minute."}
+   PROST: {objection: "E prea scump", rebuttal: "Avem cele mai bune preturi." } (defensive + generic)
+
+9. **CTA microcopy — verbe puternice + actiune clara**:
+   BUN: "Comanda acum" / "Profita de oferta" / "Vreau si eu"
+   EVITA: "Click aici" / "Trimite" / "Continua" / "Mai multe info"
+
+10. **Tot textul in romana corecta cu diacritice obligatoriu** (a, i, s, t, ts).
+
+11. **LENGTH MODE adherence — STRICT**:
+    - scurt: EXACT 3 benefits, 3 testimoniale, 4 FAQ, 1 featureSection
+    - mediu: EXACT 5 benefits, 4 testimoniale, 6 FAQ, 2 featureSections
+    - lung: EXACT 7 benefits, 6 testimoniale, 8 FAQ, 3 featureSections
+    NU livra mai putin. NU livra mai mult.${personalizationBlock}${briefBlock}${competitorBlock}${matrixBlock}
 
 Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
 
@@ -407,12 +535,18 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
   ]
 }`
 
-  // Detalii AliExpress de pasat la Claude — fara ele inventeaza orb
+  // Detalii produs de pasat la Claude — fara ele inventeaza orb.
+  // useCases / painPointSolved / audience vin din Vision (uploaded photo)
+  // sau pot lipsi (URL scrape). Cand exista, Claude trebuie sa le foloseasca
+  // direct in headlines, benefits si testimoniale.
   const productContext = [
     `Nume produs: "${productInfo.title || 'produs'}"`,
     `Pret RO: ~${rp} LEI`,
-    productInfo.description ? `\nDescriere AliExpress (de aici extragi feature-urile reale):\n"""\n${productInfo.description}\n"""` : '',
-    productInfo.specs?.length ? `\nSpecificatii produs:\n- ${productInfo.specs.join('\n- ')}` : ''
+    productInfo.description ? `\nDescriere produs (sursa: AliExpress / Vision):\n"""\n${productInfo.description}\n"""` : '',
+    productInfo.specs?.length ? `\nSpecificatii produs (concrete, extrase din sursa):\n- ${productInfo.specs.join('\n- ')}` : '',
+    productInfo.audience ? `\nAUDIENTA PROBABILA (din Vision — foloseste in testimoniale + ton):\n"""\n${productInfo.audience}\n"""` : '',
+    productInfo.painPointSolved ? `\nDURERE REZOLVATA (din Vision — foloseste in headline + topBenefits):\n"""\n${productInfo.painPointSolved}\n"""` : '',
+    productInfo.useCases?.length ? `\nSITUATII DE FOLOSIRE (din Vision — foloseste in featureSections + benefits):\n- ${productInfo.useCases.join('\n- ')}` : ''
   ].filter(Boolean).join('\n')
 
   const body = JSON.stringify({
@@ -806,8 +940,16 @@ module.exports = async function handler(req, res) {
     // Save URL in returned data so editor's auto-save can use it as
     // a stable identifier for localStorage draft (otherwise drafts collide).
     copy.aliUrl = primaryUrl
+    // Persist wizard inputs ca buildHTML sa poata aplica tone-variants,
+    // niche-icons si countdown widgets bazat pe ele la render time.
+    copy.meta = {
+      tone: tone || 'direct',
+      niche: niche || 'generic',
+      urgencyLevel: urgencyLevel || 'medie',
+      lengthMode: lengthMode || 'mediu'
+    }
 
-    console.log('=== DONE === Images:', copy.images.length, '/4 (', goodGemini.length, 'Gemini +', aliImages.length, 'Ali)')
+    console.log('=== DONE === Images:', copy.images.length, '/4 (', goodGemini.length, 'Gemini +', aliImages.length, 'Ali)', 'meta:', copy.meta)
     res.status(200).json({ success: true, data: copy })
   } catch(err) {
     console.error('Error:', err.message)
