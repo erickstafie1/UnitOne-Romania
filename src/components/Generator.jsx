@@ -202,8 +202,17 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
         body: JSON.stringify(body)
       })
       clearInterval(advance)
-      const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Eroare la analiza')
+      // Body poate fi HTML (Vercel timeout page) sau JSON cu error ca obiect
+      // (Anthropic / Vercel forwardeaza {error:{message,code}}). Coerce sigur.
+      let json = {}
+      try { json = await res.json() } catch (parseErr) { json = {} }
+      if (!res.ok || !json.success) {
+        const errMsg = typeof json.error === 'string'
+          ? json.error
+          : (json.error && (json.error.message || json.error.code))
+            || ('Eroare server (HTTP ' + res.status + ')')
+        throw new Error(errMsg)
+      }
       setProductInfo(json.productInfo)
       setIcp(json.icp)
       setResearchImages(json.images || [])
@@ -257,9 +266,15 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
       })
       clearInterval(advance)
       cancelRef.current = true
-      if (!res.ok) throw new Error('Server error ' + res.status)
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Eroare')
+      let json = {}
+      try { json = await res.json() } catch (parseErr) { json = {} }
+      if (!res.ok || !json.success) {
+        const errMsg = typeof json.error === 'string'
+          ? json.error
+          : (json.error && (json.error.message || json.error.code))
+            || ('Server error ' + res.status)
+        throw new Error(errMsg)
+      }
       setStepStatus(s => ({ ...s, salesCopy: 'done', images: 'done', finalize: 'done' }))
       setProgressPct(100)
       await new Promise(r => setTimeout(r, 700))
