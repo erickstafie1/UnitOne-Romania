@@ -178,7 +178,7 @@ Niciun text in afara JSON. Fara markdown, fara backtick-uri. Daca vezi un produs
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 45000
+      timeout: 150000
     }, (res) => {
       const chunks = []
       res.on('data', c => chunks.push(c))
@@ -544,7 +544,26 @@ REGULI CRITICE PE STRUCTURA + COPYWRITING:
     - lung: 7 benefits, 6 testimoniale, 8 FAQ, 3 featureSections, 4 quickBullets
     NU MAI PUTIN. NU MAI MULT.${personalizationBlock}${briefBlock}${competitorBlock}${matrixBlock}
 
-Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
+============================================================
+CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
+[ ] Headline = Sophistication Level identificat + 3 hook levers stack + <70 char
+[ ] Subheadline = "So That, Without" + obiectie principala eliminata
+[ ] FIECARE camp text in VOCE ACTIVA, pers 2 singular, ZERO weasel words
+[ ] FIECARE paragraf testimonial sub 300 char + 4-part structure
+[ ] FEEL→THINK→ACT flow aplicat (hero=emotie, benefits=logica, CTA=identitate+frica pierdere)
+[ ] Hawkins level — am intrat in starea AUDIENTEI sub 200 (durere/frustrare), NU am sarit la "fii fericit"
+[ ] Identity labeling min 3 ori ("tu esti / tu meriti / tu iei")
+[ ] Min 1 belief limitativ adresat in objections sau riskReversalText
+[ ] Emotional delta arc: durere (hero) → hope (body) → frica de pierdere (urgency+CTA)
+[ ] LENGTH MODE EXACT: ${opts.lengthMode || 'mediu'} = ${({scurt:'3 benefits/3 testim/4 FAQ/1 feat/3 quickBullets', mediu:'5/4/6/2/4', lung:'7/6/8/3/4'})[opts.lengthMode || 'mediu']}
+[ ] TON aplicat consistent: ${opts.tone || 'direct'}
+[ ] NISA aplicata in nicheSections: ${opts.niche || 'generic'}
+[ ] URGENCY level: ${opts.urgencyLevel || 'medie'} reflectat in urgencyMessage + intensity copy
+[ ] CUSTOM OBJECTIONS (daca cerute) folosite EXACT in objections array, nu inventate
+[ ] BRIEF user (salesAngle/styleDesc) — durere + audienta reflectate in TESTIMONIALE + topBenefits
+============================================================
+
+Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markdown, fara backtick-uri, fara explicatii.`
 
   const schema = `{
   "productName": "Nume specific al produsului (max 60 char). NU 'Produsul nostru' — foloseste numele real.",
@@ -643,8 +662,8 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
   ].filter(Boolean).join('\n')
 
   const body = JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 6000,
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 12000,
     system: system,
     messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru ACEST produs concret:
 
@@ -664,7 +683,7 @@ ${schema}` }]
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 45000
+      timeout: 150000
     }, (res) => {
       const chunks = []
       res.on('data', c => chunks.push(c))
@@ -697,7 +716,7 @@ ${schema}` }]
       })
     })
     req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout after 45s')) })
+    req.on('timeout', () => { req.destroy(); reject(new Error('Claude timeout after 150s')) })
     req.write(body)
     req.end()
   })
