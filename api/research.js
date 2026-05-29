@@ -324,14 +324,14 @@ function callClaudeVisionForResearch(imageDataUri) {
 function callClaudeResearch(productInfo) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
-  // Trimmed budget vs prior commit (24k+12k thinking) — tier 1 rate limit
-  // pe Sonnet e 30k input tokens/min, deci research call mare + scrape =
-  // peste limita rapid. Aici reducem la 12k output + 5k thinking ca sa
-  // ramana loc pentru scrape + retry.
+  // Switched Sonnet 4.5 → Haiku 4.5 — research e JSON structurat, nu
+  // necesita creativitatea Sonnet. Haiku 4.5 = ~10x mai ieftin + tier 1
+  // rate limit 100k tokens/min (vs 30k Sonnet). Mentinem extended thinking
+  // (Haiku 4.5 supports), budget 4k pentru sa ramana persona depth decenta.
   const body = JSON.stringify({
-    model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 12000,
-    thinking: { type: 'enabled', budget_tokens: 5000 },
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 8000,
+    thinking: { type: 'enabled', budget_tokens: 4000 },
     system: `Esti un research strategist expert care construieste AVATARE / ICP-uri pentru produse COD vandute in Romania, dupa metodologia MARK BUILDS BRANDS.
 
 Misiune: pornind de la un produs (descriere + specs), GANDESTE PROFUND (foloseste extended thinking) ca un consumer researcher care a citit zeci de review-uri Amazon, mii de comentarii forum si zeci de reclame de la competitori. Apoi creeaza un AVATAR PSIHOLOGIC complet — nu generic.

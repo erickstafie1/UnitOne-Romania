@@ -748,7 +748,13 @@ REGULI CRITICE PE STRUCTURA + COPYWRITING:
     - scurt: 3 benefits, 3 testimoniale, 4 FAQ, 1 featureSection, 3 quickBullets
     - mediu: 5 benefits, 4 testimoniale, 6 FAQ, 2 featureSections, 4 quickBullets
     - lung: 7 benefits, 6 testimoniale, 8 FAQ, 3 featureSections, 4 quickBullets
-    NU MAI PUTIN. NU MAI MULT.${personalizationBlock}${briefBlock}${competitorBlock}${matrixBlock}
+    NU MAI PUTIN. NU MAI MULT.
+
+Returneaza DOAR JSON valid (TOATE check-urile CHECKLIST FINAL respectate), fara markdown, fara backtick-uri, fara explicatii.`
+
+  // Dynamic system block — schimba la fiecare call (ICP, brief, params).
+  // Ramane in afara cache-ului. Trimite ~1-2k tokens per call.
+  const dynamicSystem = `${personalizationBlock}${briefBlock}${competitorBlock}${matrixBlock}
 
 ============================================================
 CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
@@ -770,9 +776,7 @@ CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 [ ] URGENCY level: ${opts.urgencyLevel || 'medie'} reflectat in urgencyMessage + intensity copy
 [ ] CUSTOM OBJECTIONS (daca cerute) folosite EXACT in objections array, nu inventate
 [ ] BRIEF user (salesAngle/styleDesc) — durere + audienta reflectate in TESTIMONIALE + topBenefits
-============================================================
-
-Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markdown, fara backtick-uri, fara explicatii.`
+============================================================`
 
   const schema = `{
   "productName": "Nume tehnic / oficial al produsului (max 60 char). NU 'Produsul nostru' — foloseste numele real.",
@@ -890,7 +894,14 @@ Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markd
     // Level, hook levers de stack, Hawkins state al audientei + sa
     // self-verifice CHECKLIST FINAL inainte de output.
     thinking: { type: 'enabled', budget_tokens: 8000 },
-    system: system,
+    // Prompt caching — system prompt e ~12k tokens static (banned, MAGIC,
+    // neuroscience, structura, reguli 1-16). Cache_control 'ephemeral' = 5min
+    // TTL, 90% discount pe input cached. Second block (dynamicSystem) ramane
+    // necachuit fiindca contine ICP + params per-call.
+    system: [
+      { type: 'text', text: system, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: dynamicSystem }
+    ],
     messages: [{ role: 'user', content: `Genereaza JSON-ul de mai jos pentru ACEST produs concret:
 
 ${productContext}
@@ -915,7 +926,13 @@ ${schema}` }]
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'prompt-caching-2024-07-31',
+        'Content-Length': Buffer.byteLength(body)
+      },
       timeout: 240000
     }, (res) => {
       const chunks = []
