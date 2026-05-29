@@ -48,6 +48,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       const STYLE_ID = 'unitone-popup-style'
       let styleEl = doc.getElementById(STYLE_ID)
       // Base CSS — popup-urile ascunse default + modal rules pentru edit mode
+      // + empty-state hint pe popup-body cand nu are children (GemPages-style)
       const baseCss = `
         .unitone-popup-block { display: none !important; }
         #unitone-edit-backdrop {
@@ -66,6 +67,31 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           max-height: 85vh !important;
           overflow: auto !important;
           box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important;
+        }
+        .unitone-popup-body { min-height: 100px; }
+        .unitone-popup-body:empty {
+          border: 2px dashed #d1d5db;
+          border-radius: 8px;
+          padding: 32px 24px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 13px;
+          cursor: pointer;
+          position: relative;
+        }
+        .unitone-popup-body:empty::before {
+          content: "+ Adaugă elemente";
+          display: block;
+          font-size: 15px;
+          font-weight: 700;
+          color: #2c6ecb;
+          margin-bottom: 6px;
+        }
+        .unitone-popup-body:empty::after {
+          content: "Click aici pentru deschide tab-ul Elemente";
+          display: block;
+          font-size: 12px;
+          color: #9ca3af;
         }
       `
       if (!styleEl) {
@@ -98,6 +124,22 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         }
       } else if (backdrop) {
         backdrop.remove()
+      }
+
+      // Click delegat pe popup-body empty → schimba tab-ul Sections/Elements
+      // pe Elements (asa cum face GemPages — "add elements" hint clickabil).
+      const EMPTY_HANDLER_FLAG = '__unitoneEmptyHandlerBound'
+      if (!doc[EMPTY_HANDLER_FLAG]) {
+        doc[EMPTY_HANDLER_FLAG] = true
+        doc.addEventListener('click', (ev) => {
+          const target = ev.target
+          if (!target || !target.classList) return
+          if (target.classList.contains('unitone-popup-body') && target.children.length === 0) {
+            ev.preventDefault()
+            ev.stopPropagation()
+            setBlocksTab('element')
+          }
+        }, true)
       }
     } catch (e) { console.warn('popup edit-mode CSS failed:', e.message) }
   }, [editPopupId, popups])
@@ -1671,11 +1713,10 @@ function addBlocks(editor, data) {
   // Default inner content — userul edita TEXT direct in canvas, dragneaza
   // alte elemente in zona popup-body (drop zone). Toate setarile vizuale
   // (close btn, overlay, bg, position, etc.) vin din trait panel.
+  // Popup body porneste GOL. Empty state (hint clickabil) e injectat via CSS
+  // :empty pseudo-class + click handler delegated in canvas (vezi useEffect).
   function popupBodyHTML() {
-    return [
-      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:600;text-align:center;line-height:1.4">⚠ POPUP — Drop orice element aici. Setări în tab <strong>Proprietăți</strong> (dreapta).</div>`,
-      `<div style="min-height:100px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;border:2px dashed #d1d5db;border-radius:8px;padding:24px">Popup gol — adaugă text, butoane, imagini din sidebar</div>`
-    ].join('')
+    return ''
   }
 
   // Block content explicit ca tree de componente (nu HTML string) ca tipurile

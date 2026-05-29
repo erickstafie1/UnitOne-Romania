@@ -579,8 +579,25 @@ module.exports = async function handler(req, res) {
     // scriptul universal care le transforma in overlay + trigger. Skip daca
     // nu exista popup pe pagina ca sa nu poluam DOM-ul cu script nefolosit.
     if (finalHtml.includes('unitone-popup-block')) {
-      // Anti-flash: ascunde inline popup imediat (handler-ul cloneaza in overlay)
-      finalHtml = '<style>.unitone-popup-block{display:none!important}</style>' + finalHtml + buildPopupHandler()
+      // Anti-flash + force-hide: chiar daca theme-ul Shopify strip-uieste
+      // <style> tag-ul, fortam inline display:none pe TOATE elementele
+      // .unitone-popup-block prin regex. Handler-ul ruleaza, cloneaza in
+      // overlay (cu clasa redenumita .unitone-popup-clone) si seteaza style
+      // nou fara display:none cand vine trigger-ul.
+      finalHtml = finalHtml.replace(
+        /<div\b([^>]*\bclass="[^"]*\bunitone-popup-block\b[^"]*"[^>]*)>/gi,
+        (match, attrs) => {
+          // Daca are deja display:none in style, nu mai duplicam
+          if (/style="[^"]*display\s*:\s*none/i.test(attrs)) return match
+          // Daca are style attr existent, prepend display:none
+          if (/style="/i.test(attrs)) {
+            return '<div' + attrs.replace(/style="/i, 'style="display:none;') + '>'
+          }
+          // Fara style attr — adaugam
+          return '<div' + attrs + ' style="display:none">'
+        }
+      )
+      finalHtml = '<style>.unitone-popup-block{display:none!important}.unitone-popup-clone{display:block!important}</style>' + finalHtml + buildPopupHandler()
     }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)
