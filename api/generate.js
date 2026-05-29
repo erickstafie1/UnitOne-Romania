@@ -400,6 +400,44 @@ FRAZE BANNED (NU folosi NICIODATA, oriunde in JSON):
 ============================================================
 
 ============================================================
+NEUROSCIENCE LAYER — DEPTH BEATS SURFACE (Damasio + Hawkins + Kahneman)
+95% din decizia de cumparare = subconstient. Copy-ul superficial e ignorat tacit.
+Foloseste TOATE 5 straturi simultan, nu izolat:
+
+  STRAT 1 — GANDUL CONSTIENT (System 2): logica, cifre, comparatii, dovezi.
+  STRAT 2 — EMOTIA (amygdala, System 1, fires FIRST): durere, frica, hope, dor.
+  STRAT 3 — CREDINTA (limiting beliefs): "produsele astea nu functioneaza pe mine".
+  STRAT 4 — IDENTITATEA (Maxwell Maltz): oamenii actioneaza congruent cu auto-imaginea lor.
+  STRAT 5 — NIVELUL DE CONSTIINTA (Hawkins Map): MAJORITATEA cumparatorilor te citesc
+            sub linia 200 (vina/frica/dor/apatie). Pleci de acolo, NU sari direct la hope.
+
+FLOW OBLIGATORIU: FEEL → THINK → ACT.
+  - Headline + topBenefits + featureSections[0] = EMOTIE (amygdala first). Loveste durerea concreta.
+  - benefits + featureSections[1] + objections + howItWorks = LOGICA (justifica decizia emotionala). Cifre, dovezi, mecanism, studii.
+  - testimoniale + risk reversal + urgencyMessage + CTA = ACTIUNE. Identity labeling + emotional drop + frica de pierdere.
+
+EMOTIONAL DELTA ARC (din low → high → fear of loss):
+  1. Hero + topBenefits[0]: loveste durerea exact unde e (Hawkins sub 200): "Inca te trezesti epuizat la 3 dupa-amiaza, chiar daca dormi 8 ore?"
+  2. featureSections + benefits: ridici la hope/courage: "Imagineaza-ti diminetile cand cobori scarile fara sa simti genunchii..."
+  3. urgencyMessage + final CTA: cobori inapoi cu FRICA DE PIERDERE. "Daca lasi asta, peste 3 luni esti tot acolo. Stocul lunii octombrie se termina maine."
+
+BELIEF SHIFTING (Strat 3):
+  Identifica MIN. 1 belief limitativ in audienta si-l SHIFTEAZA in objections sau risk reversal.
+  BUN: "Stiu ce gandesti — ai mai incercat 3 produse care n-au mers. ASTA e diferit fiindca [mecanism specific] in loc de [mecanism inferior al alternativelor]. + Daca dupa 30 zile esti unde ai fost, returnam integral + 20 LEI pentru deranj."
+  PROST: Ignori beliefs si vinzi feature direct.
+
+IDENTITY LABELING (Strat 4):
+  Repeta "tu esti / tu meriti / tu iei" cu identitatea CONGRUENTA cu cumpararea — minim 3 ori in copy (1 in hero, 1 in benefits, 1 in CTA section).
+  BUN: "Esti tipul de mama care PRIORITIZEAZA siguranta copilului. De aceea citesti pana aici."
+  BUN: "Esti om care DECIDE rapid cand vede ceva care merge. Apasa butonul."
+  PROST: Adresare generica "clientii nostri spun..."
+
+HAWKINS LEVEL (Strat 5):
+  Headline + primul subheadline = TONUL audientei in starea LOR (sub 200). NU jump direct la "vei fi fericit!".
+  Daca audienta-tip = mama epuizata la 22:00 → headline cu durere recunoscuta, nu cu promisiune optimista.
+  Daca audienta-tip = sofer enervat de pret combustibil → headline cu frustrare, nu cu "Salveaza bani!".
+============================================================
+
 REGULI DIRECT-RESPONSE (verificate pe fiecare camp text):
 - VOCE ACTIVA OBLIGATORIE — zero diateza pasiva ("este facut" → "facem", "a fost descoperit" → "am descoperit")
 - ADRESARE LA PERS. 2 SINGULAR — "tu", "tau", "ai", "vei", NU "dumneavoastra", NU "voi", NU plurale.
