@@ -228,8 +228,12 @@ function buildPopupHandler() {
         'if(overlayClickClose){',
           'overlay.addEventListener("click",function(e){if(e.target===overlay)hide()});',
         '}',
-        // Clonam block-ul (cu toate elementele drop-uite inauntru) ca popup card
+        // Clonam block-ul (cu toate elementele drop-uite inauntru) ca popup card.
+        // Important: redenumim clasa pe clone ca anti-flash CSS sa NU se aplice si pe el.
         'var clone=block.cloneNode(true);',
+        'clone.classList.remove("unitone-popup-block");',
+        'clone.classList.add("unitone-popup-clone");',
+        'clone.removeAttribute("data-popup-edit-id");',
         // Sterge editor-only labels si side-effect classes
         'var lbl=clone.querySelector(".unitone-popup-editor-label");',
         'if(lbl)lbl.parentNode.removeChild(lbl);',

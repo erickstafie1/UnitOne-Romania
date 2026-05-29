@@ -1429,7 +1429,7 @@ function buildHTML(data) {
         ? `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE (${pct}%)</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">${code}</div></div>`
         : ''
       return [
-        `<div class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="${goal}" style="margin:24px auto;max-width:440px">`,
+        `<div class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="${goal}" style="display:none;margin:24px auto;max-width:440px">`,
         `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
         `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
         `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">${head}</h2>`,
@@ -1491,7 +1491,7 @@ function registerPopupType(editor) {
         removable: true,
         attributes: {
           class: 'unitone-popup-block',
-          style: 'background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
+          style: 'display:none;background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
           'data-trigger': 'time',
           'data-delay': '30',
           'data-goal': 'discount',
@@ -1673,11 +1673,8 @@ function addBlocks(editor, data) {
   // (close btn, overlay, bg, position, etc.) vin din trait panel.
   function popupBodyHTML() {
     return [
-      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:600;text-align:center;line-height:1.4">⚠ POPUP — Click aici → tab <strong>Proprietăți</strong> (dreapta) pentru toate setările. Drop orice element în zona albă.</div>`,
-      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">Stai puțin!</h2>`,
-      `<p style="font-size:14px;color:#555;text-align:center;margin:0 0 16px;line-height:1.55">Avem o reducere exclusivă pentru tine — folosește codul la check-out.</p>`,
-      `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">SAVE10</div></div>`,
-      `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">Aplică reducerea</button>`
+      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:600;text-align:center;line-height:1.4">⚠ POPUP — Drop orice element aici. Setări în tab <strong>Proprietăți</strong> (dreapta).</div>`,
+      `<div style="min-height:100px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;border:2px dashed #d1d5db;border-radius:8px;padding:24px">Popup gol — adaugă text, butoane, imagini din sidebar</div>`
     ].join('')
   }
 
