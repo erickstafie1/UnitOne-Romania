@@ -182,6 +182,8 @@ function buildPopupHandler() {
         'function attr(k,d){var v=block.getAttribute(k);return v==null||v===""?d:v}',
         'var trigger=attr("data-trigger","time");',
         'var delay=parseInt(attr("data-delay","30"),10);',
+        'var freq=attr("data-frequency","every-visit");',
+        'var freqHours=parseInt(attr("data-frequency-hours","24"),10);',
         'var goal=attr("data-goal","discount");',
         'var overlayColor=attr("data-overlay-color","#121212");',
         'var overlayOpacity=parseInt(attr("data-overlay-opacity","70"),10);',
@@ -278,15 +280,26 @@ function buildPopupHandler() {
         '}',
         // ESC inchide
         'document.addEventListener("keydown",function(e){if(e.key==="Escape")hide()});',
-        // Show / hide logic — sessionStorage scos pentru reliability:
-        // popup apare la fiecare reload (user-ul testeaza, vrea sa vada de
-        // fiecare data). Una-data-per-session se poate adauga ulterior ca trait.
+        // Show / hide logic cu frequency control:
+        //   every-visit → fara restrictie (apare la fiecare reload)
+        //   once        → localStorage flag persistent, apare 1 data
+        //   period      → localStorage timestamp + cooldown in ore
         'var shown=false;',
+        'var storageKey="unitone-popup-"+block.id+"-last-shown";',
         'function hide(){overlay.style.display="none"}',
         'function show(){',
           'if(shown)return;',
+          'try{',
+            'if(freq==="once"){',
+              'if(localStorage.getItem(storageKey))return;',
+            '}else if(freq==="period"){',
+              'var last=parseInt(localStorage.getItem(storageKey)||"0",10);',
+              'if(Date.now()-last < freqHours*3600000)return;',
+            '}',
+          '}catch(e){}',
           'shown=true;',
           'overlay.style.display="flex";',
+          'try{localStorage.setItem(storageKey,String(Date.now()))}catch(e){}',
         '}',
         // Trigger setup
         'if(trigger==="time"){',

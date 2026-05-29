@@ -302,6 +302,16 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
             style += 'width:' + width + 'px;max-width:90vw;'
             if (height && height !== 'auto') style += 'height:' + height + (String(height).indexOf('px') >= 0 ? '' : 'px') + ';'
           }
+          // Sync si close button styles din traits (close-color, close-bg, etc.)
+          const closeEl = el.querySelector(':scope > .unitone-popup-close')
+          if (closeEl) {
+            const cColor = a['data-close-color'] || '#FFFFFF'
+            const cBg = a['data-close-bg'] || '#121212'
+            const cW = parseInt(a['data-close-w'] || '32', 10)
+            const cH = parseInt(a['data-close-h'] || '32', 10)
+            const cSize = parseInt(a['data-close-size'] || '16', 10)
+            closeEl.setAttribute('style', 'position:absolute;top:10px;right:10px;background:' + cBg + ';color:' + cColor + ';border:0;width:' + cW + 'px;height:' + cH + 'px;line-height:1;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + cSize + 'px;font-weight:bold;z-index:2')
+          }
           // Skip daca style e deja la fel (mai evita un trigger inutil)
           if (a.style === style) return
           syncBusy = true
@@ -1616,6 +1626,8 @@ function registerPopupType(editor) {
           style: 'display:none;background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
           'data-trigger': 'time',
           'data-delay': '30',
+          'data-frequency': 'every-visit',
+          'data-frequency-hours': '24',
           'data-goal': 'discount',
           'data-popup-name': 'Popup 1',
           'data-overlay-color': '#121212',
@@ -1652,6 +1664,17 @@ function registerPopupType(editor) {
             ]
           },
           { type: 'number', label: 'Delay (secunde)', name: 'data-delay', placeholder: '30', min: 1, max: 600 },
+
+          // === FRECVENȚĂ ===
+          {
+            type: 'select', label: '🔁 Frecvență per utilizator', name: 'data-frequency',
+            options: [
+              { id: 'every-visit', name: 'La fiecare vizită' },
+              { id: 'once', name: 'O dată per utilizator' },
+              { id: 'period', name: 'După o perioadă de timp' }
+            ]
+          },
+          { type: 'number', label: 'Cooldown (ore) — doar pentru "După o perioadă"', name: 'data-frequency-hours', placeholder: '24', min: 1, max: 720 },
 
           // === GOAL CTA ===
           {
