@@ -57,13 +57,14 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         }
         .unitone-popup-block[data-popup-edit-id] {
           display: block !important;
+          visibility: visible !important;
           position: fixed !important;
           top: 50% !important;
           left: 50% !important;
           transform: translate(-50%, -50%) !important;
           margin: 0 !important;
           z-index: 9999 !important;
-          max-width: min(90vw, 640px) !important;
+          max-width: 90vw !important;
           max-height: 85vh !important;
           overflow: auto !important;
           box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important;
@@ -141,6 +142,15 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
             ev.preventDefault()
             ev.stopPropagation()
             setBlocksTab('element')
+            // Scroll blocks-panel sus
+            setTimeout(() => {
+              try {
+                const panel = document.getElementById('blocks-panel')
+                if (panel) panel.scrollTop = 0
+                const leftPanel = document.querySelector('.ue-panel-left')
+                if (leftPanel) leftPanel.scrollTop = 0
+              } catch (e) {}
+            }, 30)
           }
         }, true)
       }
@@ -245,6 +255,41 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       editor.on('component:add', refreshPopups)
       editor.on('component:remove', refreshPopups)
       editor.on('component:update:attributes', refreshPopups)
+
+      // Sync data-* attributes → inline style pe canvas asa user-ul VEDE
+      // modificarile din trait panel imediat (background color, width, etc.)
+      function syncPopupStyles(comp) {
+        try {
+          if (!comp || comp.get('type') !== 'unitone-popup') return
+          const el = comp.getEl && comp.getEl()
+          if (!el) return
+          const a = comp.getAttributes()
+          const bgColor = a['data-bg-color'] || '#FFFFFF'
+          const bgImage = a['data-bg-image'] || ''
+          const corner = parseInt(a['data-corner'] || '14', 10)
+          const shadow = a['data-shadow'] || '0 20px 60px rgba(0,0,0,0.3)'
+          const width = a['data-width'] || '600'
+          const height = a['data-height'] || 'auto'
+          const padding = parseInt(a['data-padding'] || '32', 10)
+          const fullscreen = a['data-fullscreen'] === 'yes'
+          // Pastram display:none ca anti-flash sa fie ok, edit mode CSS il override
+          let style = 'display:none;background:' + bgColor + ';'
+          if (bgImage) style += 'background-image:url(\'' + bgImage + '\');background-size:cover;background-position:center;'
+          style += 'border-radius:' + corner + 'px;padding:' + padding + 'px;box-shadow:' + shadow + ';position:relative;margin:24px auto;'
+          if (fullscreen) {
+            style += 'width:100vw;height:100vh;max-width:none;border-radius:0;'
+          } else {
+            style += 'width:' + width + 'px;max-width:90vw;'
+            if (height && height !== 'auto') style += 'height:' + height + (String(height).indexOf('px') >= 0 ? '' : 'px') + ';'
+          }
+          // Setam direct pe element pentru update vizual imediat
+          el.setAttribute('style', style)
+          // Actualizam si model attributes ca sa fie salvat in body_html
+          comp.addAttributes({ style })
+        } catch (e) {}
+      }
+      editor.on('component:update:attributes', syncPopupStyles)
+      editor.on('component:selected', syncPopupStyles)
 
       // Expose editor instance for popup edit-mode CSS injection (in JSX below)
       // Hook event listener pentru click-out-popup → exit edit mode
