@@ -575,7 +575,8 @@ module.exports = async function handler(req, res) {
     // scriptul universal care le transforma in overlay + trigger. Skip daca
     // nu exista popup pe pagina ca sa nu poluam DOM-ul cu script nefolosit.
     if (finalHtml.includes('unitone-popup-block')) {
-      finalHtml = finalHtml + buildPopupHandler()
+      // Anti-flash: ascunde inline popup imediat (handler-ul cloneaza in overlay)
+      finalHtml = '<style>.unitone-popup-block{display:none!important}</style>' + finalHtml + buildPopupHandler()
     }
 
     console.log('HTML size:', Math.round(finalHtml.length / 1024), 'KB, status:', newStatus, 'plan:', plan.plan, 'template:', templateSuffix)

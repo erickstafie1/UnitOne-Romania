@@ -37,24 +37,24 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   const editPopupIdRef = useRef(null)
   useEffect(() => { editPopupIdRef.current = editPopupId }, [editPopupId])
 
-  // Inject CSS in canvas iframe cand edit mode activ — ascunde restul LP-ului,
-  // centreaza popup-ul pe overlay gri (GemPages-style edit experience).
+  // Inject CSS in canvas iframe — popup-urile sunt ASCUNSE default din LP.
+  // Vizibile DOAR cand user-ul intra in edit mode prin click pe side chip:
+  // apare ca modal centrat pe overlay dim, restul LP-ului dim si non-interactiv.
   useEffect(() => {
     if (!gjsRef.current) return
     try {
       const doc = gjsRef.current.Canvas.getDocument()
       if (!doc) return
-      const STYLE_ID = 'unitone-popup-edit-mode-style'
+      const STYLE_ID = 'unitone-popup-style'
       let styleEl = doc.getElementById(STYLE_ID)
-      if (!editPopupId) {
-        if (styleEl) styleEl.remove()
-        return
-      }
-      const css = `
-        body { background: rgba(0,0,0,0.55) !important; min-height: 100vh; }
-        body > * { display: none !important; }
-        body > [data-popup-edit-id="${editPopupId}"],
-        body [data-popup-edit-id="${editPopupId}"] {
+      // Base CSS — popup-urile ascunse default + modal rules pentru edit mode
+      const baseCss = `
+        .unitone-popup-block { display: none !important; }
+        #unitone-edit-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+          z-index: 9998; cursor: pointer;
+        }
+        .unitone-popup-block[data-popup-edit-id] {
           display: block !important;
           position: fixed !important;
           top: 50% !important;
@@ -62,6 +62,10 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           transform: translate(-50%, -50%) !important;
           margin: 0 !important;
           z-index: 9999 !important;
+          max-width: min(90vw, 640px) !important;
+          max-height: 85vh !important;
+          overflow: auto !important;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important;
         }
       `
       if (!styleEl) {
@@ -69,8 +73,9 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         styleEl.id = STYLE_ID
         doc.head.appendChild(styleEl)
       }
-      styleEl.textContent = css
-      // Mark popup with data attr so CSS can target it
+      styleEl.textContent = baseCss
+      // Mark/unmark popup + body class pentru edit mode
+      const body = doc.body
       const wrapper = gjsRef.current.getWrapper()
       wrapper.find('.unitone-popup-block').forEach(c => {
         const el = c.getEl && c.getEl()
@@ -81,6 +86,19 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
           el.removeAttribute('data-popup-edit-id')
         }
       })
+      // Backdrop element care prinde click si inchide edit mode
+      const BACKDROP_ID = 'unitone-edit-backdrop'
+      let backdrop = doc.getElementById(BACKDROP_ID)
+      if (editPopupId) {
+        if (!backdrop) {
+          backdrop = doc.createElement('div')
+          backdrop.id = BACKDROP_ID
+          backdrop.addEventListener('click', () => setEditPopupId(null))
+          body.appendChild(backdrop)
+        }
+      } else if (backdrop) {
+        backdrop.remove()
+      }
     } catch (e) { console.warn('popup edit-mode CSS failed:', e.message) }
   }, [editPopupId, popups])
 
