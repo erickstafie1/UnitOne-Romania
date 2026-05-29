@@ -101,16 +101,21 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         doc.head.appendChild(styleEl)
       }
       styleEl.textContent = baseCss
-      // Mark/unmark popup + body class pentru edit mode
+      // Mark popup in MODEL (nu doar DOM) ca GrapesJS sa nu-l piarda la
+      // re-render in-place. data-popup-edit-id setat in model → reaplicat
+      // automat la orice update de attributes.
       const body = doc.body
       const wrapper = gjsRef.current.getWrapper()
       wrapper.find('.unitone-popup-block').forEach(c => {
-        const el = c.getEl && c.getEl()
-        if (!el) return
         if (c.getId() === editPopupId) {
-          el.setAttribute('data-popup-edit-id', editPopupId)
+          c.addAttributes({ 'data-popup-edit-id': editPopupId })
         } else {
-          el.removeAttribute('data-popup-edit-id')
+          // GrapesJS removeAttributes API
+          const attrs = c.getAttributes()
+          if (attrs['data-popup-edit-id']) {
+            delete attrs['data-popup-edit-id']
+            c.setAttributes(attrs)
+          }
         }
       })
       // Backdrop element care prinde click si inchide edit mode
@@ -259,10 +264,12 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       // sync style → ... flicker continuu).
       editor.on('component:update:attributes', (comp) => {
         if (!comp || comp.get('type') !== 'unitone-popup') return
-        const last = comp.previousAttributes && comp.previousAttributes()
-        // Skip daca doar `style` s-a schimbat
         const attrs = comp.getAttributes()
-        if (!last || last['data-popup-name'] !== attrs['data-popup-name']) {
+        // Skip schimbari de style/data-popup-edit-id (interne, nu vrem refresh)
+        const lastName = comp.__lastPopupName
+        const currentName = attrs['data-popup-name']
+        if (lastName !== currentName) {
+          comp.__lastPopupName = currentName
           refreshPopups()
         }
       })

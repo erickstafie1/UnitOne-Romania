@@ -168,6 +168,7 @@ function buildPopupHandler() {
     '<script>(function(){',
     'function setupPopups(){',
       'var blocks=document.querySelectorAll(".unitone-popup-block");',
+      'console.log("[unitone-popup] handler started, found "+blocks.length+" popup(s)");',
       'if(!blocks.length)return;',
       // CSS pentru entrance effects + position classes
       'var styleEl=document.createElement("style");',
@@ -277,15 +278,15 @@ function buildPopupHandler() {
         '}',
         // ESC inchide
         'document.addEventListener("keydown",function(e){if(e.key==="Escape")hide()});',
-        // Show / hide logic
+        // Show / hide logic — sessionStorage scos pentru reliability:
+        // popup apare la fiecare reload (user-ul testeaza, vrea sa vada de
+        // fiecare data). Una-data-per-session se poate adauga ulterior ca trait.
         'var shown=false;',
         'function hide(){overlay.style.display="none"}',
         'function show(){',
           'if(shown)return;',
-          'try{if(sessionStorage.getItem("unitone-popup-"+block.id+"-shown")==="1")return}catch(e){}',
           'shown=true;',
           'overlay.style.display="flex";',
-          'try{sessionStorage.setItem("unitone-popup-"+block.id+"-shown","1")}catch(e){}',
         '}',
         // Trigger setup
         'if(trigger==="time"){',
