@@ -1608,103 +1608,134 @@ function buildHTML(data) {
     heroHtml = `<div class="unitone-hero-split" style="display:grid;grid-template-columns:1fr;gap:20px;padding:20px;background:#fff"><div>${imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:500px;object-fit:contain;display:block;margin:0 auto;border-radius:8px') : heroImgFallback}</div><div>${ratingBlock}${headlineBlock}${subBlock}${priceBlock}${relBtn}${trustRowBlock}</div></div>`
   }
 
+  // ─── HELPER: Carusel testimoniale (scroll horizontal stanga-dreapta) ─────
+  const testimonialCarousel = testimonials.length ? (() => {
+    const slides = testimonials.map(t => {
+      const name = esc(t.name || 'Client')
+      const city = esc(t.city || 'România')
+      const text = esc(t.text || '')
+      const initial = (t.name || '?').charAt(0).toUpperCase()
+      return [
+        `<div class="unitone-test-slide" style="flex:0 0 88%;scroll-snap-align:start;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:22px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.06)">`,
+        `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,${primary},#666);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">${esc(initial)}</div><div><div style="font-size:14px;font-weight:800;color:#111">${name}</div><div style="font-size:12px;color:#888">${city}</div></div></div>`,
+        `<div style="color:#f59e0b;font-size:15px;margin-bottom:8px">&#9733;&#9733;&#9733;&#9733;&#9733;</div>`,
+        `<p style="font-size:14px;color:#333;line-height:1.65;margin:0 0 12px">${text}</p>`,
+        `<span style="display:inline-block;font-size:11px;background:#dcfce7;color:#16a34a;border-radius:4px;padding:4px 10px;font-weight:700">&#10003; Comandă Livrată</span>`,
+        `</div>`
+      ].join('')
+    }).join('')
+    return [
+      `<div style="padding:28px 0 32px;background:#fafbfc">`,
+      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 6px;text-align:center;padding:0 20px">Ce spun clienții noștri</h2>`,
+      `<p style="font-size:13px;color:#666;text-align:center;margin:0 0 18px;padding:0 20px">${reviewCount.toLocaleString()}+ clienți mulțumiți · 4.8★ medie</p>`,
+      `<div class="unitone-test-carousel" style="display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:0 20px 12px;scrollbar-width:none">`,
+      slides,
+      `</div>`,
+      `<style>.unitone-test-carousel::-webkit-scrollbar{display:none}@media(min-width:768px){.unitone-test-slide{flex:0 0 32% !important}}</style>`,
+      `</div>`
+    ].join('')
+  })() : ''
+
+  // ─── HELPER: Feature card (img + mini-hook + 2-3 fraze descriere) ─────
+  function renderFeatureCard(fs, i) {
+    if (!fs) return ''
+    const img = imgs[i + 1] || imgs[0]
+    const reversed = i % 2 === 1
+    const title = esc(fs.title || '')
+    const bullets = (fs.bullets || []).slice(0, 3)
+    const desc = bullets.join(' ')  // pune bullets ca 1 paragraf descriptiv
+    const card = [
+      `<div style="background:#fff;border-radius:12px;padding:24px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid #f0f0f0">`,
+      `<div class="unitone-feature-grid" style="display:grid;grid-template-columns:1fr;gap:18px;align-items:center">`,
+      reversed
+        ? `<div style="font-size:14px;color:#444;line-height:1.65"><div style="display:inline-block;background:${primary}15;color:${primary};font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:10px;letter-spacing:0.4px;text-transform:uppercase">Caracteristică #${i + 1}</div><h3 style="font-size:20px;font-weight:900;color:#111;margin:0 0 10px;line-height:1.25">${title}</h3><p style="margin:0">${esc(desc)}</p></div>${img ? `<div>${imgTag(img, 'width:100%;border-radius:10px;display:block')}</div>` : ''}`
+        : `${img ? `<div>${imgTag(img, 'width:100%;border-radius:10px;display:block')}</div>` : ''}<div style="font-size:14px;color:#444;line-height:1.65"><div style="display:inline-block;background:${primary}15;color:${primary};font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:10px;letter-spacing:0.4px;text-transform:uppercase">Caracteristică #${i + 1}</div><h3 style="font-size:20px;font-weight:900;color:#111;margin:0 0 10px;line-height:1.25">${title}</h3><p style="margin:0">${esc(desc)}</p></div>`,
+      `</div></div>`
+    ].join('')
+    return `<div style="padding:0 20px;margin-bottom:14px">${card}</div>`
+  }
+
+  // ─── HELPER: Comparison "Noi vs Concurența" — generat din objections daca ─
+  // ─── AI nu trimite "comparison" explicit                                ─
+  const comparisonHtml = (() => {
+    let rows = Array.isArray(data.comparison?.rows) ? data.comparison.rows : null
+    if (!rows && objections.length) {
+      // Fallback: deriva din objections — fiecare obiectie devine un "feature comparison"
+      rows = objections.slice(0, 4).map(o => ({
+        feature: (o.objection || '').slice(0, 60),
+        them: 'NU',
+        us: (o.rebuttal || '').slice(0, 80) + ' ✓'
+      }))
+    }
+    if (!rows || !rows.length) return ''
+    const usLabel = data.comparison?.usLabel || data.productName || 'Produsul Nostru'
+    const themLabel = data.comparison?.themLabel || 'Alte Soluții'
+    return [
+      `<div style="padding:36px 20px;background:#fff">`,
+      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 10px;text-align:center">De ce ${esc(usLabel)} <span style="color:${primary}">≠</span> alte soluții</h2>`,
+      `<p style="font-size:14px;color:#666;text-align:center;margin:0 0 22px">Compară și decizi singur.</p>`,
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:900px;margin:0 auto">`,
+      `<div style="background:#fff;border:2px solid #fecaca;border-radius:12px;padding:18px 16px">`,
+      `<div style="text-align:center;font-size:13px;font-weight:800;color:#dc2626;margin-bottom:14px;text-transform:uppercase;letter-spacing:0.4px">${esc(themLabel)}</div>`,
+      rows.map(r => `<div style="display:flex;gap:8px;font-size:13px;color:#666;padding:8px 0;border-bottom:1px solid #fee2e2"><span style="color:#dc2626;font-weight:900;flex-shrink:0">✗</span><span>${esc(r.them || '')}</span></div>`).join(''),
+      `</div>`,
+      `<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:18px 16px">`,
+      `<div style="text-align:center;font-size:13px;font-weight:800;color:#16a34a;margin-bottom:14px;text-transform:uppercase;letter-spacing:0.4px">${esc(usLabel)}</div>`,
+      rows.map(r => `<div style="display:flex;gap:8px;font-size:13px;color:#111;font-weight:600;padding:8px 0;border-bottom:1px solid #dcfce7"><span style="color:#16a34a;font-weight:900;flex-shrink:0">✓</span><span>${esc(r.us || '')}</span></div>`).join(''),
+      `</div>`,
+      `</div></div>`
+    ].join('')
+  })()
+
   return [
     `<div id="unitone-lp" class="tone-${esc(meta.tone || 'direct')} niche-${esc(meta.niche || 'generic')}">`,
     styleBlock,
     `<div style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;width:100%;background:#fff;color:#111;line-height:1.5">`,
 
-    // ─── 1. Topbar ────────────────────────────────────────────────────
-    `<div style="background:#111;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:0.3px">`,
-    `&#128222; ${phoneNumber} &nbsp;&middot;&nbsp; &#128666; LIVRARE RAPIDĂ &middot; PLATĂ LA LIVRARE`,
-    `</div>`,
-
-    // ─── 2. Hero (3 variante: split / centered / overlay) ─────────────
+    // ─── 1. HEADLINE + 2. POZA PRODUS + 3. REVIEWS + 4. NUME PRODUS + 5. OFERTA + 6. BENEFITS + 7. CTA ──
+    // Hero block deja construit cuprinde toate cele 7 elemente in ordinea ceruta
     heroHtml,
 
-    // ─── 2b. Quick bullets — 3-4 beneficii scurte sub imaginea principala ─
+    // ─── 6 (extins). Lista 3-4 beneficii — quickBullets format sub hero ───
     quickBulletsHtml,
 
-    // ─── 3. (Trust microstrip eliminat — duplicat cu cel din hero) ────
-    // ─── 4. (Gift banner eliminat by default — apare doar daca user
-    //         seteaza explicit giftValue > 0 si confirma in setari) ────
-    giftValue > 0 ? [
-      `<div style="padding:18px 20px;text-align:center;background:#fff">`,
-      `<div class="unitone-gift" style="display:inline-block;background:${bgAccent};border:2px solid ${bgAccentBorder};border-radius:8px;padding:14px 24px;font-size:16px;font-weight:800;color:${secondary}">`,
-      `&#127873; Primești Cadou în valoare de ${giftValue} LEI!`,
-      `</div>`,
+    // ─── 7 (anchor). CTA secundar in mijlocul paginii ────────────────────
+    // (CTA principal e in hero. Acesta apare repetat dupa beneficii.)
+
+    // ─── 8. CARUSEL TESTIMONIALE (scroll horizontal stg-dr, 3-4 sliduri) ─
+    // Aceste testimoniale fac OBJECTION HANDLING — fiecare reflecta o
+    // posibila viata a user-ului, scrise emotional ca el sa se identifice.
+    testimonialCarousel,
+
+    // ─── 9. SECTIUNEA CARACTERISTICI SI AVANTAJE ─────────────────────────
+    // Headline sectiune + per-feature card (poza + mini-hook + 2-3 fraze
+    // descriere scrisa direct cu "tu" — vorbeste cu omul, NU descrie obiect).
+    featureSections.length ? [
+      `<div style="padding:32px 20px 14px;background:#fafbfc">`,
+      `<h2 style="font-size:24px;font-weight:900;color:#111;margin:0 0 6px;text-align:center;line-height:1.2">Ce primești cu adevărat</h2>`,
+      `<p style="font-size:14px;color:#666;text-align:center;margin:0 0 24px">Fiecare detaliu gândit ca tu să rezolvi problema, nu să mai cumperi încă unul peste 2 luni.</p>`,
       `</div>`
     ].join('') : '',
+    featureSections.map((fs, i) => renderFeatureCard(fs, i)).join(''),
+    featureSections.length ? `<div style="padding:0 20px 24px;background:#fafbfc"></div>` : '',
 
-    // ─── 5. Top 3 feature grid (TEXT) ─────────────────────────────────
-    topBenefitsHtml,
+    // ─── 10. PRODUCT COMPARISON (Noi vs Alte solutii) ───────────────────
+    comparisonHtml,
 
-    // ─── 5b. Lista completa beneficii (cand AI livreaza > 3 items) ────
-    benefitsListHtml,
-
-    // ─── 6a. Feature section 1 (IMG + TEXT) ───────────────────────────
-    renderFeatureSection(featureSections[0], 0),
-
-    // ─── 7. Risk reversal box (TEXT) ──────────────────────────────────
-    `<div style="padding:24px 20px;background:#fff">`,
-    `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:20px 22px;border-radius:6px">`,
-    `<h3 style="font-size:18px;font-weight:900;color:#111;margin:0 0 10px">&#10003; COMANZI FĂRĂ GRIJI!</h3>`,
-    `<p style="font-size:14px;color:#444;line-height:1.65;margin:0">${esc(riskReversalText)}</p>`,
-    `</div>`,
-    `</div>`,
-
-    // ─── 6b. Feature section 2 (IMG + TEXT, alternant) ────────────────
-    renderFeatureSection(featureSections[1], 1),
-
-    // ─── 6c. Feature section 3 (doar pe lengthMode=lung) ──────────────
-    renderFeatureSection(featureSections[2], 2),
-
-    // ─── 7b. Obiectii Tratate (TEXT) — daca user a cerut in form generator ─
-    objectionsHtml,
-
-    // ─── 7c. Nisa-specific sections (tabel marimi / specs / ingrediente / etc) ─
-    nicheSectionsHtml,
-
-    // ─── 7d. How-it-works timeline (3 pasi numerotati) ─────────────────
-    howItWorksHtml,
-
-    // ─── 8. Testimoniale (TEXT) ────────────────────────────────────────
-    testimonials.length ? [
-      `<div style="padding:32px 20px;background:#f9fafb">`,
-      `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center">Ce spun clienții noștri</h2>`,
-      `<div class="unitone-test-grid" style="display:grid;grid-template-columns:1fr;gap:14px">`,
+    // ─── 11. MAI MULTE REVIEWS / TESTIMONIALE (vertical grid extras) ────
+    // Sub fold, pentru user-ii care vor mai multa social proof.
+    testimonials.length > 3 ? [
+      `<div style="padding:36px 20px;background:#fff">`,
+      `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 6px;text-align:center">Și mai multe povești reale</h2>`,
+      `<p style="font-size:13px;color:#666;text-align:center;margin:0 0 22px">Citește experiențe complete — fiecare e o viață ca a ta.</p>`,
+      `<div class="unitone-test-grid" style="display:grid;grid-template-columns:1fr;gap:14px;max-width:900px;margin:0 auto">`,
       tCards,
       `</div></div>`
     ].join('') : '',
 
     // ─── 8b. Lifestyle banner cu imagine[3] (IMG) — ritm img-text in
     //         jumatatea de jos a paginii ───────────────────────────────
-    renderLifestyleBanner(),
-
-    // ─── 9. Urgency banner — varianta inalta are countdown + stock pulse ─
-    [
-      `<div style="background:#fef2f2;border-top:3px solid ${primary};border-bottom:3px solid ${primary};padding:24px 20px;text-align:center">`,
-      `<div style="font-size:18px;font-weight:900;color:${primary};margin-bottom:${showCountdown ? '14px' : '6px'};text-transform:uppercase;letter-spacing:0.5px">&#9888; ${esc(urgencyMessage)}</div>`,
-      showCountdown ? [
-        `<div style="display:flex;justify-content:center;gap:8px;margin:0 0 14px;flex-wrap:nowrap">`,
-        `<div style="text-align:center"><span id="ucd-h" style="background:${primary};color:#fff;border-radius:6px;padding:8px 12px;font-size:22px;font-weight:900;font-family:monospace;min-width:46px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;color:#666">ORE</div></div>`,
-        `<div style="font-size:22px;font-weight:900;color:${primary};padding-top:8px">:</div>`,
-        `<div style="text-align:center"><span id="ucd-m" style="background:${primary};color:#fff;border-radius:6px;padding:8px 12px;font-size:22px;font-weight:900;font-family:monospace;min-width:46px;display:inline-block">${timerMinutes}</span><div style="font-size:10px;margin-top:3px;color:#666">MIN</div></div>`,
-        `<div style="font-size:22px;font-weight:900;color:${primary};padding-top:8px">:</div>`,
-        `<div style="text-align:center"><span id="ucd-s" style="background:${primary};color:#fff;border-radius:6px;padding:8px 12px;font-size:22px;font-weight:900;font-family:monospace;min-width:46px;display:inline-block">00</span><div style="font-size:10px;margin-top:3px;color:#666">SEC</div></div>`,
-        `</div>`,
-        `<script>(function(){var t=${timerMinutes}*60;function r(){var h=String(Math.floor(t/3600)).padStart(2,"0"),m=String(Math.floor((t%3600)/60)).padStart(2,"0"),s=String(t%60).padStart(2,"0");var eh=document.getElementById("ucd-h"),em=document.getElementById("ucd-m"),es=document.getElementById("ucd-s");if(eh)eh.textContent=h;if(em)em.textContent=m;if(es)es.textContent=s}setInterval(function(){if(t>0)t--;r()},1000);r()})()<\/script>`
-      ].join('') : '',
-      showStockPulse ? [
-        `<style>@keyframes unitone-stock-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.85;transform:scale(1.03)}}</style>`,
-        `<div style="display:inline-block;background:#fff;border:2px solid ${primary};border-radius:24px;padding:8px 18px;margin:0 0 16px;animation:unitone-stock-pulse 1.4s ease-in-out infinite">`,
-        `<span style="font-size:13px;color:${primary};font-weight:800">&#128293; Doar ${stockCount} bucăți rămase în stoc</span>`,
-        `</div>`
-      ].join('') : `<p style="font-size:14px;color:#666;margin:0 0 18px">Comandă Acum, Primești și Cadou Surpriză &#127873;</p>`,
-      `<div style="display:inline-block">${scrollBtn}</div>`,
-      `</div>`
-    ].join(''),
-
-    // ─── 10. FAQ accordion ────────────────────────────────────────────
+    // ─── 12. FAQ accordion (raspunde la fricile care blocheaza cumpararea) ─
     (data.faq || []).length ? [
       `<div style="padding:32px 20px;background:#fff">`,
       `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 22px;text-align:center">Întrebări Frecvente</h2>`,

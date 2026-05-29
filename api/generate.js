@@ -519,71 +519,67 @@ REGULI DIRECT-RESPONSE (verificate pe fiecare camp text):
 ============================================================
 
 ============================================================
-STRUCTURA CANONICA LP COD ROMANIA — observata pe 9 LP-uri reale de high-conversion (CarEco, Plasa Magnetica, CleanPro, Furtun Gradina 60m/45m, Set Presiune, StopFisuri Adeziv, Stickere). Fiecare LP genereat trebuie sa respecte ACEASTA ORDINE + sa includa elementele marcate "obligatoriu".
+STRUCTURA OBLIGATORIE LP COD ROMANIA — ordinea EXACTA in care AI trebuie sa genereze content. NU adaugi sectiuni in plus, NU omiti. Fiecare sectiune raspunde la o obiectie naturala (Question Ladder).
 
-ORDINE SECTIUNI (Question Ladder — fiecare raspunde la o obiectie naturala in mintea cumparatorului):
+ORDINE SECTIUNI:
 
-1. STICKY TOP BAR (telefon + livrare rapida) — "0700 XXX XXX · 🚚 LIVRARE RAPIDA · PLATA LA LIVRARE"
-   Raspunde: "Cum comand?" Construieste credibilitate brand.
+1. HEADLINE — atrage atentia in <3 secunde (Sophistication Level + 3 hook levers)
+2. POZA PRODUS — image[0] dominant
+3. STARS + REVIEW COUNT — "5★ X.XXX+ Clienti Multumiti"
+4. PRODUCT NAME — nume specific sub headline
+5. OFFER (price block) — old price taiat + price nou MARE + procent reducere + savings
+6. 3-4 BENEFICII PRINCIPALE (quickBullets) — cu impact MAXIM, alese sa motiveze cei mai multi cumparatori
+7. CTA buton mare verde/portocaliu — "🛒 COMANDA ACUM"
+8. CARUSEL TESTIMONIALE — 3-4 testimoniale scroll horizontal stanga-dreapta. FIECARE testimonial:
+   - OBJECTION HANDLING: trateaza una din credintele limitative ale ICP-ului
+   - User-ul citeste si simte "asta sunt EU" — propria viata scrisa in cuvinte
+   - 4-part: situatia veche (cu durere ICP-ului) → actiunea (cum a aflat) → rezultatul cu cifra → emotia finala
+9. SECTIUNEA CARACTERISTICI SI AVANTAJE (featureSections):
+   - Headline sectiune: "Ce primesti cu adevarat" sau similar
+   - Per featureSection: title scurt CAPS (mini-hook, ex: "AJUNGI ACOLO UNDE PISTOLUL NU AJUNGE") + 2-3 fraze DESCRIERE SCURTA care vorbeste DIRECT cu omul ("Cand o folosesti, vei putea sa...")
+   - Foloseste informatiile despre cum sa vorbesti cu user-ul (Avatar Sheet + ICP) ca sa-l faci sa DOREASCA produsul
+10. PRODUCT COMPARISON — Noi vs Solutii Comune (us vs them)
+    - usLabel = numele produsului, themLabel = "alte solutii" (spalatorie, aspiratoare ieftine, etc.)
+    - 4 rows: feature + them (dezavantaj concret) + us (avantaj cu cifra)
+11. MAI MULTE REVIEWS / TESTIMONIALE (vertical grid, sub fold pentru cei care vor mai mult social proof)
+12. FAQ ACCORDION — raspunde EXACT la FRICILE care blocheaza cumpararea:
+    Fiecare q/a treats o frica psihologica ICP-ului (beliefBarriers). Min 4 din cele 6 intrebari trebuie sa adreseze direct o frica/obiectie. Restul 2 = info logistica (plata/livrare).
 
-2. HERO SECTION (obligatoriu):
-   - Promo badge top-left ("1+1 GRATIS" / "REDUCERE -50%" / "OFERTA ASTAZI")
-   - Product image dominant + small thumbnails 3-4
-   - Star rating (5★) + N reviews count: "5★ 1.247+ Clienti Multumiti"
-   - HEADLINE H1 (Sophistication Level adaptat) — pattern dovedit:
-     * "INCEPE SA [BENEFICIU] CU [PRODUS]" (pattern interrupt)
-     * "[BENEFICIU SPECIFIC IN CIFRE] CU UN SIMPLU [PRODUS]"
-     * "[VERB IMPERATIV] [DURERE] IN [TIMEFRAME]"
-   - Subheadline cu UVP + 1 obiectie eliminata (formula "So That, Without")
-   - Price block: OLDPRICE TAIAT + price MARE colorat + procent reducere badge + "X LEI economisesti"
-   - CTA principal — BUTON VERDE/PORTOCALIU MARE "🛒 COMANDA ACUM"
-   - Trust micro-strip: ✓ Livrare 24-48h · 🚚 Plata ramburs · ↩ Retur 30 zile
-   Raspunde: "Sunt in locul potrivit?"
+REGULI PE SECTIUNI (mapate la structura 12-section):
 
-3. QUICK BULLETS — 4 beneficii MASURABILE max 8 cuvinte fiecare cu icon ✓
-   Raspunde: "Ce primesc concret?"
+S1-S7 HERO BLOC:
+- headline = Sophistication Level + 3 hook levers + <70 char. Pattern dovedite: "INCEPE SA [verb] [beneficiu]", "[Cifra specifica] cu un simplu [produs]", "[Verb imperativ] [durere] in [timeframe]".
+- subheadline = "So That, Without" + obiectie eliminata.
+- reviewCount realist (500-9999 bazat pe nisa).
+- price/oldPrice/procent reducere — economii vizibile.
+- quickBullets = EXACT 4, max 8 cuvinte, beneficii MASURABILE (cifre/timp) — alese pentru IMPACT MAXIM la motivation cumparare.
 
-4. TESTIMONIAL SOCIAL PROOF EARLY (sub fold) — 1-2 carduri cu FOTO real customer + nume + oras + 5★ + text scurt cu DETALIU CONCRET
-   Raspunde: "Mai a folosit cineva asta?"
+S8 CARUSEL TESTIMONIALE (3-4 sliduri):
+Fiecare testimonial face OBJECTION HANDLING — adreseaza una din credintele limitative din beliefBarriers (ICP). User-ul citeste si se vede pe sine. Structura 4-part:
+  (a) "Aveam EXACT problema X de ani de zile" (situatia inainte cu durere autentica)
+  (b) "Am incercat Y, n-a mers" (alta solutie esuata = obiectie subtilata)
+  (c) "Cand am inceput cu [produs], in [Z zile] am observat [rezultat cu cifra]" (mecanism + dovada)
+  (d) "Acum [transformare emotionala / identitate noua]" (emotie finala)
+Max 300 char per testimonial. Nume + oras RO. Stars 5.
 
-5. TOP 3 BENEFITS (PAS framework) — fiecare in card cu icon mare + headline CAPS + descriere 1-2 fraze
-   Raspunde: "Ma intelege cineva?"
+S9 FEATURE CARDS (featureSections):
+- Fiecare card: title = MINI-HOOK CAPS (max 40 char) care promite un beneficiu specific
+- bullets[] = 2-3 fraze descriere care vorbesc DIRECT cu user-ul folosind "tu" — il fac sa DOREASCA. NU descriere obiect tehnica.
+- Ex BUN title: "AJUNGI ACOLO UNDE PISTOLUL NU AJUNGE"
+- Ex BUN bullets: ["Cand bagi prelungirea sub bancheta din spate, scoti praful pe care nici aspiratorul nu-l prinde. 50 bar de presiune impinge tot ce s-a infundat luni de zile.", "Ai garantie ca masina ta arata si dedesubt ca noua, nu doar sus.", "Folosesti acelasi gadget si pentru gradina, terasa, motocicleta."]
 
-6. FEATURE SECTION 1 (IMG + TEXT bullets) — un beneficiu cheie explicat
-   Optional sublinie CAPS gen "EASY TO INSTALL" / "FUNCTIONEAZA PE ORICE..."
-   Raspunde: "Cum functioneaza?"
+S10 COMPARISON:
+- usLabel = numele scurt al produsului
+- themLabel = "alte solutii" CONCRETE (NU generic "concurenta"). Ex: "Spalatoria auto manuala", "Aspiratoare wireless ieftine", "Servicii la mecanic"
+- rows[]: 4 obiectii principale ale ICP-ului → fiecare rand: feature comparat, them = dezavantajul lor in cuvintele user-ului, us = avantajul tau cu cifra concreta.
 
-7. RISK REVERSAL BOX — banner verde cu "✓ COMANZI FARA GRIJI!" + garantie conditionala
-   Raspunde: "Ce daca nu merge?"
+S11 EXTRA TESTIMONIALE = restul testimoniale[] >3 in lista vertical.
 
-8. FEATURE SECTION 2 (IMG + TEXT, alternant fata de S6)
-   Raspunde: "Ce mai pot face cu el?"
-
-9. COMPARISON STRIP "Cu vs Fara" sau "Concurenta vs Noi" — 2 col grid cu ✗ rosu si ✓ verde
-   Raspunde: "De ce voi si nu concurenta?"
-
-10. TESTIMONIALE GRID (4-6 carduri vertical, NU CAROUSEL) — fiecare cu avatar + nume + oras + 5★ + text 4-part (situatie/actiune/rezultat/emotie) + badge verde "✓ Comanda Livrata"
-    Raspunde: "De ce sa te cred pe tine?"
-
-11. FB SOCIAL PROOF (optional dar foarte puternic in RO) — "Mai multe comentarii pe Facebook" cu screenshot-uri 3-4 comentarii avatar+text autentic gen "Sotia mea le iubeste!", "Comanda primita rapid"
-    Raspunde: "Cine MAI mai foloseste asta?"
-
-12. HOW IT WORKS — 3 pasi cu numere + iconite + 1 fraza fiecare
-    Pas 1 = ACTIUNEA usoara | Pas 2 = REZULTATUL imediat | Pas 3 = BENEFICIUL durabil
-    Raspunde: "Cat de simplu e?"
-
-13. OBJECTIONS TRATATE (daca cerut) — 4 carduri 2x2 grid cu ✗ obiectie + ✓ rebuttal cu cifra/spec specifica
-    Raspunde: "Care sunt riscurile?"
-
-14. URGENCY BANNER ROSU LIGHT — "⚠ STOC LIMITAT — ULTIMELE X BUC din lotul [luna]" + "Comanda Acum, Primesti si Cadou Surpriza 🎁" + buton CTA repeat
-    Raspunde: "De ce ACUM?"
-
-15. FAQ ACCORDION — 6 intrebari FIXE: plata / livrare / curier / garantie / telefon / retur
-    Raspunde: "Mai am 6 intrebari rapide"
-
-16. PHONE CONTACT BANNER — "Ai nevoie de ajutor? Suna la 0700 XXX XXX"
-
-17. FOOTER
+S12 FAQ — 6 intrebari MIX:
+- Min 4 din 6 trebuie sa adreseze fricile psihologice din beliefBarriers (NU doar logistic).
+- Ex: "Daca nu merge la mine?" (frica de risc), "Cum stiu ca nu se strica in 2 luni?" (frica de durabilitate), "Pot folosi si daca nu am experienta?" (frica de incompetenta).
+- 2 din 6 = info logistica (plata ramburs, livrare 2-4 zile).
+- Raspunsuri concrete, 1-2 fraze, sub 200 char.
 
 PATTERN-URI COPY OBSERVATE PE LP-URILE WIN:
 - "INCEPE SA [verb] [beneficiu]" (CarEco)
@@ -799,7 +795,17 @@ Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markd
   }` : 'null'},
   "nicheSections": [
     {"type": "sizeTable|infoList", "title": "...", "headers": ["..."], "rows": [["..."]], "items": [{"label": "...", "value": "..."}]}
-  ]
+  ],
+  "comparison": {
+    "usLabel": "Numele produsului tau (max 30 char)",
+    "themLabel": "Alte solutii comune folosite (ex: 'Spalatoria auto', 'Aspiratoare wireless ieftine')",
+    "rows": [
+      {"feature": "Aspect comparat (ex: 'Pret pe utilizare')", "them": "Dezavantajul concret al concurentei in cuvintele lor (max 80 char)", "us": "Beneficiul TAU + cifra (max 80 char)"},
+      {"feature": "Alt aspect (ex: 'Timp setup')", "them": "...", "us": "..."},
+      {"feature": "...", "them": "...", "us": "..."},
+      {"feature": "...", "them": "...", "us": "..."}
+    ]
+  }
 }`
 
   // Detalii produs de pasat la Claude — fara ele inventeaza orb.
