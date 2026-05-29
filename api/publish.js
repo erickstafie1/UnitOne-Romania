@@ -546,6 +546,11 @@ module.exports = async function handler(req, res) {
       // Forteaza full-width chiar daca templeturile noastre n-au prins
       finalHtml = buildFullWidthOverride() + finalHtml
 
+      // Popup handler — acelasi fix ca pe primul publish (action!='update')
+      const hasPopupUpdate = finalHtml.includes('unitone-popup-block')
+      console.log('[publish UPDATE] popup detected:', hasPopupUpdate, 'KB:', Math.round(finalHtml.length / 1024))
+      finalHtml = buildPopupHandler(hasPopupUpdate) + finalHtml
+
       // IMPORTANT: nu trimitem title pe UPDATE — daca user-ul redenumeste LP-ul
       // in editor, NU vrem sa schimbam numele produsului Shopify (al lor real).
       // LP title se pastreaza ca metafield separat (unitone:lp_title) ca sa-l
