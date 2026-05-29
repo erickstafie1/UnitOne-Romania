@@ -28,6 +28,9 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   const [popupGoal, setPopupGoal] = useState('discount')  // phone | order | discount
   // Niche / vertical — adapteaza sectiuni LP (tabel marimi pt fashion, specs pt tech, etc.)
   const [niche, setNiche] = useState('generic')
+  // Product image — base64 din upload, AI vision o citeste si extrage nume + descriere
+  const [productImage, setProductImage] = useState('')
+  const [productImageName, setProductImageName] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
@@ -71,7 +74,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
 
   async function generate() {
     // Accept either AliExpress link OR competitor link (cel putin unul)
-    if (!aliUrl.trim() && !competitorUrl.trim()) return
+    if (!aliUrl.trim() && !competitorUrl.trim() && !productImage) return
     setError(''); setLoading(true); setLoadPct(STEPS[0].pct); setLoadMsg(STEPS[0].msg)
     cancelRef.current = false
 
@@ -109,7 +112,8 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           includeObjections,
           popupEnabled,
           popupGoal: popupEnabled ? popupGoal : null,
-          niche
+          niche,
+          productImage: productImage || null
         })
       })
       cancelRef.current = true
@@ -180,7 +184,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
     setStep(s => Math.max(s - 1, 0))
   }
   function canAdvance() {
-    if (step === 0) return aliUrl.trim() || competitorUrl.trim()  // cel putin unul
+    if (step === 0) return aliUrl.trim() || competitorUrl.trim() || productImage  // cel putin unul
     return true  // alte pasi au valori default, OK
   }
   function isLastStep() { return step === STEPS_COUNT - 1 }
@@ -250,7 +254,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
             <BlockStack gap="400">
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">De unde luăm produsul?</Text>
-                <Text as="p" tone="subdued">Pune fie un link AliExpress, fie unul de la un competitor — cel puțin unul. Poți pune și ambele.</Text>
+                <Text as="p" tone="subdued">Link AliExpress, link competitor, SAU poză produs — minim unul. Poți combina.</Text>
               </BlockStack>
               <TextField
                 label="Link AliExpress"
@@ -272,6 +276,54 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
                 helpText="AI învață stilul și unghiul, apoi îl bate la conversie"
                 onKeyDown={e => e.key === 'Enter' && canAdvance() && goNext()}
               />
+              <Text as="p" variant="bodySm" tone="subdued" alignment="center">— sau —</Text>
+              <BlockStack gap="100">
+                <Text as="p" variant="bodyMd" fontWeight="semibold">Poză produs</Text>
+                <Text as="p" variant="bodySm" tone="subdued">Încarcă o poză. AI-ul Vision identifică produsul și generează LP fără să mai scrii nimic.</Text>
+                <div style={{
+                  border: '2px dashed ' + (productImage ? '#16a34a' : '#d1d5db'),
+                  borderRadius: 10,
+                  padding: 18,
+                  textAlign: 'center',
+                  background: productImage ? '#f0fdf4' : '#fafafa',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                onClick={() => document.getElementById('productImageInput')?.click()}>
+                  <input
+                    id="productImageInput"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (file.size > 5 * 1024 * 1024) { setError('Poză prea mare (max 5MB)'); return }
+                      const reader = new FileReader()
+                      reader.onload = () => {
+                        setProductImage(String(reader.result || ''))
+                        setProductImageName(file.name)
+                      }
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                  {productImage ? (
+                    <BlockStack gap="200" inlineAlign="center">
+                      <img src={productImage} alt="preview" style={{ maxWidth: 160, maxHeight: 160, borderRadius: 8, objectFit: 'contain' }} />
+                      <Text as="p" variant="bodySm" fontWeight="semibold">✓ {productImageName}</Text>
+                      <Button size="slim" tone="critical" variant="plain" onClick={(e) => { e.stopPropagation(); setProductImage(''); setProductImageName('') }}>
+                        Șterge poza
+                      </Button>
+                    </BlockStack>
+                  ) : (
+                    <BlockStack gap="100" inlineAlign="center">
+                      <div style={{ fontSize: 28 }}>📷</div>
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">Click pentru a încărca poză</Text>
+                      <Text as="p" variant="bodySm" tone="subdued">JPG / PNG · max 5MB</Text>
+                    </BlockStack>
+                  )}
+                </div>
+              </BlockStack>
             </BlockStack>
           )}
 
@@ -489,7 +541,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
               size="large"
               icon={MagicIcon}
               onClick={generate}
-              disabled={!aliUrl.trim() && !competitorUrl.trim()}
+              disabled={!aliUrl.trim() && !competitorUrl.trim() && !productImage}
             >
               Generează pagina ta
             </Button>

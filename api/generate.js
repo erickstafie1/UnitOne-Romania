@@ -140,6 +140,69 @@ function extractMeta(html) {
   return { title, priceUSD, description, specs }
 }
 
+// Claude Vision — primeste imagine (data URI base64) si returneaza
+// {title, description, specs} extras din imagine. Inlocuieste scrape-ul
+// AliExpress cand user-ul upload-eaza poza in loc de link.
+function callClaudeVision(imageDataUri) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
+  // Parse data URI: data:image/jpeg;base64,/9j/4AAQ...
+  const m = imageDataUri.match(/^data:([^;]+);base64,(.+)$/)
+  if (!m) throw new Error('Invalid image data URI')
+  const mediaType = m[1]
+  const base64 = m[2]
+
+  const body = JSON.stringify({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 800,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+        { type: 'text', text: `Analizeaza imaginea si returneaza DOAR un JSON cu:
+{
+  "title": "Numele produsului in romana (max 60 char, ex: 'Aspirator de mana wireless Pro')",
+  "description": "Descriere produsului in 2-4 fraze: ce face, caracteristici principale, public tinta. Romana corecta cu diacritice.",
+  "specs": ["Specificatie 1 (ex: 'Baterie 40 ore')", "Specificatie 2", "..." (3-6 specs vizibile din imagine)]
+}
+
+Niciun text in afara JSON. Fara markdown, fara backtick-uri.` }
+      ]
+    }]
+  })
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
+      timeout: 45000
+    }, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString())
+          if (data.error) throw new Error('Vision: ' + data.error.message)
+          const text = (data.content || []).map(c => c.text || '').join('')
+          const jsonStr = extractBalancedJSON(text)
+          if (!jsonStr) throw new Error('Vision: no JSON in response')
+          const parsed = JSON.parse(jsonStr)
+          resolve({
+            title: String(parsed.title || '').slice(0, 100),
+            priceUSD: 0,  // vision nu vede pret
+            description: String(parsed.description || '').slice(0, 1500),
+            specs: Array.isArray(parsed.specs) ? parsed.specs.slice(0, 8).map(s => String(s)) : []
+          })
+        } catch (e) { reject(e) }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('Vision timeout')) })
+    req.write(body)
+    req.end()
+  })
+}
+
 function callClaude(productInfo, styleDesc, opts = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
@@ -502,6 +565,11 @@ function buildFallbackCopy(productInfo) {
 
 // Descarca o imagine de la URL si o returneaza ca base64
 function fetchImageAsBase64(url) {
+  // Data URI shortcut — uploadul user-ului vine ca "data:image/jpeg;base64,..."
+  if (typeof url === 'string' && url.startsWith('data:')) {
+    const m = url.match(/^data:([^;]+);base64,(.+)$/)
+    if (m) return Promise.resolve({ base64: m[2], mimeType: m[1] })
+  }
   return new Promise((resolve) => {
     const lib = url.startsWith('https') ? https : http
     const req = lib.get(url, { timeout: 15000 }, (res) => {
@@ -590,31 +658,46 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections, popupEnabled, popupGoal, niche } = req.body
+    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections, popupEnabled, popupGoal, niche, productImage } = req.body
     // Acceptam fie aliUrl, fie competitorUrl — cel putin unul. Daca user-ul
     // a dat doar competitor URL, il folosim ca sursa primara pentru scrape.
-    if (!aliUrl && !competitorUrl) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link (AliExpress sau competitor)' })
-    const primaryUrl = aliUrl || competitorUrl
+    if (!aliUrl && !competitorUrl && !productImage) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link sau o poza' })
+    const primaryUrl = aliUrl || competitorUrl || ''
 
     const geminiKey = process.env.GEMINI_API_KEY
     console.log('=== GENERATE v5 ===')
     console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
+    console.log('Input source:', productImage ? 'PHOTO' : (aliUrl ? 'aliUrl' : 'competitorUrl'))
 
-    // STEP 1: Scrape sursa primara (aliUrl daca exista, altfel competitorUrl).
-    // Fara nume + pret, Claude genereaza orb testimoniale despre "produs bun"
-    // care apoi nu se potrivesc cu produsul real.
-    const html = await fetchWithScraper(primaryUrl).catch(() => '')
+    // STEP 1: Identifica produsul.
+    //   A) Photo upload → Claude Vision extrage title + description + specs
+    //   B) URL → scrape (AliExpress meta sau generic)
     let aliImages = []
     let productInfo = { title: '', priceUSD: 0, description: '', specs: [] }
-    if (html.length > 1000) {
-      aliImages = extractImages(html)
-      const meta = extractMeta(html)
-      if (meta.title?.length > 5) productInfo.title = meta.title.substring(0, 100)
-      if (meta.priceUSD > 0) productInfo.priceUSD = meta.priceUSD
-      if (meta.description) productInfo.description = meta.description
-      if (meta.specs?.length) productInfo.specs = meta.specs
+    if (productImage) {
+      try {
+        console.log('Calling Claude Vision...')
+        productInfo = await callClaudeVision(productImage)
+        console.log('Vision result:', { title: productInfo.title, descLen: productInfo.description?.length, specsCount: productInfo.specs?.length })
+        // Folosim poza uploadata ca imagine sursa pentru Gemini lifestyle gen
+        aliImages = [productImage]
+      } catch (e) {
+        console.log('Vision failed:', e.message)
+      }
     }
-    console.log('Ali scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length, descLen: productInfo.description?.length, specsCount: productInfo.specs?.length })
+    if (primaryUrl && (!productInfo.title || productInfo.title.length < 5)) {
+      const html = await fetchWithScraper(primaryUrl).catch(() => '')
+      if (html.length > 1000) {
+        const scraped = extractImages(html)
+        if (scraped.length) aliImages = aliImages.concat(scraped)
+        const meta = extractMeta(html)
+        if (meta.title?.length > 5) productInfo.title = meta.title.substring(0, 100)
+        if (meta.priceUSD > 0) productInfo.priceUSD = meta.priceUSD
+        if (meta.description) productInfo.description = meta.description
+        if (meta.specs?.length) productInfo.specs = meta.specs
+      }
+      console.log('URL scrape:', { title: productInfo.title, priceUSD: productInfo.priceUSD, images: aliImages.length })
+    }
 
     // STEP 1.5: Scrape competitor URL pentru context — doar daca e DIFERIT de
     // primaryUrl (altfel duplicate fetch). Best-effort, max 5s.
