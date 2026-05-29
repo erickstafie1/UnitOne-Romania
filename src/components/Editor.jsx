@@ -1303,6 +1303,16 @@ function addBlocks(editor, data) {
   // panelul Settings (dreapta in editor). Trigger / delay / goal devin
   // data-attributes care publish.js le citeste si seteaza comportamentul.
   try {
+    // Auto-select popup-ul dupa drop ca user-ul sa vada imediat trait-urile
+    // in panelul Proprietati (dreapta). Fara asta trebuie sa-l caute manual.
+    editor.on('block:drag:stop', (component) => {
+      try {
+        if (component && component.getClasses && component.getClasses().indexOf('unitone-popup-block') >= 0) {
+          setTimeout(() => editor.select(component), 50)
+        }
+      } catch (e) {}
+    })
+
     editor.DomComponents.addType('unitone-popup', {
       isComponent: el => {
         if (el && el.classList && el.classList.contains('unitone-popup-block')) {
@@ -1345,16 +1355,12 @@ function addBlocks(editor, data) {
   // si configureaza trigger/delay/goal din panelul Settings (dreapta). La
   // publish, publish.js insereaza un script universal care citeste data-*
   // attributes si seteaza comportamentul (overlay + trigger).
-  function popupBlock() {
-    // Block default content — user editeaza textul direct in canvas.
-    // data-trigger / data-delay / data-goal sunt setate prin trait panel (dreapta).
-    // publish.js insereaza la publish un script universal care:
-    //   1. ascunde inline-cardul
-    //   2. cloneaza in overlay fixed-position
-    //   3. wireaza trigger (time / scroll past) si CTA (discount / order)
+  // Inner content (everything inside .unitone-popup-block) ca HTML string.
+  // Outer div e specificat ca component object cu type explicit ca sa NU mai
+  // depinda de isComponent (care e flaky cand HTML-ul vine din block).
+  function popupInnerHTML() {
     return [
-      `<div data-gjs-type="unitone-popup" class="unitone-popup-block" data-trigger="time" data-delay="30" data-goal="discount" style="margin:24px auto;max-width:440px">`,
-      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center">⚠ POPUP — Configurează trigger/delay/goal în panelul Settings (dreapta). Pe pagina publicată apare ca overlay.</div>`,
+      `<div class="unitone-popup-editor-label" style="background:#fef3c7;border:1px dashed #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#92400e;font-weight:600;text-align:center;line-height:1.4">⚠ POPUP — Click aici apoi vezi tab-ul <strong>Proprietăți</strong> (dreapta jos) pentru a configura Trigger / Secunde / Goal. Pe pagina publicată apare ca overlay (nu inline).</div>`,
       `<div class="unitone-popup-card" style="background:#fff;border-radius:14px;padding:28px 24px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb">`,
       `<button class="unitone-popup-close" style="position:absolute;top:10px;right:10px;background:transparent;border:0;color:#9ca3af;font-size:22px;cursor:pointer;width:30px;height:30px;line-height:1" aria-label="Close">×</button>`,
       `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center;line-height:1.25">Stai puțin!</h2>`,
@@ -1362,9 +1368,25 @@ function addBlocks(editor, data) {
       `<div style="margin:18px 0;padding:14px 16px;background:#fef3c7;border:2px dashed #f59e0b;border-radius:8px;text-align:center"><div style="font-size:11px;color:#92400e;font-weight:700;letter-spacing:1px;margin-bottom:4px">CODUL TĂU DE REDUCERE</div><div class="unitone-popup-code" style="font-size:24px;font-weight:900;color:#92400e;font-family:monospace;letter-spacing:2px">SAVE10</div></div>`,
       `<button class="unitone-popup-cta" style="width:100%;background:${p};color:#fff;border:0;border-radius:8px;padding:14px 20px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:0.3px;margin-top:6px">Aplică reducerea</button>`,
       `<p style="font-size:11px;color:#9ca3af;text-align:center;margin:12px 0 0">Apăsând, accepți să primești comunicări de marketing.</p>`,
-      `</div>`,
       `</div>`
     ].join('')
+  }
+
+  // Block content ca component object explicit — forteaza type='unitone-popup'
+  // FARA dependinta de isComponent. GrapesJS instantiaza direct tipul nostru.
+  function popupBlockContent() {
+    return {
+      type: 'unitone-popup',
+      tagName: 'div',
+      attributes: {
+        class: 'unitone-popup-block',
+        'data-trigger': 'time',
+        'data-delay': '30',
+        'data-goal': 'discount',
+        style: 'margin:24px auto;max-width:440px'
+      },
+      components: popupInnerHTML()
+    }
   }
 
   // Mini visual previews — each is a small SVG that hints at what the block does.
@@ -1562,7 +1584,7 @@ function addBlocks(editor, data) {
         <div style="background:#fff;border-radius:10px;padding:18px;border:1px solid #e5e7eb"><div style="display:flex;align-items:start;gap:10px;margin-bottom:10px"><span style="color:#dc2626;font-weight:900;font-size:18px">✗</span><strong style="font-size:14px;color:#111">E fragil sau nu rezistă</strong></div><div style="display:flex;align-items:start;gap:10px;border-left:3px solid #16a34a;padding-left:10px"><span style="color:#16a34a;font-weight:900;font-size:18px">✓</span><span style="font-size:14px;color:#444">Material premium testat + garanție 24 luni înlocuire gratuită.</span></div></div>
       </div></div>` },
     { id:'popup', label:'Popup', cat:'Conversie', media: T.popup,
-      content: popupBlock() },
+      content: popupBlockContent() },
     { id:'how-to-use', label:'Cum Se Folosește', cat:'Educație', media: T.howToUse,
       content: `<div style="padding:36px 20px;background:#fff"><h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 28px;text-align:center">Cum funcționează — 3 pași simpli</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
         <div style="text-align:center"><div style="width:64px;height:64px;background:${p};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;margin:0 auto 16px">1</div><h3 style="font-size:16px;font-weight:800;color:#111;margin:0 0 10px">Pasul 1</h3><p style="font-size:14px;color:#555;margin:0;line-height:1.6">Descrie primul pas concret aici.</p></div>
