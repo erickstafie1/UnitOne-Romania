@@ -63,6 +63,57 @@ const SOURCES = [
   { id: 'competitor', label: 'Link competitor', emoji: '🎯', color: '#a855f7' },
 ]
 
+// Iconite SVG (Lucide-style) pentru pasii roadmap. currentColor permite
+// flip-ul albastru → alb dupa ce cercul s-a umplut (controlat din CSS).
+function StepIcon({ stepKey }) {
+  const p = { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  switch (stepKey) {
+    case 'importData': return (
+      <svg {...p}>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+        <line x1="12" y1="22.08" x2="12" y2="12"/>
+      </svg>
+    )
+    case 'marketResearch': return (
+      <svg {...p}>
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <path d="M8 11h6M11 8v6"/>
+      </svg>
+    )
+    case 'icpConfirm': return (
+      <svg {...p}>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <polyline points="17,11 19,13 23,9"/>
+      </svg>
+    )
+    case 'salesCopy': return (
+      <svg {...p}>
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+      </svg>
+    )
+    case 'images': return (
+      <svg {...p}>
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21,15 16,10 5,21"/>
+      </svg>
+    )
+    case 'finalize': return (
+      <svg {...p}>
+        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+        <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+      </svg>
+    )
+    default: return null
+  }
+}
+
 export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   // Source picker
   const [source, setSource] = useState('aliexpress')
@@ -235,49 +286,45 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   ]
 
   function RoadmapView({ title }) {
-    const accent = '#1e40af'  // albastru profund (ca in pic)
+    const accent = '#1e40af'
+    const trackColor = '#e2e8f0'
+    const COL_LEFT = 32     // centru-x cercuri pe coloana stanga
+    const COL_RIGHT = 132   // centru-x cercuri pe coloana dreapta (zigzag)
+    const ICON = 64
+    const ROW = 110
+    const n = roadmapSteps.length
+    const totalH = (n - 1) * ROW + ICON
+
     return (
       <Page narrowWidth>
         <style>{`
-          @keyframes ue-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-          /* Entrance animation REMOVED — fiecare update setStepStatus
-             retriggera-o si parea ca se reincarca tot roadmapul */
           .ue-step-icon{
-            width:64px;height:64px;border-radius:50%;
+            width:${ICON}px;height:${ICON}px;border-radius:50%;
+            position:relative;overflow:hidden;
+            background:#fff;border:3px solid ${accent};
             display:flex;align-items:center;justify-content:center;
-            flex-shrink:0;font-size:22px;font-weight:700;
-            transition:background .45s ease, color .45s ease, border-color .45s ease, transform .35s ease;
-            position:relative;z-index:2
+            flex-shrink:0;
+            transition:transform .35s ease, box-shadow .35s ease
           }
-          /* PENDING + ACTIVE = cerc alb cu border albastru, icon albastru */
-          .ue-step-icon.pending,.ue-step-icon.active{
-            background:#fff;border:3px solid ${accent};color:${accent}
+          .ue-step-icon.active{transform:scale(1.08);animation:ue-pulse 1.8s ease-in-out infinite}
+          @keyframes ue-pulse{0%,100%{box-shadow:0 0 0 6px ${accent}1f}50%{box-shadow:0 0 0 14px ${accent}0f}}
+          /* Radial fill cand stepul devine done — albastrul se extinde din centru */
+          .ue-step-icon::before{
+            content:'';position:absolute;inset:-3px;border-radius:50%;
+            background:${accent};transform:scale(0);
+            transition:transform .65s cubic-bezier(.16,1,.3,1);
+            z-index:1
           }
-          .ue-step-icon.active{transform:scale(1.08);box-shadow:0 0 0 6px ${accent}1f}
-          /* DONE = cerc plin albastru, icon alb */
-          .ue-step-icon.done{
-            background:${accent};border:3px solid ${accent};color:#fff
-          }
-          .ue-step-label{font-size:14px;line-height:1.4;color:#0f172a;transition:color .35s ease, text-decoration-color .35s ease}
+          .ue-step-icon.done::before{transform:scale(1)}
+          /* Iconita ramane aceeasi; doar culoarea inverseaza dupa ce cercul s-a umplut */
+          .ue-step-icon svg{position:relative;z-index:2;color:${accent};transition:color .4s ease .25s}
+          .ue-step-icon.done svg{color:#fff}
+          .ue-step-label{font-size:14px;line-height:1.4;color:#0f172a;transition:color .35s ease}
           .ue-step-label.pending{color:#94a3b8}
           .ue-step-label.active{color:${accent};font-weight:700}
           .ue-step-label.done{color:#475569;text-decoration:line-through;text-decoration-color:${accent};text-decoration-thickness:2px}
           .ue-progress-track{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden}
           .ue-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,${accent});transition:width .8s cubic-bezier(.16,1,.3,1);border-radius:4px}
-          /* Zigzag layout — row 0/2/4 aliniat stanga, 1/3/5 cu offset spre dreapta */
-          .ue-step-row{display:flex;gap:18px;align-items:center;position:relative}
-          .ue-step-row.right{margin-left:80px}
-          /* Connector curbat intre cercuri — pseudo cu border-radius */
-          .ue-step-row::after{
-            content:'';position:absolute;left:32px;top:64px;
-            width:40px;height:40px;border-left:3px solid #e2e8f0;border-bottom:3px solid #e2e8f0;
-            border-radius:0 0 0 20px;z-index:1;pointer-events:none
-          }
-          .ue-step-row.right::after{
-            left:-48px;border-left:none;border-right:3px solid #e2e8f0;border-radius:0 0 20px 0
-          }
-          .ue-step-row:last-child::after{display:none}
-          .ue-step-row.done::after,.ue-step-row.partly-done::after{border-color:${accent}}
         `}</style>
         <Card>
           <BlockStack gap="500">
@@ -288,22 +335,58 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
                 <Text as="p" variant="bodySm" tone="subdued" alignment="center">{Math.round(progressPct)}% complete</Text>
               </div>
             </BlockStack>
-            <div style={{ padding: '10px 0 4px' }}>
+
+            <div style={{ position: 'relative', width: '100%', height: totalH, marginTop: 8 }}>
+              {/* Conectori SVG cu Bezier — unesc efectiv fiecare cerc de urmatorul */}
+              <svg
+                style={{ position: 'absolute', left: 0, top: 0, width: COL_RIGHT + ICON, height: totalH, pointerEvents: 'none', overflow: 'visible' }}
+                aria-hidden="true"
+              >
+                {roadmapSteps.slice(0, -1).map((s, i) => {
+                  const fromRight = i % 2 === 1
+                  const toRight = (i + 1) % 2 === 1
+                  const x1 = fromRight ? COL_RIGHT : COL_LEFT
+                  const x2 = toRight ? COL_RIGHT : COL_LEFT
+                  const y1 = i * ROW + ICON
+                  const y2 = (i + 1) * ROW
+                  const midY = (y1 + y2) / 2
+                  const d = x1 === x2
+                    ? `M ${x1} ${y1} L ${x2} ${y2}`
+                    : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`
+                  const isDone = stepStatus[s.key] === 'done'
+                  return (
+                    <path key={s.key} d={d}
+                      stroke={isDone ? accent : trackColor}
+                      strokeWidth="3" fill="none" strokeLinecap="round"
+                      style={{ transition: 'stroke .55s ease' }}
+                    />
+                  )
+                })}
+              </svg>
+
               {roadmapSteps.map((s, i) => {
+                const isRight = i % 2 === 1
                 const status = stepStatus[s.key]
-                const icon = status === 'done' ? '✓' : (status === 'active' ? (
-                  <span style={{ display: 'inline-block', animation: 'ue-spin 1.4s linear infinite' }}>↻</span>
-                ) : s.emoji)
-                const rowClass = ['ue-step-row', i % 2 === 1 ? 'right' : '', status === 'done' ? 'done' : '']
-                  .filter(Boolean).join(' ')
                 return (
-                  <div key={s.key} className={rowClass} style={{ paddingBottom: 32 }}>
-                    <div className={'ue-step-icon ' + status}>{icon}</div>
-                    <div className={'ue-step-label ' + status}>{s.label}</div>
+                  <div key={s.key} style={{
+                    position: 'absolute',
+                    left: isRight ? COL_RIGHT - ICON / 2 : 0,
+                    top: i * ROW,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16
+                  }}>
+                    <div className={'ue-step-icon ' + status}>
+                      <StepIcon stepKey={s.key} />
+                    </div>
+                    <div className={'ue-step-label ' + status} style={{ maxWidth: isRight ? 260 : 320 }}>
+                      {s.label}
+                    </div>
                   </div>
                 )
               })}
             </div>
+
             <div style={{ marginTop: 8, padding: 14, background: '#fafbfc', borderRadius: 10, border: '1px solid #e1e3e5' }}>
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
                 AI gândește adânc · 2-3 minute pentru calitate maximă
