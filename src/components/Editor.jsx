@@ -1365,6 +1365,47 @@ function buildHTML(data) {
   // Obiecții Tratate — apare doar daca formularul Generator a cerut-o (includeObjections=true)
   // si Claude a populat array-ul `objections`. Layout: 2-col grid pe desktop,
   // fiecare card are obiectia (rosu) + rebuttal (verde).
+  // Niche sections — Fashion size table, Electronics specs, Beauty ingredients, etc.
+  // AI populates `nicheSections` based on the niche chosen in Generator wizard.
+  // Two render types: "sizeTable" (HTML table with headers + rows) and "infoList"
+  // (2-col grid with label / value pairs).
+  const nicheSections = Array.isArray(data.nicheSections) ? data.nicheSections : []
+  const nicheSectionsHtml = nicheSections.length ? nicheSections.map(sec => {
+    if (!sec || typeof sec !== 'object') return ''
+    const title = esc(sec.title || '')
+    if (sec.type === 'sizeTable' && Array.isArray(sec.headers) && Array.isArray(sec.rows)) {
+      const headerRow = sec.headers.map(h => `<th style="padding:10px 14px;background:${primary};color:#fff;font-size:13px;font-weight:700;text-align:center;border:1px solid ${primary}">${esc(h)}</th>`).join('')
+      const bodyRows = sec.rows.map((row, i) => {
+        if (!Array.isArray(row)) return ''
+        const cells = row.map(c => `<td style="padding:10px 14px;font-size:13px;color:#333;text-align:center;border:1px solid #e5e7eb">${esc(c)}</td>`).join('')
+        return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">${cells}</tr>`
+      }).join('')
+      return [
+        `<div style="padding:32px 20px;background:#fff">`,
+        `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 18px;text-align:center">${title}</h2>`,
+        `<div style="overflow-x:auto;max-width:720px;margin:0 auto">`,
+        `<table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden">`,
+        `<thead><tr>${headerRow}</tr></thead>`,
+        `<tbody>${bodyRows}</tbody>`,
+        `</table></div></div>`
+      ].join('')
+    }
+    if (sec.type === 'infoList' && Array.isArray(sec.items)) {
+      const rows = sec.items.map(it => {
+        if (!it || typeof it !== 'object') return ''
+        return `<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#fff"><span style="flex:0 0 130px;font-size:13px;font-weight:700;color:${primary}">${esc(it.label || '')}</span><span style="flex:1;font-size:13px;color:#444;line-height:1.5">${esc(it.value || '')}</span></div>`
+      }).join('')
+      return [
+        `<div style="padding:32px 20px;background:#fafbfc">`,
+        `<h2 style="font-size:20px;font-weight:900;color:#111;margin:0 0 18px;text-align:center">${title}</h2>`,
+        `<div style="max-width:720px;margin:0 auto;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb">`,
+        rows,
+        `</div></div>`
+      ].join('')
+    }
+    return ''
+  }).join('') : ''
+
   const objectionsHtml = objections.length ? [
     `<div style="padding:36px 20px;background:#fafbfc">`,
     `<h2 style="font-size:22px;font-weight:900;color:#111;margin:0 0 8px;text-align:center">Răspundem îngrijorărilor tale</h2>`,
@@ -1508,6 +1549,9 @@ function buildHTML(data) {
 
     // ─── 7b. Obiectii Tratate (TEXT) — daca user a cerut in form generator ─
     objectionsHtml,
+
+    // ─── 7c. Nisa-specific sections (tabel marimi / specs / ingrediente / etc) ─
+    nicheSectionsHtml,
 
     // ─── 8. Testimoniale (TEXT) ────────────────────────────────────────
     testimonials.length ? [

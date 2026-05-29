@@ -26,6 +26,8 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   // Popup options — adauga popup pe pagina cu un obiectiv specific
   const [popupEnabled, setPopupEnabled] = useState(false)
   const [popupGoal, setPopupGoal] = useState('discount')  // phone | order | discount
+  // Niche / vertical — adapteaza sectiuni LP (tabel marimi pt fashion, specs pt tech, etc.)
+  const [niche, setNiche] = useState('generic')
   const [loading, setLoading] = useState(false)
   const [loadMsg, setLoadMsg] = useState('')
   const [loadPct, setLoadPct] = useState(0)
@@ -35,7 +37,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
   const cancelRef = useRef(false)
   // Wizard state — MUST be here (before any return), nu dupa if(loading)
   // altfel violam regula React hooks (order changes between renders).
-  const STEPS_COUNT = 7
+  const STEPS_COUNT = 8
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState('forward')
 
@@ -106,7 +108,8 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           tone, urgencyLevel, lengthMode,
           includeObjections,
           popupEnabled,
-          popupGoal: popupEnabled ? popupGoal : null
+          popupGoal: popupEnabled ? popupGoal : null,
+          niche
         })
       })
       cancelRef.current = true
@@ -327,6 +330,37 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
           {step === 3 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
+                <Text as="h2" variant="headingLg">Ce tip de produs este?</Text>
+                <Text as="p" tone="subdued">Selectează nișa — AI-ul va adăuga secțiuni specifice (tabel mărimi pentru fashion, specs pentru tech, ingrediente pentru beauty, etc.).</Text>
+              </BlockStack>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                <OptionCard active={niche === 'fashion'} onClick={() => setNiche('fashion')}
+                  icon="👗" label="Fashion & Accesorii" desc="Tabel mărimi, ghid fit, instrucțiuni îngrijire" />
+                <OptionCard active={niche === 'electronics'} onClick={() => setNiche('electronics')}
+                  icon="📱" label="Electronics & Gadgets" desc="Specs tehnice, compatibilitate, ce conține cutia" />
+                <OptionCard active={niche === 'beauty'} onClick={() => setNiche('beauty')}
+                  icon="💄" label="Beauty & Cosmetice" desc="Ingrediente, tip piele, mod de aplicare" />
+                <OptionCard active={niche === 'auto'} onClick={() => setNiche('auto')}
+                  icon="🚗" label="Auto & Moto" desc="Compatibilitate vehicul, pași instalare" />
+                <OptionCard active={niche === 'health'} onClick={() => setNiche('health')}
+                  icon="💊" label="Sănătate & Suplimente" desc="Compoziție, dozaj, contraindicații" />
+                <OptionCard active={niche === 'home'} onClick={() => setNiche('home')}
+                  icon="🏠" label="Casă & Bucătărie" desc="Dimensiuni, materiale, instrucțiuni curățare" />
+                <OptionCard active={niche === 'sports'} onClick={() => setNiche('sports')}
+                  icon="🏋️" label="Sport & Fitness" desc="Mușchi targetați, durată sesiune, nivel" />
+                <OptionCard active={niche === 'baby'} onClick={() => setNiche('baby')}
+                  icon="🍼" label="Copii & Bebe" desc="Vârstă recomandată, certificări siguranță" />
+                <OptionCard active={niche === 'pet'} onClick={() => setNiche('pet')}
+                  icon="🐶" label="Animale de Companie" desc="Mărime animal, rasă, ingrediente (dacă mâncare)" />
+                <OptionCard active={niche === 'generic'} onClick={() => setNiche('generic')}
+                  icon="🛍️" label="Altele / General" desc="Fără secțiuni specifice de nișă" />
+              </div>
+            </BlockStack>
+          )}
+
+          {step === 4 && (
+            <BlockStack gap="400">
+              <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">Cât de „pushy" să fie pagina?</Text>
                 <Text as="p" tone="subdued">Cantitatea de urgență vizuală și presiune.</Text>
               </BlockStack>
@@ -353,7 +387,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
             </BlockStack>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">Tratăm obiecțiile cumpărătorilor?</Text>
@@ -368,7 +402,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
             </BlockStack>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">Adăugăm un popup pe pagină?</Text>
@@ -397,7 +431,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
             </BlockStack>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <BlockStack gap="400">
               <BlockStack gap="100">
                 <Text as="h2" variant="headingLg">{includeObjections ? 'Obiecții specifice (opțional)' : 'Aproape gata!'}</Text>
@@ -424,6 +458,7 @@ export default function Generator({ onGenerated, onBack, presetStyle }) {
                   <BlockStack gap="100">
                     <Text as="p" variant="bodyMd" fontWeight="semibold">Recapitulare comandă AI:</Text>
                     <Text as="p" variant="bodySm">• <strong>Ton:</strong> {tone} · <strong>Urgență:</strong> {urgencyLevel} · <strong>Lungime:</strong> {lengthMode}</Text>
+                    <Text as="p" variant="bodySm">• <strong>Nișă:</strong> {({fashion: 'Fashion', electronics: 'Electronics', beauty: 'Beauty', auto: 'Auto', health: 'Sănătate', home: 'Casă', sports: 'Sport', baby: 'Copii', pet: 'Animale', generic: 'General'}[niche] || niche)}</Text>
                     <Text as="p" variant="bodySm">• <strong>Obiecții tratate:</strong> {includeObjections ? (customObjections.trim() ? 'Custom (' + customObjections.split('\n').filter(s => s.trim()).length + ')' : 'Standard') : 'Nu'}</Text>
                     <Text as="p" variant="bodySm">• <strong>Popup:</strong> {popupEnabled ? ({discount: 'Reducere', order: 'Forțare comandă'}[popupGoal] || popupGoal) : 'Nu'}</Text>
                     <Text as="p" variant="bodySm">• <strong>Profil cumpărător:</strong> {salesAngle.trim() ? salesAngle.slice(0, 80) + (salesAngle.length > 80 ? '...' : '') : '(nedefinit — AI va folosi default)'}</Text>

@@ -200,6 +200,24 @@ function callClaude(productInfo, styleDesc, opts = {}) {
     ? `INCLUDE — populeaza campul "popup" cu: ${popupGoalMap[popupGoal] || popupGoalMap.discount}`
     : 'OMITE — lasa "popup": null'
 
+  // Niche — adapteaza sectiuni specifice tipului de produs.
+  // Fiecare niche are 1-2 sectiuni de informatie specifica (tabel, lista, etc.)
+  // pe care Claude trebuie sa le populeze in campul "nicheSections" din JSON.
+  const niche = opts.niche || 'generic'
+  const nicheMap = {
+    fashion: 'FASHION — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"sizeTable", title:"Ghid mărimi", headers:["Mărime","Bust","Talie","Șold"], rows:[["S","82-86","64-68","88-92"], ["M","87-91","69-73","93-97"], ["L","92-96","74-78","98-102"], ["XL","97-101","79-83","103-107"]]} cu valori realiste in cm. (2) {type:"infoList", title:"Material & îngrijire", items:[{label:"Material",value:"..."},{label:"Spălare",value:"..."},{label:"Călcare",value:"..."}]}.',
+    electronics: 'ELECTRONICS — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Specificații tehnice", items:[{label:"Conectivitate",value:"..."},{label:"Baterie",value:"..."},{label:"Greutate",value:"..."},{label:"Dimensiuni",value:"..."},{label:"Compatibilitate",value:"..."}]} cu valori concrete extrase din descriere. (2) {type:"infoList", title:"În pachet", items:[{label:"1×",value:"Produs principal"},{label:"1×",value:"Cablu"},{label:"1×",value:"Manual utilizare"}]}.',
+    beauty: 'BEAUTY — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Ingrediente cheie", items:[{label:"...",value:"... (beneficiu pentru piele)"}, ...5-6 ingrediente]}. (2) {type:"infoList", title:"Cum se folosește", items:[{label:"Pas 1",value:"..."},{label:"Pas 2",value:"..."},{label:"Pas 3",value:"..."},{label:"Tip piele",value:"... (uscată/grasă/mixtă/toate)"}]}.',
+    auto: 'AUTO — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Compatibilitate vehicul", items:[{label:"Mărci",value:"... (universal sau specific marca)"},{label:"Ani fabricație",value:"..."},{label:"Tip mașină",value:"... (sedan/SUV/hatchback)"},{label:"Cerinte instalare",value:"..."}]}. (2) {type:"infoList", title:"Instalare in 3 pași", items:[{label:"Pas 1",value:"..."},{label:"Pas 2",value:"..."},{label:"Pas 3",value:"..."}]}.',
+    health: 'SANATATE — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Compoziție", items:[{label:"Ingredient activ",value:"... (cantitate)"},{label:"Forma",value:"... (capsule/lichid/pulbere)"},{label:"Mod administrare",value:"... (cu apă/pe stomacul gol/etc)"}]}. (2) {type:"infoList", title:"Dozaj & contraindicații", items:[{label:"Doza zilnică",value:"..."},{label:"Durată cură",value:"..."},{label:"Atenție",value:"NU pentru gravide/copii sub X ani/etc"}]}.',
+    home: 'CASA — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Dimensiuni & materiale", items:[{label:"Dimensiuni",value:"L×l×h în cm"},{label:"Greutate",value:"..."},{label:"Material principal",value:"..."},{label:"Capacitate",value:"... (dacă aplicabil)"}]}. (2) {type:"infoList", title:"Întreținere", items:[{label:"Curățare",value:"..."},{label:"Spălare",value:"... (mașina vase DA/NU)"},{label:"Garanție",value:"..."}]}.',
+    sports: 'SPORT — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Plan antrenament", items:[{label:"Durată sesiune",value:"... minute"},{label:"Frecvență recomandată",value:"... ori pe săptămână"},{label:"Nivel",value:"începător/intermediar/avansat"},{label:"Mușchi targetați",value:"..."}]}. (2) {type:"infoList", title:"Rezultate așteptate", items:[{label:"După 1 săptămână",value:"..."},{label:"După 30 zile",value:"..."},{label:"După 90 zile",value:"..."}]}.',
+    baby: 'COPII — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Vârstă & utilizare", items:[{label:"Vârstă recomandată",value:"... luni/ani"},{label:"Greutate maximă",value:"... kg"},{label:"Materiale",value:"... (non-toxic, BPA-free, etc)"},{label:"Certificări",value:"CE/EN71/etc"}]}. (2) {type:"infoList", title:"Sfaturi pentru părinți", items:[{label:"Curățare",value:"..."},{label:"Siguranță",value:"NU lăsați copilul nesupravegheat / etc"},{label:"Depozitare",value:"..."}]}.',
+    pet: 'ANIMALE — populeaza "nicheSections" cu 2 sectiuni: (1) {type:"infoList", title:"Pentru ce animale", items:[{label:"Tip animal",value:"câine/pisică/ambele"},{label:"Mărime/Greutate",value:"... kg"},{label:"Vârstă",value:"..."},{label:"Materiale",value:"... (non-toxic)"}]}. (2) {type:"infoList", title:"Mod de folosire", items:[{label:"Pas 1",value:"..."},{label:"Pas 2",value:"..."},{label:"Pas 3",value:"..."}]}.',
+    generic: 'GENERIC — LASA "nicheSections": []. Fara sectiuni de nisa specifice.'
+  }
+  const nicheInstruction = nicheMap[niche] || nicheMap.generic
+
   const personalizationBlock = `
 
 === PERSONALIZARE LP (RESPECTA EXACT) ===
@@ -208,7 +226,8 @@ ${angleBlock}
 NIVEL URGENTA: ${urgencyMap[urgencyLevel]}
 LUNGIME CONTINUT: ${lengthMap[lengthMode]}
 OBIECTII: ${objectionsInstruction}
-POPUP: ${popupInstruction}`
+POPUP: ${popupInstruction}
+NISA: ${nicheInstruction}`
 
   // styleDesc e CONTEXT COMERCIAL OPTIONAL din partea user-ului (audienta tinta,
   // ton, unghi specific de vanzare, features pe care vrea sa le accentueze).
@@ -319,7 +338,10 @@ Returneaza DOAR JSON valid, fara markdown, fara backtick-uri, fara explicatii.`
     "ctaText": "Text buton scurt (max 25 char)",
     "discountCode": "${popupGoal === 'discount' ? 'COD_GENERAT' : ''}",
     "discountPercent": ${popupGoal === 'discount' ? 15 : 0}
-  }` : 'null'}
+  }` : 'null'},
+  "nicheSections": [
+    {"type": "sizeTable|infoList", "title": "...", "headers": ["..."], "rows": [["..."]], "items": [{"label": "...", "value": "..."}]}
+  ]
 }`
 
   // Detalii AliExpress de pasat la Claude — fara ele inventeaza orb
@@ -568,7 +590,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections, popupEnabled, popupGoal } = req.body
+    const { aliUrl, competitorUrl, styleDesc, presetStyle, tone, salesAngle, urgencyLevel, lengthMode, includeObjections, customObjections, popupEnabled, popupGoal, niche } = req.body
     // Acceptam fie aliUrl, fie competitorUrl — cel putin unul. Daca user-ul
     // a dat doar competitor URL, il folosim ca sursa primara pentru scrape.
     if (!aliUrl && !competitorUrl) return res.status(400).json({ error: 'Trebuie sa pui cel putin un link (AliExpress sau competitor)' })
@@ -627,7 +649,8 @@ module.exports = async function handler(req, res) {
       customObjections: Array.isArray(customObjections) ? customObjections : [],
       competitorContext,
       popupEnabled: !!popupEnabled,
-      popupGoal: popupEnabled ? (popupGoal || 'discount') : null
+      popupGoal: popupEnabled ? (popupGoal || 'discount') : null,
+      niche: niche || 'generic'
     })
     // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
