@@ -1590,6 +1590,9 @@ function registerPopupType(editor) {
         hoverable: true,
         copyable: true,
         removable: true,
+        // Toolbar GrapesJS (move/copy/delete + arrow parent) ascuns — apareau
+        // suprapuse peste close button-ul nostru in edit mode → vizual buguit.
+        toolbar: [],
         attributes: {
           class: 'unitone-popup-block',
           style: 'display:none;background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
@@ -1729,6 +1732,7 @@ function registerPopupType(editor) {
         copyable: false,
         removable: false,
         selectable: true,
+        toolbar: [],
         attributes: { class: 'unitone-popup-body' }
       }
     }
@@ -1794,7 +1798,8 @@ function addBlocks(editor, data) {
           components: '×',
           selectable: false,
           draggable: false,
-          removable: false
+          removable: false,
+          toolbar: []
         },
         {
           type: 'unitone-popup-body',
