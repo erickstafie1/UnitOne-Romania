@@ -136,18 +136,20 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
       // pe Elements (asa cum face GemPages — "add elements" hint clickabil).
       // Folosim closest() ca click-urile pe ::before/::after pseudo sau pe
       // copii sa fie capturate corect.
-      // CLICK (nu mousedown) ca sa NU blocam drag-drop GrapesJS — mousedown
-      // capture-fased + preventDefault impiedica initierea drag-ului din popup
-      // catre orice element. Click fires doar dupa mousedown+mouseup fara
-      // miscare, deci interactiuni de drag nu sunt afectate.
+      // Mousedown capture-phase + stopPropagation: opreste GrapesJS canvas
+      // selection (care fires pe mousedown) ASUPRA empty-body, dar lasa
+      // dragstart/dragend (HTML5 D&D nu folosesc click chain) sa functioneze
+      // normal pentru drops din sidebar.
+      // Nu preventDefault: native focus + click chain raman intacte.
       const EMPTY_HANDLER_FLAG = '__unitoneEmptyHandlerBound'
       if (!doc[EMPTY_HANDLER_FLAG]) {
         doc[EMPTY_HANDLER_FLAG] = true
-        doc.addEventListener('click', (ev) => {
+        doc.addEventListener('mousedown', (ev) => {
           const t = ev.target
           if (!t || !t.closest) return
           const popupBody = t.closest('.unitone-popup-body')
           if (popupBody && popupBody.children.length === 0) {
+            ev.stopPropagation()
             setBlocksTab('element')
             setTimeout(() => {
               try {
@@ -158,7 +160,7 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
               } catch (e) {}
             }, 30)
           }
-        })
+        }, true)
       }
     } catch (e) { console.warn('popup edit-mode CSS failed:', e.message) }
   }, [editPopupId])
@@ -1671,8 +1673,9 @@ function registerPopupType(editor) {
         copyable: true,
         removable: true,
         // Toolbar custom — doar Delete (default avea arrow parent + move + copy
-        // care se suprapuneau cu close button). User trebuie sa poate sterge popup.
-        toolbar: [{ command: 'tlb-delete', attributes: { class: 'fa fa-trash-o', title: 'Șterge popup' }, label: '🗑' }],
+        // care se suprapuneau cu close button). FontAwesome icon, NO label
+        // text (altfel iconita + emoji apareau ambele).
+        toolbar: [{ command: 'tlb-delete', attributes: { class: 'fa fa-trash-o', title: 'Șterge popup' } }],
         attributes: {
           class: 'unitone-popup-block',
           style: 'display:none;background:#FFFFFF;border-radius:14px;padding:32px;max-width:600px;margin:24px auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);border:1px solid #e5e7eb;position:relative',
