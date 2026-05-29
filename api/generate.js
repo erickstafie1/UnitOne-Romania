@@ -470,6 +470,63 @@ FRAZE BANNED (NU folosi NICIODATA, oriunde in JSON):
 ============================================================
 
 ============================================================
+HORMOZI M.A.G.I.C. — OFFER NAMING FORMULA (campul "offerName")
+Din "$100M Offers" by Alex Hormozi. Numele ofertei VINDE rezultatul inainte
+ca user-ul sa citeasca pagina. Acronim M.A.G.I.C. = 5 elemente, FOLOSESTI 3
+(maxim 4) per nume — niciodata toate 5 (devine greoi).
+
+  M – MAGNETIC REASON: de ce ofera EXISTA acum? (Editie Limitata / Lansare de Vara / Lichidare de Stoc / Black Friday)
+  A – AVATAR: pentru CINE e? (Mamici / Soferi / Începători / Femei 35+ / Antreprenori Ocupati)
+  G – GOAL: rezultatul CONCRET dorit? (Ten Curat / Fara Durere / Slabit Rapid / Confort Maxim / Fesieri Modelati)
+  I – INTERVAL DE TIMP: cat de repede? (in 30 zile / Peste Noapte / Instant / in 14 Zile)
+  C – CONTAINER WORD: cum livrezi? (Kit / Sistem / Pachet / Trusa / Rutina / Colectie / Arsenal / Set / Programul / Metoda / Formula)
+
+REGULI STRICTE:
+
+1. CLARITATEA > CREATIVITATEA. User trebuie sa stie ce cumpara si ce problema rezolva din prima secunda.
+   PROST: "Elixirul Zeitei" (abstract, fara semnal de rezultat)
+   BUN: "Serul Nocturn pentru Ten Luminos in 28 Zile" (clar + Goal + Timp + Container)
+
+2. COMBINEAZA 3 (max 4) elemente din M.A.G.I.C. — NICIODATA toate 5 simultan.
+   - Combo universal: Container + Timp + Goal
+   - Combo Avatar: Avatar + Goal + Container (cand persona e foarte clara)
+   - Combo Magnetic: Magnetic + Goal + Container (lansari / oferte limitate)
+
+3. OBLIGATIVITATEA CONTAINER WORD-ului. Chiar si pentru UN SINGUR produs (nu bundle),
+   reframe-uieste ca pachet/sistem/rutina/kit. Creste valoarea perceputa de 2-5x.
+   PROST: "Crema Anti-Riduri"
+   BUN: "Sistemul Anti-Riduri de 30 Zile"
+   PROST: "Sampon si Balsam Antimatreata"
+   BUN: "Kitul Complet pentru Scalp Curat"
+
+4. DENUMESTE DUPA REZULTAT (Dream Outcome), nu dupa feature/ingredient/spec.
+   PROST: "Set Benzi Elastice 50kg"
+   BUN: "Kitul de 30 Zile pentru Fesieri Modelati"
+   PROST: "Furtun Spalare 60m cu 7 Pulverizatoare"
+   BUN: "Sistemul de Spalare Express 15 Minute pentru Masina ta"
+
+5. ALITERATIE / RITM (optional — doar daca NU sacrifica claritatea).
+   "Rutina Rapida de Refacere", "Sistemul Simplu de Slabit", "Pachetul Performantei Personalizate".
+
+EXEMPLE DE TRANSFORMARE (few-shot pattern):
+  Set gantere + coarda → "Kitul 'Mamici in Forma' pentru Arderi Rapide" (Avatar+Goal+Container)
+  Crema anti-acneice → "Sistemul de 14 Zile pentru Ten Curat" (Timp+Goal+Container)
+  3 tricouri de bumbac → "Pachetul de Baza 'Confort Maxim'" (Goal+Container)
+  Aspirator wireless → "Kitul de Curatare Express 15 Minute" (Container+Timp+Goal)
+  Supliment de slabire → "Sistemul de 30 Zile pentru Topit Grasimea Abdominala" (Timp+Goal+Container)
+  Curs / Ebook retete → "Colectia de Vara: Retete Rapide pentru Antreprenori" (Magnetic+Avatar+Container)
+  Furtun gradina extensibil → "Arsenalul de Gradinarit Fara Efort" (Container+Goal)
+  Capcana soareci → "Sistemul Anti-Daunatori in 24 Ore" (Container+Goal+Timp)
+
+CONTAINER WORDS PERMISE (RO): Kit, Sistem, Pachet, Colectie, Trusa, Set, Arsenal, Rutina, Programul, Metoda, Formula
+
+OUTPUT: campul "offerName" in JSON (max 60 char). DIFERIT de "productName".
+  - productName = numele tehnic / oficial al produsului ("Aspirator wireless wireless 800W")
+  - offerName = repackaging M.A.G.I.C. ("Kitul de Curatare Express 15 Minute")
+Headline-ul si CTA pot mentiona offerName ca element principal de vanzare.
+============================================================
+
+============================================================
 NEUROSCIENCE LAYER — DEPTH BEATS SURFACE (Damasio + Hawkins + Kahneman)
 95% din decizia de cumparare = subconstient. Copy-ul superficial e ignorat tacit.
 Foloseste TOATE 5 straturi simultan, nu izolat:
@@ -696,6 +753,7 @@ REGULI CRITICE PE STRUCTURA + COPYWRITING:
 ============================================================
 CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 [ ] STRUCTURA CANONICA respectata: hero (badge+rating+price+CTA+trust strip), quickBullets, testimonial early, topBenefits, featureSection 1, riskReversalText explicit conditional, featureSection 2, comparison/objections, full testimonials list, howItWorks 3 pasi, urgencyMessage cu cifra concreta, FAQ 6 standard
+[ ] offerName aplica HORMOZI M.A.G.I.C. — Container word OBLIGATORIU + 2-3 din M-A-G-I, denumire dupa REZULTAT (NU feature/spec), claritate > creativitate, max 60 char
 [ ] Min 3 din PATTERN-URILE WIN incluse: pattern interrupt headline ("INCEPE SA X"), CAPS keyword sub-headline ("FUNCTIONEAZA PE ORICE..."), numeric proof claim ("Folosit deja de X.XXX"), explicit garantia "30 zile - GARANTIE DE RETURNARE A BANILOR", urgency cu cifra ("ULTIMELE X BUC din lotul [luna]")
 [ ] Headline = Sophistication Level identificat + 3 hook levers stack + <70 char
 [ ] Subheadline = "So That, Without" + obiectie principala eliminata
@@ -717,7 +775,8 @@ CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 Returneaza DOAR JSON valid (TOATE check-urile de mai sus respectate), fara markdown, fara backtick-uri, fara explicatii.`
 
   const schema = `{
-  "productName": "Nume specific al produsului (max 60 char). NU 'Produsul nostru' — foloseste numele real.",
+  "productName": "Nume tehnic / oficial al produsului (max 60 char). NU 'Produsul nostru' — foloseste numele real.",
+  "offerName": "REPACKAGING M.A.G.I.C. (Hormozi) — combina Container word OBLIGATORIU + 2-3 din M-A-G-I (max 60 char). DIFERIT de productName, denumit dupa REZULTAT. Ex: 'Sistemul de 14 Zile pentru Ten Curat', 'Kitul Mamici in Forma pentru Arderi Rapide', 'Pachetul de Baza Confort Maxim'. APLICA HORMOZI M.A.G.I.C. block.",
   "headline": "H1 — alege Level sofisticare 1-5, stack 3 hook levers, max 70 char. APLICA Regula 1+2 din REGULI CRITICE.",
   "subheadline": "Formula 'So That, Without': promisiune + obiectie eliminata. Max 100 char. APLICA Regula 3.",
   "price": ${rp},
@@ -963,6 +1022,7 @@ function buildFallbackCopy(productInfo) {
   const name = productInfo.title || 'Produsul Tău'
   return {
     productName: name.substring(0, 60),
+    offerName: `Pachetul Complet ${name}`.substring(0, 60),
     headline: `${name} — Calitate Premium`,
     subheadline: 'Comandă acum cu livrare rapidă și plată la livrare',
     price: rp, oldPrice: Math.round(rp * 1.6), bumpPrice: Math.round(rp * 0.2),
