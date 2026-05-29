@@ -106,6 +106,12 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
 
       gjsRef.current = editor
 
+      // CRITICAL: register custom component types BEFORE any setComponents call,
+      // ca elementele existente (e.g. .unitone-popup-block in body_html) sa fie
+      // matched la parse. Daca registrarea se face dupa, blocurile salvate
+      // raman cu type='default' si trait-urile noastre nu apar.
+      registerPopupType(editor)
+
       if (data.fromDashboard && data.editorHtml) {
         // BEST PATH: the page was published with the metafield-source pipeline
         // (post-2025-05). We have the raw GrapesJS html + css — restore it
@@ -1282,6 +1288,68 @@ function buildHTML(data) {
   ].join('\n')
 }
 
+// ─── registerPopupType ────────────────────────────────────────────────────────
+// Custom GrapesJS component type pentru popup-uri. Inregistreaza trait-uri
+// (Trigger / Secunde / Goal) editabile din panelul Proprietati. Trait-urile
+// se mapeaza la data-* attributes pe care publish.js le citeste si seteaza
+// comportamentul popup-ului pe storefront.
+// IMPORTANT: chemat INAINTE de setComponents ca elementele existente in
+// body_html sa fie matched la parse (altfel raman default si trait-urile
+// noastre nu apar).
+function registerPopupType(editor) {
+  const Components = editor.DomComponents
+  if (!Components) {
+    console.warn('[unitone] DomComponents missing, popup type not registered')
+    return
+  }
+  Components.addType('unitone-popup', {
+    extend: 'default',
+    isComponent: (el) => {
+      if (el && el.classList && el.classList.contains('unitone-popup-block')) {
+        return { type: 'unitone-popup' }
+      }
+    },
+    model: {
+      defaults: {
+        name: 'Popup',
+        droppable: true,
+        selectable: true,
+        hoverable: true,
+        attributes: { 'data-trigger': 'time', 'data-delay': '30', 'data-goal': 'discount' },
+        traits: [
+          {
+            type: 'select',
+            label: 'Trigger',
+            name: 'data-trigger',
+            options: [
+              { value: 'time', name: 'După X secunde' },
+              { value: 'scroll', name: 'La scroll past popup' }
+            ]
+          },
+          {
+            type: 'number',
+            label: 'Secunde (delay)',
+            name: 'data-delay',
+            placeholder: '30',
+            min: 1,
+            max: 600
+          },
+          {
+            type: 'select',
+            label: 'Goal',
+            name: 'data-goal',
+            options: [
+              { value: 'discount', name: 'Reducere (cod)' },
+              { value: 'order', name: 'Formular comandă (scroll la COD)' }
+            ]
+          }
+        ]
+      }
+    }
+  })
+  console.log('[unitone] popup type registered')
+}
+
 // ─── addBlocks ────────────────────────────────────────────────────────────────
 function addBlocks(editor, data) {
   const p = data?.style?.primaryColor || '#e8000d'
@@ -1298,57 +1366,16 @@ function addBlocks(editor, data) {
     return `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${p};border-radius:6px;padding:6px;text-align:center;${extra || ''}"><span class="unitone-placeholder-text" style="color:${p};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real (Releasit / EasySell)</span></div>`
   }
 
-  // ─── Custom component type: unitone-popup ─────────────────────────────
-  // Inregistreaza un tip de component cu traits (selectoare) editabile din
-  // panelul Settings (dreapta in editor). Trigger / delay / goal devin
-  // data-attributes care publish.js le citeste si seteaza comportamentul.
-  try {
-    // Auto-select popup-ul dupa drop ca user-ul sa vada imediat trait-urile
-    // in panelul Proprietati (dreapta). Fara asta trebuie sa-l caute manual.
-    editor.on('block:drag:stop', (component) => {
-      try {
-        if (component && component.getClasses && component.getClasses().indexOf('unitone-popup-block') >= 0) {
-          setTimeout(() => editor.select(component), 50)
-        }
-      } catch (e) {}
-    })
-
-    editor.DomComponents.addType('unitone-popup', {
-      isComponent: el => {
-        if (el && el.classList && el.classList.contains('unitone-popup-block')) {
-          return { type: 'unitone-popup' }
-        }
-      },
-      model: {
-        defaults: {
-          name: 'Popup',
-          droppable: true,
-          selectable: true,
-          hoverable: true,
-          attributes: { 'data-trigger': 'time', 'data-delay': '30', 'data-goal': 'discount' },
-          traits: [
-            {
-              type: 'select', label: 'Trigger',
-              name: 'data-trigger',
-              options: [
-                { value: 'time', name: 'După X secunde' },
-                { value: 'scroll', name: 'La scroll past popup' }
-              ]
-            },
-            { type: 'number', label: 'Secunde (delay)', name: 'data-delay', placeholder: '30', min: 1, max: 600 },
-            {
-              type: 'select', label: 'Goal',
-              name: 'data-goal',
-              options: [
-                { value: 'discount', name: 'Reducere (cod)' },
-                { value: 'order', name: 'Formular comandă (scroll la COD)' }
-              ]
-            }
-          ]
-        }
+  // Auto-select popup-ul dupa drop ca user-ul sa vada imediat trait-urile
+  // in panelul Proprietati. registerPopupType (la nivel modul) inregistreaza
+  // tipul — chemat la editor init, INAINTE de setComponents.
+  editor.on('block:drag:stop', (component) => {
+    try {
+      if (component && component.getClasses && component.getClasses().indexOf('unitone-popup-block') >= 0) {
+        setTimeout(() => editor.select(component), 50)
       }
-    })
-  } catch (e) { console.log('Popup component type registration failed:', e.message) }
+    } catch (e) {}
+  })
 
   // ─── Popup block builder ──────────────────────────────────────────────
   // Genereaza UN SINGUR block-popup generic. User-ul editeaza textul cum vrea
