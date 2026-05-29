@@ -37,23 +37,28 @@ function scrapeViaClaude(url, sourceHint) {
   if (aliId) productHint = ' AliExpress item ID ' + aliId[1]
   else if (amzId) productHint = ' Amazon ASIN ' + amzId[1]
   else if (albId) productHint = ' Alibaba product ID ' + albId[1]
-  // Haiku 4.5 — 50k rate limit / min (tier 1) vs Sonnet 30k. Scraping nu necesita
-  // gandire profunda, Haiku descurca + e mai rapid si mai ieftin.
+  // Haiku 4.5 — 50k rate limit/min. Combinam DOUA tool-uri:
+  //   1. web_fetch — fetcheaza URL-ul DIRECT (functie pe AliExpress/Amazon).
+  //   2. web_search — backup daca URL e blocat (cauta dupa nume/ID).
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 3000,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
+    tools: [
+      { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 3 },
+      { type: 'web_search_20250305', name: 'web_search', max_uses: 4 }
+    ],
     messages: [{
       role: 'user',
-      content: 'Foloseste web_search ca sa gasesti acest produs:\n' +
+      content: 'Trebuie sa extragi informatii REALE despre acest produs.\n' +
         'URL: ' + cleanUrl + '\n' +
         'Sursa: ' + sourceLabel + productHint + '\n\n' +
-        (sourceHint === 'aliexpress' ?
-          'AliExpress paginile nu sunt indexate direct. Strategie:\n' +
-          '1. Cauta pe Google "' + (productHint.trim() || cleanUrl) + '" + review-uri si comparatii\n' +
-          '2. Cauta produsul dupa keywords din URL slug pe alte site-uri\n' +
-          '3. Cauta categoria de produs + ID-ul pe AliExpress aggregators\n\n'
-          : 'Strategii: search URL direct, search ID + nume site, search slug keywords, cauta pe review sites.\n\n') +
+        'STRATEGIE:\n' +
+        '1. Foloseste web_fetch ca sa fetchezi URL-ul DIRECT — asa primesti HTML-ul paginii.\n' +
+        '2. Din HTML, extrage: numele produsului (title/h1/og:title), descrierea, specs (feature bullets), pret, imagini.\n' +
+        '3. Daca web_fetch returneaza eroare / continut gol, foloseste web_search ca BACKUP — search dupa "' + (productHint.trim() || 'produs') + '" + brand/keywords.\n\n' +
+        'CRITIC:\n' +
+        '- Folose DETALIILE REALE din HTML, nu inventezi.\n' +
+        '- Daca total nu gasesti dupa toate strategiile, returneaza string gol / array gol. NU "Product information unavailable".\n\n' +
         'Returneaza DOAR JSON valid:\n' +
         '{\n' +
         '  "title": "Nume real produs sau string gol",\n' +
@@ -61,8 +66,7 @@ function scrapeViaClaude(url, sourceHint) {
         '  "specs": ["spec1", ...] sau [],\n' +
         '  "priceUSD": numar sau 0,\n' +
         '  "images": ["url1", ...] sau []\n' +
-        '}\n\n' +
-        'CRITIC: daca NU gasesti nimic dupa search, returneaza string gol / array gol. NU inventa, NU folosi placeholder gen "Product information unavailable".'
+        '}'
     }]
   })
   // scrapeApiCall e similar cu apiCall dar trimite header-ul anthropic-beta
@@ -75,7 +79,7 @@ function scrapeViaClaude(url, sourceHint) {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
-          'anthropic-beta': 'web-search-2025-03-05',
+          'anthropic-beta': 'web-fetch-2025-09-10,web-search-2025-03-05',
           'Content-Length': Buffer.byteLength(body)
         },
         timeout: 120000
