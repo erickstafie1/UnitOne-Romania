@@ -841,7 +841,7 @@ function extractBalancedJSON(text) {
 // pe care il poate edita in editor.
 async function callClaudeWithRetry(productInfo, styleDesc, opts = {}) {
   let lastErr
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const copy = await callClaude(productInfo, styleDesc, opts)
       if (!copy || typeof copy !== 'object') throw new Error('Claude returned non-object')
@@ -850,7 +850,15 @@ async function callClaudeWithRetry(productInfo, styleDesc, opts = {}) {
       lastErr = e
       console.log('Claude attempt ' + (attempt + 1) + ' failed:', e.message)
       if (/x-api-key|authentication|401/i.test(e.message)) break
-      if (attempt === 0) await new Promise(r => setTimeout(r, 1500))
+      // Rate limit / overload → backoff mai lung. 12s, 30s, 60s.
+      const isRateLimit = /rate\s*limit|429|overload|usage\s+tier/i.test(e.message)
+      if (isRateLimit && attempt < 2) {
+        const delay = [12000, 30000, 60000][attempt] || 12000
+        console.log('Claude rate-limited, backoff', delay, 'ms')
+        await new Promise(r => setTimeout(r, delay))
+      } else if (attempt === 0) {
+        await new Promise(r => setTimeout(r, 1500))
+      }
     }
   }
   console.log('Claude failed all attempts, returning fallback skeleton. Last error:', lastErr?.message)
@@ -1111,7 +1119,9 @@ module.exports = async function handler(req, res) {
       if (!copy.heroVariant) copy.heroVariant = 'split'  // default safe daca preset nu specifica
       console.log('Variant signature: preset palette=' + presetStyle.primaryColor + ' hero=' + (presetStyle.heroVariant || 'split'))
     } else {
-      const variants = pickVariantsByDescription(styleDesc, copy.productName)
+      // styleDesc — derivat din ICP (persona + niche) pentru pick-uri smart de paleta
+      const styleDescV6 = (icp?.persona || '') + ' ' + (icp?.niche || '') + ' ' + (productInfo.title || '')
+      const variants = pickVariantsByDescription(styleDescV6, copy.productName)
       copy.style = Object.assign({}, copy.style || {}, {
         primaryColor: variants.palette.primary,
         secondaryColor: variants.palette.secondary,
@@ -1119,19 +1129,20 @@ module.exports = async function handler(req, res) {
         bgAccentBorder: variants.palette.bgAccentBorder
       })
       copy.heroVariant = variants.heroVariant
-      console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant + ' (from desc=' + (styleDesc ? 'YES' : 'NO') + ')')
+      console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant)
     }
 
     // Save URL in returned data so editor's auto-save can use it as
     // a stable identifier for localStorage draft (otherwise drafts collide).
-    copy.aliUrl = primaryUrl
-    // Persist wizard inputs ca buildHTML sa poata aplica tone-variants,
+    copy.aliUrl = legacy.aliUrl || ''
+    // Persist input params asa buildHTML poate aplica tone-variants,
     // niche-icons si countdown widgets bazat pe ele la render time.
+    // Sursa: icp (din research agent) > legacy (back-compat).
     copy.meta = {
-      tone: tone || 'direct',
-      niche: niche || 'generic',
-      urgencyLevel: urgencyLevel || 'medie',
-      lengthMode: lengthMode || 'mediu'
+      tone: icp?.recommendedTone || legacy.tone || 'direct',
+      niche: icp?.niche || legacy.niche || 'generic',
+      urgencyLevel: icp?.recommendedUrgency || legacy.urgencyLevel || 'medie',
+      lengthMode: icp?.recommendedLength || legacy.lengthMode || 'mediu'
     }
 
     console.log('=== DONE === Images:', copy.images.length, '/4 (', goodGemini.length, 'Gemini +', aliImages.length, 'Ali)', 'meta:', copy.meta)
