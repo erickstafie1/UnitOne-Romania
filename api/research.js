@@ -641,10 +641,34 @@ module.exports = async function handler(req, res) {
     if (productInfo.description && /^(product\s+information\s+unavailable|information\s+unavailable|unavailable|cannot|unable)/i.test(productInfo.description)) {
       productInfo.description = ''
     }
-    const hasUsableInfo = (productInfo.title && productInfo.title.length >= 5) ||
-                         (productInfo.description && productInfo.description.length >= 50) ||
-                         (productInfo.specs && productInfo.specs.length >= 2)
-    if (!hasUsableInfo) {
+    // Thresholds slim — accept partial info (title >= 3 char OR desc >= 20 OR 1 spec)
+    const hasUsableInfo = (productInfo.title && productInfo.title.length >= 3) ||
+                         (productInfo.description && productInfo.description.length >= 20) ||
+                         (productInfo.specs && productInfo.specs.length >= 1)
+    // FALLBACK FINAL: extract title din URL slug daca tot esueaza scraping-ul.
+    // E mai bun sa avem ceva (chiar partial) decat sa esuam complet.
+    if (!hasUsableInfo && url) {
+      try {
+        const u = new URL(url)
+        // Extract slug din pathname si curata-l (ex: /products/aspirator-wireless-800w → "Aspirator Wireless 800w")
+        const slug = (u.pathname || '').split('/').filter(Boolean).pop() || ''
+        const titleFromSlug = slug
+          .replace(/\.html?$/i, '')
+          .replace(/[-_]+/g, ' ')
+          .replace(/\d+\.html$/, '')
+          .replace(/\b\w/g, c => c.toUpperCase())
+          .trim()
+        if (titleFromSlug.length >= 4) {
+          productInfo.title = titleFromSlug.slice(0, 80)
+          productInfo.description = productInfo.description || `Produs ${titleFromSlug.toLowerCase()} disponibil cu plata la livrare`
+          console.log('[research] FALLBACK title from URL slug:', productInfo.title)
+        }
+      } catch (e) {}
+    }
+    const hasUsableInfoAfterFallback = (productInfo.title && productInfo.title.length >= 3) ||
+                                       (productInfo.description && productInfo.description.length >= 20) ||
+                                       (productInfo.specs && productInfo.specs.length >= 1)
+    if (!hasUsableInfoAfterFallback) {
       return res.status(422).json({
         error: 'Nu am putut extrage info despre produs. AI a incercat web search dar pagina e blocata sau nu e indexata. Solutii: 1) Foloseste upload poza, 2) Foloseste Shopify product (daca-l ai in magazin), 3) Incearca alt URL (varianta canonica, fara tracking params).'
       })
