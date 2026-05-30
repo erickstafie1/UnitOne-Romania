@@ -17,6 +17,34 @@ Raspunde scurt si direct, in romana. Foloseste bullet points cand listezi idei.
 Daca utilizatorul cere sa creezi o pagina, spune-i sa apese "Pagina noua" din meniu.
 Nu folosi emoji decat foarte rar (max 1-2 pe raspuns).`
 
+// System prompt pentru bug-report chatbot (declansat dupa publish, click "Bad").
+// Empatic, scurt, pune intrebari clarificatoare, propune trimiterea catre echipa.
+const BUG_REPORT_SYSTEM_PROMPT = `Esti un asistent prietenos al echipei UnitOne, o aplicatie Shopify care genereaza pagini COD cu AI.
+
+Rol: ASCULTI feedback-ul user-ului cand ceva nu i-a placut la pagina generata, sau cand a gasit un bug. Esti EMPATIC, scurt si util.
+
+Stil:
+- Vorbesti DOAR in romana, cu diacritice perfect puse (ă, â, î, ș, ț).
+- Mesajele tale au 1-3 fraze MAX. Nu scrii paragrafe lungi.
+- Folosesti "tu", NU "dumneavoastra".
+- Limbaj cald + uman, nu robotic: "Înțeleg", "Mulțumesc că-mi spui asta", "Hm, asta sună frustrant".
+
+Flow:
+1. Daca e primul mesaj de la user, multumeste-i pentru feedback si intreaba DESPRE CE e vorba (pagina arata ciudat? lipseste ceva? a aparut o eroare?).
+2. La fiecare raspuns al user-ului, intreaba O singura clarificare concreta:
+   - "În ce secțiune ai văzut asta?" (hero/testimoniale/FAQ/etc)
+   - "S-a întâmplat când ai dat publish sau în editor?"
+   - "Pe ce dispozitiv erai — telefon sau desktop?"
+   - "Poți să-mi descrii pasul exact când a apărut?"
+3. Dupa 3-5 schimburi (sau cand simti ca ai info suficienta), spune ceva de tip:
+   "Am notat toate detaliile. O să trimit asta echipei să rezolve. Vrei să-ți răspundă cineva pe email? Dacă da, lasă-mi adresa."
+4. Daca user-ul da email sau spune "nu", incheie cu "Mulțumesc! Echipa o să se uite peste asta în maxim 24 de ore."
+
+Important:
+- NU promiti rezolvari concrete pe care nu le poti garanta.
+- NU spui ca esti AI / Claude / etc. Doar "asistentul echipei UnitOne".
+- Daca user-ul iti cere ajutor TEHNIC pe care nu il poti da (ex: "cum repar magazinul meu"), redirectioneaza politicos la docs.shopify.com sau email-ul de suport.`
+
 // System prompt pentru AI Enhance — primeste descrierea/notele scrise de user
 // si o EXTINDE cu CONTEXT COMERCIAL (audienta tinta, ton, unghi de vanzare).
 // Faptele despre produs (ce este, ce face) vin oricum din AliExpress in
@@ -43,10 +71,10 @@ OUTPUT:
 - NU prefatare ("Iata:" / "Brief:"). NU mentiona ca esti AI.
 - Incepe direct cu continutul extins.`
 
-function anthropicCall(messages, apiKey, systemPromptOverride) {
+function anthropicCall(messages, apiKey, systemPromptOverride, modelOverride) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
-      model: 'claude-sonnet-4-5',
+      model: modelOverride || 'claude-sonnet-4-5',
       max_tokens: 1024,
       system: systemPromptOverride || SYSTEM_PROMPT,
       messages
@@ -109,6 +137,31 @@ module.exports = async function handler(req, res) {
       if (response.error) return res.status(500).json({ error: response.error.message || 'AI error' })
       const enhanced = (response.content?.[0]?.text || '').trim()
       return res.status(200).json({ success: true, enhanced })
+    }
+
+    // Mode: bug_report — chatbot pentru feedback negativ. Foloseste Haiku 4.5
+    // (ieftin + rapid) + system prompt empatic care strange detalii.
+    if (body.action === 'bug_report') {
+      const { messages: bugMessages } = body
+      if (!Array.isArray(bugMessages) || bugMessages.length === 0) {
+        return res.status(400).json({ error: 'messages array required' })
+      }
+      const sanitized = bugMessages
+        .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+        .slice(-20)
+        .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }))
+      if (sanitized.length === 0 || sanitized[sanitized.length - 1].role !== 'user') {
+        return res.status(400).json({ error: 'last message must be user' })
+      }
+      const response = await anthropicCall(
+        sanitized,
+        apiKey,
+        BUG_REPORT_SYSTEM_PROMPT,
+        'claude-haiku-4-5-20251001'
+      )
+      if (response.error) return res.status(500).json({ error: response.error.message || 'AI error' })
+      const reply = (response.content?.[0]?.text || '').trim()
+      return res.status(200).json({ success: true, reply })
     }
 
     // Default mode: chat

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Page, Card, Button, TextField, ButtonGroup, Banner, Badge, Modal,
   ResourceList, ResourceItem, BlockStack, InlineStack, Text, Box, Spinner,
-  Icon, Thumbnail, EmptyState, Toast
+  Icon, Thumbnail, EmptyState, Toast, Checkbox
 } from '@shopify/polaris'
 import {
   ArrowLeftIcon, DesktopIcon, MobileIcon, SaveIcon, ExternalIcon,
@@ -23,6 +23,116 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   const [publishedUrl, setPublishedUrl] = useState('')
   const [publishedDemoted, setPublishedDemoted] = useState(false)
   const [error, setError] = useState('')
+
+  // ─── Post-publish feedback widget ──────────────────────────────────
+  // Banner + 2 modals afisate dupa publish reusit:
+  //  - Good → modal cu checklist "Ce ti-a placut?" → POST /api/feedback
+  //  - Bad  → modal cu chatbot Haiku → finalizare POST /api/feedback
+  const [feedbackGiven, setFeedbackGiven] = useState(null) // null | 'good' | 'bad' | 'dismissed'
+  const [goodModalOpen, setGoodModalOpen] = useState(false)
+  const [badModalOpen, setBadModalOpen] = useState(false)
+  const [goodSelected, setGoodSelected] = useState([])
+  const [goodText, setGoodText] = useState('')
+  const [goodSubmitting, setGoodSubmitting] = useState(false)
+  const [chatMessages, setChatMessages] = useState([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatSubmitting, setChatSubmitting] = useState(false)
+  const [chatSent, setChatSent] = useState(false)
+  const chatBottomRef = useRef(null)
+
+  const GOOD_OPTIONS = [
+    'Aspectul vizual',
+    'Textele scrise (copy)',
+    'Pozele generate',
+    'Structura paginii',
+    'Ușurința de folosire',
+    'Rapiditatea procesului'
+  ]
+
+  function toggleGood(opt) {
+    setGoodSelected(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])
+  }
+
+  async function submitGood() {
+    setGoodSubmitting(true)
+    try {
+      await apiFetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: 'good',
+          shop, pageUrl: publishedUrl,
+          structured: goodSelected,
+          text: goodText
+        })
+      })
+    } catch (e) { /* ignore — feedback is fire-and-forget */ }
+    setGoodSubmitting(false)
+    setGoodModalOpen(false)
+  }
+
+  function openBadChat() {
+    setBadModalOpen(true)
+    if (chatMessages.length === 0) {
+      // Greeting initial — hardcodat, fara round-trip pana user-ul scrie
+      setChatMessages([{
+        role: 'assistant',
+        content: 'Bună! Mulțumesc că-mi spui că ceva nu a fost cum trebuie. Poți să-mi descrii rapid ce nu ți-a plăcut sau ce nu a funcționat?'
+      }])
+    }
+  }
+
+  async function sendChatMessage() {
+    const text = chatInput.trim()
+    if (!text || chatLoading) return
+    const newMessages = [...chatMessages, { role: 'user', content: text }]
+    setChatMessages(newMessages)
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const r = await apiFetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bug_report', messages: newMessages })
+      })
+      const j = await r.json()
+      if (j.success && j.reply) {
+        setChatMessages([...newMessages, { role: 'assistant', content: j.reply }])
+      } else {
+        setChatMessages([...newMessages, { role: 'assistant', content: 'Hm, am întâmpinat o problemă tehnică. Poți încerca din nou?' }])
+      }
+    } catch (e) {
+      setChatMessages([...newMessages, { role: 'assistant', content: 'Nu am putut trimite mesajul. Verifică conexiunea.' }])
+    }
+    setChatLoading(false)
+  }
+
+  async function finalizeBugReport() {
+    setChatSubmitting(true)
+    try {
+      const summary = chatMessages.filter(m => m.role === 'user').map(m => m.content).join(' | ')
+      await apiFetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: 'bad',
+          shop, pageUrl: publishedUrl,
+          conversation: chatMessages,
+          summary
+        })
+      })
+      setChatSent(true)
+    } catch (e) { /* ignore */ }
+    setChatSubmitting(false)
+  }
+
+  // Auto-scroll la ultimul mesaj
+  useEffect(() => {
+    if (badModalOpen && chatBottomRef.current) {
+      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [chatMessages, chatLoading, badModalOpen])
   const [showProductModal, setShowProductModal] = useState(false)
   const [products, setProducts] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -781,50 +891,222 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
   if (published) return (
     <Page narrowWidth>
       <EditorStyles />
-      <Card>
-        <BlockStack gap="500" inlineAlign="center">
-          <Box
-            background={publishedDemoted ? 'bg-fill-warning' : 'bg-fill-success'}
-            padding="500"
-            borderRadius="400"
-            minWidth="80px"
-            minHeight="80px"
-          >
-            <InlineStack align="center" blockAlign="center">
-              <Icon source={publishedDemoted ? SaveIcon : CheckIcon} tone="text-inverse" />
-            </InlineStack>
-          </Box>
-
-          <BlockStack gap="200" inlineAlign="center">
-            <Badge tone={publishedDemoted ? 'warning' : 'success'}>
-              {publishedDemoted ? 'Salvată ca draft' : 'Publicată cu succes'}
-            </Badge>
-            <Text as="h2" variant="headingXl" alignment="center">
-              {publishedDemoted ? 'Pagină salvată' : 'Pagina ta e live'}
-            </Text>
-            <Text as="p" alignment="center" tone="subdued">
-              {publishedDemoted
-                ? 'Planul Free permite o singură pagină publicată simultan. Pagina nouă a fost creată ca draft — o poți activa din Dashboard, sau fă upgrade pentru pagini nelimitate.'
-                : 'Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.'}
-            </Text>
-          </BlockStack>
-
-          <ButtonGroup>
-            {!publishedDemoted && (
-              <Button variant="primary" url={publishedUrl} external icon={ExternalIcon}>
-                Vezi pagina live
-              </Button>
-            )}
-            <Button
-              variant={publishedDemoted ? 'primary' : 'secondary'}
-              icon={ArrowLeftIcon}
-              onClick={() => { setPublished(false); setPublishedDemoted(false); if(onPublished) onPublished(); else if(onBack) onBack() }}
+      <BlockStack gap="400">
+        <Card>
+          <BlockStack gap="500" inlineAlign="center">
+            <Box
+              background={publishedDemoted ? 'bg-fill-warning' : 'bg-fill-success'}
+              padding="500"
+              borderRadius="400"
+              minWidth="80px"
+              minHeight="80px"
             >
-              Înapoi la dashboard
-            </Button>
-          </ButtonGroup>
-        </BlockStack>
-      </Card>
+              <InlineStack align="center" blockAlign="center">
+                <Icon source={publishedDemoted ? SaveIcon : CheckIcon} tone="text-inverse" />
+              </InlineStack>
+            </Box>
+
+            <BlockStack gap="200" inlineAlign="center">
+              <Badge tone={publishedDemoted ? 'warning' : 'success'}>
+                {publishedDemoted ? 'Salvată ca draft' : 'Publicată cu succes'}
+              </Badge>
+              <Text as="h2" variant="headingXl" alignment="center">
+                {publishedDemoted ? 'Pagină salvată' : 'Pagina ta e live'}
+              </Text>
+              <Text as="p" alignment="center" tone="subdued">
+                {publishedDemoted
+                  ? 'Planul Free permite o singură pagină publicată simultan. Pagina nouă a fost creată ca draft — o poți activa din Dashboard, sau fă upgrade pentru pagini nelimitate.'
+                  : 'Pagina COD a fost publicată în magazinul tău. O poți vedea acum sau te poți întoarce la dashboard.'}
+              </Text>
+            </BlockStack>
+
+            <ButtonGroup>
+              {!publishedDemoted && (
+                <Button variant="primary" url={publishedUrl} external icon={ExternalIcon}>
+                  Vezi pagina live
+                </Button>
+              )}
+              <Button
+                variant={publishedDemoted ? 'primary' : 'secondary'}
+                icon={ArrowLeftIcon}
+                onClick={() => { setPublished(false); setPublishedDemoted(false); if(onPublished) onPublished(); else if(onBack) onBack() }}
+              >
+                Înapoi la dashboard
+              </Button>
+            </ButtonGroup>
+          </BlockStack>
+        </Card>
+
+        {/* Feedback banner — invizibil dupa ce user-ul a ales sau a dismiss */}
+        {!feedbackGiven && (
+          <Banner
+            tone="info"
+            title="Spune-ne ce părere ai"
+            onDismiss={() => setFeedbackGiven('dismissed')}
+          >
+            <BlockStack gap="300">
+              <Text as="p" variant="bodyMd">
+                Părerea ta contează — ne ajută să facem aplicația mai bună pentru tine.
+              </Text>
+              <ButtonGroup>
+                <Button
+                  onClick={() => { setFeedbackGiven('good'); setGoodModalOpen(true) }}
+                >
+                  👍 Îmi place
+                </Button>
+                <Button
+                  onClick={() => { setFeedbackGiven('bad'); openBadChat() }}
+                >
+                  👎 Nu prea
+                </Button>
+              </ButtonGroup>
+            </BlockStack>
+          </Banner>
+        )}
+
+        {/* Confirmare scurta dupa ce a trimis feedback */}
+        {feedbackGiven === 'good' && !goodModalOpen && (
+          <Banner tone="success" title="Mulțumim pentru feedback!">
+            <Text as="p" variant="bodyMd">Ne ajută să continuăm să facem aplicația mai bună.</Text>
+          </Banner>
+        )}
+        {feedbackGiven === 'bad' && !badModalOpen && chatSent && (
+          <Banner tone="success" title="Am notat tot — mulțumim!">
+            <Text as="p" variant="bodyMd">Echipa o să se uite peste asta în maxim 24 de ore.</Text>
+          </Banner>
+        )}
+      </BlockStack>
+
+      {/* Modal pozitiv — checklist + textarea */}
+      <Modal
+        open={goodModalOpen}
+        onClose={() => setGoodModalOpen(false)}
+        title="Mă bucur că-ți place!"
+        primaryAction={{
+          content: goodSubmitting ? 'Se trimite...' : 'Trimite',
+          onAction: submitGood,
+          loading: goodSubmitting,
+          disabled: goodSelected.length === 0 && !goodText.trim()
+        }}
+        secondaryActions={[{ content: 'Închide', onAction: () => setGoodModalOpen(false) }]}
+      >
+        <Modal.Section>
+          <BlockStack gap="400">
+            <Text as="p" variant="bodyMd">Ce ți-a plăcut cel mai mult la pagina generată?</Text>
+            <BlockStack gap="200">
+              {GOOD_OPTIONS.map(opt => (
+                <Checkbox
+                  key={opt}
+                  label={opt}
+                  checked={goodSelected.includes(opt)}
+                  onChange={() => toggleGood(opt)}
+                />
+              ))}
+            </BlockStack>
+            <TextField
+              label="Altceva? (opțional)"
+              value={goodText}
+              onChange={setGoodText}
+              multiline={3}
+              autoComplete="off"
+              placeholder="Spune-ne mai multe..."
+            />
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
+
+      {/* Modal chatbot — bug report */}
+      <Modal
+        open={badModalOpen}
+        onClose={() => setBadModalOpen(false)}
+        title="Spune-ne ce nu a mers"
+        size="large"
+        primaryAction={chatMessages.filter(m => m.role === 'user').length >= 2 && !chatSent ? {
+          content: chatSubmitting ? 'Se trimite...' : 'Trimite echipei',
+          onAction: finalizeBugReport,
+          loading: chatSubmitting
+        } : undefined}
+        secondaryActions={[{ content: chatSent ? 'Închide' : 'Închide fără trimitere', onAction: () => setBadModalOpen(false) }]}
+      >
+        <Modal.Section>
+          <BlockStack gap="300">
+            {chatSent ? (
+              <Banner tone="success" title="Mulțumesc!">
+                <Text as="p" variant="bodyMd">Echipa o să se uite peste asta în maxim 24 de ore.</Text>
+              </Banner>
+            ) : (
+              <>
+                <div style={{
+                  maxHeight: 380,
+                  minHeight: 240,
+                  overflowY: 'auto',
+                  padding: 14,
+                  background: '#f6f6f7',
+                  borderRadius: 10,
+                  border: '1px solid #e1e3e5'
+                }}>
+                  {chatMessages.map((m, i) => (
+                    <div key={i} style={{
+                      display: 'flex',
+                      justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                      marginBottom: 10
+                    }}>
+                      <div style={{
+                        maxWidth: '78%',
+                        padding: '10px 14px',
+                        borderRadius: 14,
+                        background: m.role === 'user' ? '#2c6ecb' : '#fff',
+                        color: m.role === 'user' ? '#fff' : '#202223',
+                        fontSize: 14,
+                        lineHeight: 1.45,
+                        border: m.role === 'user' ? 'none' : '1px solid #e1e3e5',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word'
+                      }}>
+                        {m.content}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div style={{ color: '#6b7280', fontSize: 13, fontStyle: 'italic', padding: '6px 4px' }}>
+                      Se gândește...
+                    </div>
+                  )}
+                  <div ref={chatBottomRef} />
+                </div>
+
+                <InlineStack gap="200" align="space-between" blockAlign="end">
+                  <div style={{ flex: 1 }}>
+                    <TextField
+                      label=""
+                      labelHidden
+                      value={chatInput}
+                      onChange={setChatInput}
+                      placeholder="Scrie aici..."
+                      autoComplete="off"
+                      disabled={chatLoading || chatSubmitting}
+                      multiline={1}
+                    />
+                  </div>
+                  <Button
+                    onClick={sendChatMessage}
+                    disabled={!chatInput.trim() || chatLoading || chatSubmitting}
+                    variant="primary"
+                  >
+                    Trimite
+                  </Button>
+                </InlineStack>
+
+                {chatMessages.filter(m => m.role === 'user').length < 2 && (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Răspunde la câteva întrebări apoi vei putea trimite feedback-ul echipei.
+                  </Text>
+                )}
+              </>
+            )}
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
     </Page>
   )
 
