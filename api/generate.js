@@ -895,10 +895,10 @@ CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
-    // Schema LOCKED + structura predictabila → max_tokens reduse 16k → 8k.
-    // Extended thinking eliminat — structura nu mai necesita "gandire" pentru
-    // alegerea sectiunilor, doar populare. Latency drop ~50%, cost drop ~25%.
-    max_tokens: 8000,
+    // Schema LOCKED + structura predictabila → max_tokens reduse 16k → 6k.
+    // 12 sectiuni fixe = output bound (~4-5k tokens tipic). 6k = buffer 20%.
+    // Extended thinking eliminat — structura nu mai necesita "gandire".
+    max_tokens: 6000,
     // Prompt caching — system prompt e ~12k tokens static (banned, MAGIC,
     // neuroscience, structura, reguli 1-16). Cache_control 'ephemeral' = 5min
     // TTL, 90% discount pe input cached. Second block (dynamicSystem) ramane
@@ -1250,12 +1250,47 @@ module.exports = async function handler(req, res) {
     console.log('Gemini key:', geminiKey ? 'OK ' + geminiKey.substring(0,8) : 'MISSING')
     console.log('Product:', productInfo.title.slice(0, 50), '| ICP hawkins:', icp?.hawkinsLevel, '| soph:', icp?.sophisticationLevel, '| niche:', icp?.niche)
 
-    // STEP 2: Claude cu produsul + ICP-ul EDITAT de user (mai puternic decat
-    // parametrii izolati pe care ii avea inainte — ICP-ul include persona,
-    // dureri, dorinte, beliefBarriers, Hawkins level, sophisticationLevel +
-    // recomandari pentru tone/urgency/length/niche/includeObjections).
-    const copy = await callClaudeWithRetry(productInfo, '', {
-      // ICP-driven params
+    // ─── PARALLEL EXECUTION: Sonnet copy + Gemini images simultan ─────
+    // Vechi: await Sonnet ~60-120s → await Gemini ~30-60s = total ~90-180s.
+    // Nou: ambele pornesc deodata → total = max(Sonnet, Gemini) ~60-120s.
+    // Economie ~30-60s + evita 504 Vercel timeout la 300s.
+
+    const heroImageUrl = aliImages[0] || null
+    console.log('Product image for Gemini:', heroImageUrl ? 'YES' : 'NO')
+
+    // Pre-fetch product image (paralel cu Sonnet)
+    const productImagePromise = (heroImageUrl && geminiKey)
+      ? fetchImageAsBase64(heroImageUrl).then(d => {
+          console.log('Product image pre-fetched:', d ? 'OK' : 'FAIL')
+          return d
+        })
+      : Promise.resolve(null)
+
+    const HERO_PROMPT = `This is a product. Create a stunning cinematic hero image of this exact product on a clean elegant background. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Magazine cover quality, 8K resolution. No text overlays.`
+    const GRID_PROMPTS = [
+      `Authentic UGC-style photo of a happy Romanian woman 28-35 holding this exact product with a smile in her modern apartment. Soft natural daylight, candid feel, warm tones. Product clearly visible.`,
+      `Authentic UGC-style photo of a Romanian man 35-45 using this exact product at home, focused expression, casual clothes, modern interior. Natural lighting, realistic look.`,
+      `Authentic UGC-style photo of a Romanian woman 45-55 with this exact product in her kitchen or living room, warm friendly smile. Soft golden hour light, family-friendly feel.`,
+      `Authentic UGC-style photo of a young Romanian man 25-30 with this exact product, casual urban outfit, modern apartment, relaxed pose. Editorial natural light.`,
+      `Authentic UGC-style photo of a Romanian woman 32-40 actively using this exact product, joyful natural expression, modern home. Soft natural daylight, lifestyle vibe.`,
+      `Authentic UGC-style photo of a Romanian man 40-50 with this exact product, satisfied expression, professional casual look. Warm natural lighting, magazine quality.`
+    ]
+    const allPrompts = [HERO_PROMPT, ...GRID_PROMPTS]
+
+    // Gemini promise — pornește dupa fetch imagine, paralel cu Sonnet
+    const tGemini = Date.now()
+    const geminiAllPromise = (async () => {
+      const productImageData = await productImagePromise
+      if (!geminiKey) return Array(allPrompts.length).fill(null)
+      return Promise.all(allPrompts.map((p, i) =>
+        geminiImage(p, geminiKey, productImageData || heroImageUrl)
+          .then(img => { console.log('Gemini', i + 1, '/', allPrompts.length, img ? 'OK' : 'FAIL', '(', Date.now() - tGemini, 'ms)'); return img })
+      ))
+    })()
+
+    // Sonnet promise — paralel cu Gemini
+    const tSonnet = Date.now()
+    const sonnetPromise = callClaudeWithRetry(productInfo, '', {
       icp: icp || {},
       tone: icp?.recommendedTone || 'direct',
       salesAngle: icp ? buildSalesAngleFromIcp(icp) : '',
@@ -1267,66 +1302,28 @@ module.exports = async function handler(req, res) {
       competitorContext: '',
       popupEnabled: false,
       popupGoal: null
-    })
-    // Sincronizare campuri din productInfo (Claude poate sa fi inventat nume scurt)
+    }).then(c => { console.log('Sonnet done in', Date.now() - tSonnet, 'ms'); return c })
+
+    // Await ambele paralel
+    const [copy, geminiImages] = await Promise.all([sonnetPromise, geminiAllPromise])
+    console.log('Gemini total parallel:', Date.now() - tGemini, 'ms')
+
+    // Post-process copy
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
     if (productInfo.priceUSD > 0) {
       const rp = Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10
       copy.price = rp
       copy.oldPrice = Math.round(rp * 1.4)
     }
-    // FORCE schema flag — Claude poate omite campul _schemaVersion din JSON.
-    // Setam noi server-side ca dispatcher Editor sa stie sigur ca e v2.
     copy._schemaVersion = 2
-    // Currency format RO standard (99,00 LEI)
     copy.priceFormatted = formatLei(copy.price || 99)
     copy.oldPriceFormatted = formatLei(copy.oldPrice || 149)
-
-    // Reviewer count random pe nisa daca AI nu a setat sau a setat generic
     const condensedNiche = condenseNiche(icp?.niche || copy.niche)
     if (!copy.reviewCount || copy.reviewCount === 1247) {
       copy.reviewCount = randomReviewCount(condensedNiche)
     }
     copy.niche = condensedNiche
 
-    // ─── IMAGE STRATEGY V2 ────────────────────────────────────────────
-    // 1 HERO + 6 CUSTOMER GRID = 7 Gemini calls (paralel).
-    // OPTIMIZARE: pre-fetch product image ONCE, pass base64 la toate 7
-    // (vechi: 7 calls × 1 fetch = 7 download-uri; nou: 1 download + 7 reuse).
-    const heroImageUrl = aliImages[0] || null
-    console.log('Product image for Gemini:', heroImageUrl ? 'YES' : 'NO')
-
-    // Pre-fetch product image o singura data
-    let productImageData = null
-    if (heroImageUrl && geminiKey) {
-      const t0 = Date.now()
-      productImageData = await fetchImageAsBase64(heroImageUrl)
-      console.log('Pre-fetched product image in', Date.now() - t0, 'ms', productImageData ? 'OK' : 'FAIL')
-    }
-
-    const HERO_PROMPT = `This is a product. Create a stunning cinematic hero image of this exact product on a clean elegant background. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Magazine cover quality, 8K resolution. No text overlays.`
-
-    // 6 customer-grid prompts — diverse Romanian profiles 25-55 ani, lifestyle natural
-    const GRID_PROMPTS = [
-      `Authentic UGC-style photo of a happy Romanian woman 28-35 holding this exact product with a smile in her modern apartment. Soft natural daylight, candid feel, warm tones. Product clearly visible.`,
-      `Authentic UGC-style photo of a Romanian man 35-45 using this exact product at home, focused expression, casual clothes, modern interior. Natural lighting, realistic look.`,
-      `Authentic UGC-style photo of a Romanian woman 45-55 with this exact product in her kitchen or living room, warm friendly smile. Soft golden hour light, family-friendly feel.`,
-      `Authentic UGC-style photo of a young Romanian man 25-30 with this exact product, casual urban outfit, modern apartment, relaxed pose. Editorial natural light.`,
-      `Authentic UGC-style photo of a Romanian woman 32-40 actively using this exact product, joyful natural expression, modern home. Soft natural daylight, lifestyle vibe.`,
-      `Authentic UGC-style photo of a Romanian man 40-50 with this exact product, satisfied expression, professional casual look. Warm natural lighting, magazine quality.`
-    ]
-
-    const allPrompts = [HERO_PROMPT, ...GRID_PROMPTS]
-    const tGemini = Date.now()
-    const geminiPromises = geminiKey
-      ? allPrompts.map((p, i) =>
-          geminiImage(p, geminiKey, productImageData || heroImageUrl)
-            .then(img => { console.log('Gemini', i + 1, '/', allPrompts.length, img ? 'OK' : 'FAIL', '(', Date.now() - tGemini, 'ms)'); return img })
-        )
-      : Array(allPrompts.length).fill(null).map(() => Promise.resolve(null))
-
-    const geminiImages = await Promise.all(geminiPromises)
-    console.log('Gemini total parallel:', Date.now() - tGemini, 'ms')
     const heroAI = geminiImages[0]
     const gridAI = geminiImages.slice(1)
     const goodGrid = gridAI.filter(Boolean)
