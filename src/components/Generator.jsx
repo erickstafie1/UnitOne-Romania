@@ -303,10 +303,11 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
   function RoadmapView({ title }) {
     const accent = '#1e40af'
     const trackColor = '#e2e8f0'
-    const COL_LEFT = 32     // centru-x cercuri pe coloana stanga
-    const COL_RIGHT = 132   // centru-x cercuri pe coloana dreapta (zigzag)
-    const ICON = 64
-    const ROW = 110
+    const ICON = 52
+    const ROW = 78
+    const CONTAINER_W = 360   // roadmap se centreaza in card; max 360px latime
+    const COL_LEFT = ICON / 2                   // 26 — centru-x cercuri stanga
+    const COL_RIGHT = CONTAINER_W - ICON / 2    // 334 — centru-x cercuri dreapta
     const n = roadmapSteps.length
     const totalH = (n - 1) * ROW + ICON
 
@@ -351,10 +352,17 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
               </div>
             </BlockStack>
 
-            <div style={{ position: 'relative', width: '100%', height: totalH, marginTop: 8 }}>
-              {/* Conectori SVG cu Bezier — unesc efectiv fiecare cerc de urmatorul */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: CONTAINER_W,
+              margin: '0 auto',           // centrat in card
+              height: totalH,
+              marginTop: 8
+            }}>
+              {/* Conectori SVG Bezier intre cercuri */}
               <svg
-                style={{ position: 'absolute', left: 0, top: 0, width: COL_RIGHT + ICON, height: totalH, pointerEvents: 'none', overflow: 'visible' }}
+                style={{ position: 'absolute', left: 0, top: 0, width: CONTAINER_W, height: totalH, pointerEvents: 'none', overflow: 'visible' }}
                 aria-hidden="true"
               >
                 {roadmapSteps.slice(0, -1).map((s, i) => {
@@ -382,19 +390,25 @@ export default function Generator({ onGenerated, onBack, presetStyle, shop }) {
               {roadmapSteps.map((s, i) => {
                 const isRight = i % 2 === 1
                 const status = stepStatus[s.key]
+                // Mirror pattern: cerc stanga → label dreapta cu text-align left;
+                // cerc dreapta → label stanga cu text-align right (toward center).
                 return (
                   <div key={s.key} style={{
                     position: 'absolute',
-                    left: isRight ? COL_RIGHT - ICON / 2 : 0,
                     top: i * ROW,
+                    [isRight ? 'right' : 'left']: 0,
                     display: 'flex',
+                    flexDirection: isRight ? 'row-reverse' : 'row',
                     alignItems: 'center',
-                    gap: 16
+                    gap: 12
                   }}>
                     <div className={'ue-step-icon ' + status}>
                       <StepIcon stepKey={s.key} />
                     </div>
-                    <div className={'ue-step-label ' + status} style={{ maxWidth: isRight ? 260 : 320 }}>
+                    <div
+                      className={'ue-step-label ' + status}
+                      style={{ maxWidth: 220, textAlign: isRight ? 'right' : 'left' }}
+                    >
                       {s.label}
                     </div>
                   </div>
