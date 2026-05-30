@@ -325,11 +325,12 @@ function callClaudeResearch(productInfo) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
   // Haiku 4.5 — research e JSON structurat, NU necesita creativitatea Sonnet.
-  // Thinking eliminat (nu adauga calitate pe structured output, doar latenta).
-  // Latency: ~30-45s in loc de 60-90s cu thinking.
+  // Thinking eliminat (latenta -). max_tokens 8000 — ICP JSON e bogat
+  // (14 fielduri nested cu cate 3-5 sub-items fiecare); 6k era prea mic
+  // si trunca JSON la mijloc → "Unbalanced JSON" error.
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 6000,
+    max_tokens: 8000,
     system: `Esti un research strategist expert care construieste AVATARE / ICP-uri pentru produse COD vandute in Romania, dupa metodologia MARK BUILDS BRANDS.
 
 Misiune: pornind de la un produs (descriere + specs), GANDESTE PROFUND (foloseste extended thinking) ca un consumer researcher care a citit zeci de review-uri Amazon, mii de comentarii forum si zeci de reclame de la competitori. Apoi creeaza un AVATAR PSIHOLOGIC complet — nu generic.
@@ -459,7 +460,7 @@ function extractFirstJSON(data) {
   const text = data.text || (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('')
   const start = text.indexOf('{')
   if (start === -1) throw new Error('No JSON in response')
-  let depth = 0, inStr = false, esc = false
+  let depth = 0, inStr = false, esc = false, lastValidEnd = -1
   for (let i = start; i < text.length; i++) {
     const c = text[i]
     if (esc) { esc = false; continue }
@@ -467,9 +468,55 @@ function extractFirstJSON(data) {
     if (c === '"') { inStr = !inStr; continue }
     if (inStr) continue
     if (c === '{') depth++
-    else if (c === '}') { depth--; if (depth === 0) return JSON.parse(text.substring(start, i + 1)) }
+    else if (c === '}') {
+      depth--
+      if (depth === 0) return JSON.parse(text.substring(start, i + 1))
+    }
   }
-  throw new Error('Unbalanced JSON')
+  // Truncated by max_tokens — try tolerant recovery: close missing braces.
+  // Strip trailing partial string/array/object, then close depth.
+  console.log('[extractFirstJSON] truncated text length:', text.length, '- attempting recovery, depth:', depth)
+  let candidate = text.substring(start)
+  // Remove trailing incomplete fragment after last complete element
+  // Find last "," or "}" or "]" not inside string
+  let lastSafe = -1
+  let d = 0, inS = false, e = false
+  for (let i = 0; i < candidate.length; i++) {
+    const c = candidate[i]
+    if (e) { e = false; continue }
+    if (c === '\\') { e = true; continue }
+    if (c === '"') { inS = !inS; continue }
+    if (inS) continue
+    if (c === '{' || c === '[') d++
+    else if (c === '}' || c === ']') d--
+    if (!inS && (c === ',' || c === '}' || c === ']') && d >= 1) lastSafe = i
+  }
+  if (lastSafe > 0) {
+    candidate = candidate.substring(0, lastSafe).replace(/,\s*$/, '')
+    // Close remaining open braces
+    let openObj = 0, openArr = 0
+    let inS2 = false, e2 = false
+    for (const c of candidate) {
+      if (e2) { e2 = false; continue }
+      if (c === '\\') { e2 = true; continue }
+      if (c === '"') { inS2 = !inS2; continue }
+      if (inS2) continue
+      if (c === '{') openObj++
+      else if (c === '}') openObj--
+      else if (c === '[') openArr++
+      else if (c === ']') openArr--
+    }
+    while (openArr-- > 0) candidate += ']'
+    while (openObj-- > 0) candidate += '}'
+    try {
+      const parsed = JSON.parse(candidate)
+      console.log('[extractFirstJSON] recovery SUCCESS — recovered', Object.keys(parsed).length, 'fields')
+      return parsed
+    } catch (e) {
+      console.log('[extractFirstJSON] recovery JSON.parse failed:', e.message, '- first 200 char of candidate:', candidate.substring(0, 200))
+    }
+  }
+  throw new Error('Unbalanced JSON (truncated at ' + text.length + ' chars, depth=' + depth + ')')
 }
 
 // ─── Main handler ───
