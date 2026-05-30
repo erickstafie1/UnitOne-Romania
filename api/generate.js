@@ -1,72 +1,81 @@
-// v5 - gemini parallel cu claude
+// v6 - locked 12-section structure + 4 niche palettes + no thinking
 const https = require('https')
 const http = require('http')
 
-// Curated COD-optimized palettes — each combination is tested in real RO COD
-// campaigns. Random pick per generation so every merchant's LP feels unique.
-// Each palette has: primary (CTA + accents), secondary (text/borders),
-// bgAccent (gift banner/highlight bg), bgAccentBorder (highlight border).
-const PALETTES = [
-  // 1. Classic Red — universal high-urgency default (most COD pages)
-  { primary: '#dc2626', secondary: '#111111', bgAccent: '#fffbeb', bgAccentBorder: '#facc15' },
-  // 2. Bold Blue — trust, tech, finance, B2B-ish
-  { primary: '#1e40af', secondary: '#0f172a', bgAccent: '#eff6ff', bgAccentBorder: '#3b82f6' },
-  // 3. Forest Green — health, wellness, eco, food
-  { primary: '#16a34a', secondary: '#14532d', bgAccent: '#f0fdf4', bgAccentBorder: '#22c55e' },
-  // 4. Burnt Orange — warm, food, lifestyle, beauty (subdued)
-  { primary: '#ea580c', secondary: '#431407', bgAccent: '#fff7ed', bgAccentBorder: '#fb923c' },
-  // 5. Royal Purple — premium beauty, fashion, accessories
-  { primary: '#7c3aed', secondary: '#1e1b4b', bgAccent: '#faf5ff', bgAccentBorder: '#a855f7' },
-  // 6. Hot Pink — beauty, cosmetics, women's products
-  { primary: '#db2777', secondary: '#500724', bgAccent: '#fdf2f8', bgAccentBorder: '#ec4899' },
-  // 7. Deep Teal — wellness, eco, modern minimalist
-  { primary: '#0d9488', secondary: '#042f2e', bgAccent: '#f0fdfa', bgAccentBorder: '#14b8a6' },
-  // 8. Charcoal Gold — luxury, premium, high-end fashion/tech
-  { primary: '#1f2937', secondary: '#111827', bgAccent: '#fefce8', bgAccentBorder: '#d4af37' }
-]
-
-// Hero layout variants — same content, different visual treatment.
-// Saved with the LP at generation time so re-edits preserve the chosen look.
-const HERO_VARIANTS = ['split', 'centered', 'overlay']
-// 'split'    - image left / details right (2-col on desktop) — current default
-// 'centered' - image full-width on top, all details centered below (more emotional)
-// 'overlay'  - image as background with darkened overlay + text on top (bold/luxury)
-
-// Detecteaza tematica produsului din descriere SAU nume scrape-uit si returneaza
-// paleta+heroVariant potrivite. 'split' (image left, text right) e default
-// pentru ca seamana cel mai mult cu stilul GemPages / produsutil.ro.
-// Mapping: PALETTES[0]=Red, 1=Blue, 2=Green, 3=Orange, 4=Purple, 5=Pink, 6=Teal, 7=Gold
-function pickVariantsByDescription(desc, productName) {
-  // Combina descrierea user-ului + numele scrape-uit; ambele pot avea cuvinte cheie
-  const txt = ((desc || '') + ' ' + (productName || '')).toLowerCase()
-  // Categorii cu cuvinte cheie + indici paleta corespunzatoare + variante hero recomandate
-  // Per-category palette picks. heroVariant default 'split' (image left + text
-  // right, side-by-side on desktop) — user-ul a cerut explicit lateral-lateral.
-  // Variantele 'centered' / 'overlay' raman optionale pentru viitor diverse,
-  // dar nu se mai pica automat.
-  const matchers = [
-    { kw: ['femei', 'beauty', 'cosmetic', 'skincare', 'machiaj', 'parfum', 'serum', 'crema'], palettes: [5, 4] },
-    { kw: ['barbati', 'sportiv', 'fitness', 'antrenament', 'forta', 'masculin'], palettes: [0, 3] },
-    { kw: ['copii', 'bebe', 'parinti', 'mame', 'familie', 'jucarie', 'gradinita'], palettes: [3, 5] },
-    { kw: ['tehnologie', 'tech', 'gadget', 'electronic', 'wireless', 'bluetooth', 'smart', 'usb'], palettes: [1, 7] },
-    { kw: ['sanatate', 'natural', 'eco', 'organic', 'wellness', 'supliment', 'vitamine', 'detox'], palettes: [2, 6] },
-    { kw: ['luxury', 'luxos', 'premium', 'elegant', 'piele', 'lemn', 'aur', 'argint'], palettes: [7, 4] },
-    { kw: ['bucatarie', 'casa', 'mancare', 'gatit', 'curatenie', 'menaj', 'soareci', 'sobolan', 'capcana'], palettes: [3, 2] },
-    { kw: ['fashion', 'haine', 'imbracaminte', 'geanta', 'pantofi', 'bijuterii', 'accesori'], palettes: [4, 5] }
+// 4 condensed niche palettes. AI mapează nișa ICP → una din astea, evitand
+// 10 variante care diluau identitatea vizuala. Sub fiecare paletă coexistă
+// 3 nuanțe similare ca să varieze ușor între LP-uri în aceeași nișă.
+const NICHE_PALETTES = {
+  // BEAUTY — pink/peach soft (Lumin, Versa, Primal Queen aesthetic)
+  beauty: [
+    { primary: '#db2777', secondary: '#500724', bgAccent: '#fdf2f8', bgAccentBorder: '#ec4899', accent2: '#fbcfe8' },
+    { primary: '#e11d48', secondary: '#4c0519', bgAccent: '#fff1f2', bgAccentBorder: '#f43f5e', accent2: '#fecdd3' },
+    { primary: '#ea580c', secondary: '#431407', bgAccent: '#fff7ed', bgAccentBorder: '#fb923c', accent2: '#fed7aa' }
+  ],
+  // HEALTH — clinical blue/teal (Neuro Vision aesthetic)
+  health: [
+    { primary: '#1e40af', secondary: '#0f172a', bgAccent: '#eff6ff', bgAccentBorder: '#3b82f6', accent2: '#dbeafe' },
+    { primary: '#0d9488', secondary: '#042f2e', bgAccent: '#f0fdfa', bgAccentBorder: '#14b8a6', accent2: '#ccfbf1' },
+    { primary: '#16a34a', secondary: '#14532d', bgAccent: '#f0fdf4', bgAccentBorder: '#22c55e', accent2: '#dcfce7' }
+  ],
+  // PET — beige/cream warm (Stellar Cat Bed aesthetic)
+  pet: [
+    { primary: '#a16207', secondary: '#451a03', bgAccent: '#fefce8', bgAccentBorder: '#d4af37', accent2: '#fef3c7' },
+    { primary: '#92400e', secondary: '#451a03', bgAccent: '#fffbeb', bgAccentBorder: '#f59e0b', accent2: '#fde68a' },
+    { primary: '#854d0e', secondary: '#422006', bgAccent: '#fefce8', bgAccentBorder: '#ca8a04', accent2: '#fef9c3' }
+  ],
+  // GENERIC — bold red (COD universal default)
+  generic: [
+    { primary: '#dc2626', secondary: '#111111', bgAccent: '#fffbeb', bgAccentBorder: '#facc15', accent2: '#fee2e2' },
+    { primary: '#b91c1c', secondary: '#0a0a0a', bgAccent: '#fef2f2', bgAccentBorder: '#ef4444', accent2: '#fecaca' },
+    { primary: '#7c3aed', secondary: '#1e1b4b', bgAccent: '#faf5ff', bgAccentBorder: '#a855f7', accent2: '#e9d5ff' }
   ]
-  for (const m of matchers) {
-    if (m.kw.some(k => txt.includes(k))) {
-      return {
-        palette: PALETTES[m.palettes[Math.floor(Math.random() * m.palettes.length)]],
-        heroVariant: 'split'  // default lateral-lateral
-      }
-    }
+}
+
+// Mapează nișa ICP (10 variante vechi) la una din cele 4 nișe condensate.
+function condenseNiche(rawNiche) {
+  const n = String(rawNiche || 'generic').toLowerCase()
+  if (['beauty', 'fashion'].includes(n)) return 'beauty'
+  if (['health', 'sports', 'baby'].includes(n)) return 'health'
+  if (n === 'pet') return 'pet'
+  return 'generic'
+}
+
+function pickNichePalette(niche) {
+  const key = condenseNiche(niche)
+  const set = NICHE_PALETTES[key]
+  return { niche: key, palette: set[Math.floor(Math.random() * set.length)] }
+}
+
+// Reviewer count random pe nișă (intervale realiste per categorie)
+function randomReviewCount(niche) {
+  const key = condenseNiche(niche)
+  const ranges = {
+    beauty: [800, 2500],
+    health: [500, 1800],
+    pet: [300, 1200],
+    generic: [600, 2000]
   }
-  // Fallback: random paleta + split hero (consistency on layout)
-  return {
-    palette: PALETTES[Math.floor(Math.random() * PALETTES.length)],
-    heroVariant: 'split'
-  }
+  const [min, max] = ranges[key]
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+// Format preț 99,00 LEI (RO standard: virgulă zecimală, spațiu LEI)
+function formatLei(n) {
+  const num = Math.round(Number(n) * 100) / 100
+  return num.toFixed(2).replace('.', ',') + ' LEI'
+}
+
+// Backward compat — vechiul pickVariantsByDescription. Pastrat ca nu cade
+// nimic dintr-un path neexplorat care îl mai folosește.
+function pickVariantsByDescription(desc, productName) {
+  const txt = ((desc || '') + ' ' + (productName || '')).toLowerCase()
+  let niche = 'generic'
+  if (/femei|beauty|cosmetic|skincare|machiaj|parfum|serum|crema|fashion|haine/.test(txt)) niche = 'beauty'
+  else if (/sanatate|natural|wellness|supliment|vitamine|detox|sportiv|fitness/.test(txt)) niche = 'health'
+  else if (/pet|catel|caine|pisica|hamster|animal/.test(txt)) niche = 'pet'
+  const r = pickNichePalette(niche)
+  return { palette: r.palette, heroVariant: 'split' }
 }
 
 function fetchWithScraper(url) {
@@ -631,216 +640,135 @@ REGULI DIRECT-RESPONSE (verificate pe fiecare camp text):
 ============================================================
 
 ============================================================
-STRUCTURA OBLIGATORIE LP COD ROMANIA — ordinea EXACTA in care AI trebuie sa genereze content. NU adaugi sectiuni in plus, NU omiti. Fiecare sectiune raspunde la o obiectie naturala (Question Ladder).
+STRUCTURA LOCKED — 12 SECTIUNI EXACTE (NU adaugi, NU omiti, NU schimbi ordinea):
 
-ORDINE SECTIUNI:
+1. HERO BLOCK
+   image[0] + brandBadge + offerName + heroSubheadline +
+   5★ reviewCount + 4 quickBullets (max 8 cuv fiecare) + ctaPrimary + 3 trustPills
 
-1. HEADLINE — atrage atentia in <3 secunde (Sophistication Level + 3 hook levers)
-2. POZA PRODUS — image[0] dominant
-3. STARS + REVIEW COUNT — "5★ X.XXX+ Clienti Multumiti"
-4. PRODUCT NAME — nume specific sub headline
-5. OFFER (price block) — old price taiat + price nou MARE + procent reducere + savings
-6. 3-4 BENEFICII PRINCIPALE (quickBullets) — cu impact MAXIM, alese sa motiveze cei mai multi cumparatori
-7. CTA buton mare verde/portocaliu — "🛒 COMANDA ACUM"
-8. CARUSEL TESTIMONIALE — 3-4 testimoniale scroll horizontal stanga-dreapta. FIECARE testimonial:
-   - OBJECTION HANDLING: trateaza una din credintele limitative ale ICP-ului
-   - User-ul citeste si simte "asta sunt EU" — propria viata scrisa in cuvinte
-   - 4-part: situatia veche (cu durere ICP-ului) → actiunea (cum a aflat) → rezultatul cu cifra → emotia finala
-9. SECTIUNEA CARACTERISTICI SI AVANTAJE (featureSections):
-   - Headline sectiune: "Ce primesti cu adevarat" sau similar
-   - Per featureSection: title scurt CAPS (mini-hook, ex: "AJUNGI ACOLO UNDE PISTOLUL NU AJUNGE") + 2-3 fraze DESCRIERE SCURTA care vorbeste DIRECT cu omul ("Cand o folosesti, vei putea sa...")
-   - Foloseste informatiile despre cum sa vorbesti cu user-ul (Avatar Sheet + ICP) ca sa-l faci sa DOREASCA produsul
-10. PRODUCT COMPARISON — Noi vs Solutii Comune (us vs them)
-    - usLabel = numele produsului, themLabel = "alte solutii" (spalatorie, aspiratoare ieftine, etc.)
-    - 4 rows: feature + them (dezavantaj concret) + us (avantaj cu cifra)
-11. MAI MULTE REVIEWS / TESTIMONIALE (vertical grid, sub fold pentru cei care vor mai mult social proof)
-12. FAQ ACCORDION — raspunde EXACT la FRICILE care blocheaza cumpararea:
-    Fiecare q/a treats o frica psihologica ICP-ului (beliefBarriers). Min 4 din cele 6 intrebari trebuie sa adreseze direct o frica/obiectie. Restul 2 = info logistica (plata/livrare).
+2. TESTIMONIAL CAROUSEL ABOVE-FOLD (EXACT 3-4 carduri)
+   foto placeholder + nume + varsta + oras + quote 4-part max 280 char + 5★
+   Quote face OBJECTION HANDLING (din ICP beliefBarriers)
 
-REGULI PE SECTIUNI (mapate la structura 12-section):
+3. AS SEEN IN BAR
+   mode='media': PRO TV / CAPITAL / ADEVĂRUL / ANTENA 1 / CLICK (text-only)
+   mode='trust' (fallback daca produs niche): "Recomandat de specialiști RO"
+     + 4 badges: ANPC Certificat / Made in EU / Plată la livrare / Livrare 24-48h
 
-S1-S7 HERO BLOC:
-- headline = Sophistication Level + 3 hook levers + <70 char. Pattern dovedite: "INCEPE SA [verb] [beneficiu]", "[Cifra specifica] cu un simplu [produs]", "[Verb imperativ] [durere] in [timeframe]".
-- subheadline = "So That, Without" + obiectie eliminata.
-- reviewCount realist (500-9999 bazat pe nisa).
-- price/oldPrice/procent reducere — economii vizibile.
-- quickBullets = EXACT 4, max 8 cuvinte, beneficii MASURABILE (cifre/timp) — alese pentru IMPACT MAXIM la motivation cumparare.
+4. IDENTITY HEADLINE + INTRO PARAGRAFE (OBLIGATORIU)
+   identityHeadline: "Pentru [Audience specifică] care vor [Result] fără [Objection]"
+   introParagraphs: 2-3 fraze conversational cu "tu"
 
-S8 CARUSEL TESTIMONIALE (3-4 sliduri):
-Fiecare testimonial face OBJECTION HANDLING — adreseaza una din credintele limitative din beliefBarriers (ICP). User-ul citeste si se vede pe sine. Structura 4-part:
-  (a) "Aveam EXACT problema X de ani de zile" (situatia inainte cu durere autentica)
-  (b) "Am incercat Y, n-a mers" (alta solutie esuata = obiectie subtilata)
-  (c) "Cand am inceput cu [produs], in [Z zile] am observat [rezultat cu cifra]" (mecanism + dovada)
-  (d) "Acum [transformare emotionala / identitate noua]" (emotie finala)
-Max 300 char per testimonial. Nume + oras RO. Stars 5.
+5. 3 FEATURE SECTIONS (image above + copy under, EXACT 3 cards)
+   Fiecare: title CAPS mini-hook max 40 char + 3 fraze copy direct cu "tu"
+   3 features = 3 UNGHIURI DIFERITE ale aceleeasi dureri/dorinte centrale
 
-S9 FEATURE CARDS (featureSections):
-- Fiecare card: title = MINI-HOOK CAPS (max 40 char) care promite un beneficiu specific
-- bullets[] = 2-3 fraze descriere care vorbesc DIRECT cu user-ul folosind "tu" — il fac sa DOREASCA. NU descriere obiect tehnica.
-- Ex BUN title: "AJUNGI ACOLO UNDE PISTOLUL NU AJUNGE"
-- Ex BUN bullets: ["Cand bagi prelungirea sub bancheta din spate, scoti praful pe care nici aspiratorul nu-l prinde. 50 bar de presiune impinge tot ce s-a infundat luni de zile.", "Ai garantie ca masina ta arata si dedesubt ca noua, nu doar sus.", "Folosesti acelasi gadget si pentru gradina, terasa, motocicleta."]
+6. BEFORE / AFTER
+   title "Diferenta in [timeframe]" + 2 columns
+   beforeText: durere cotidiana concreta (inainte) max 180 char
+   afterText: rezultat concret cu cifra + emotie (dupa) max 180 char
 
-S10 COMPARISON:
-- usLabel = numele scurt al produsului
-- themLabel = "alte solutii" CONCRETE (NU generic "concurenta"). Ex: "Spalatoria auto manuala", "Aspiratoare wireless ieftine", "Servicii la mecanic"
-- rows[]: 4 obiectii principale ale ICP-ului → fiecare rand: feature comparat, them = dezavantajul lor in cuvintele user-ului, us = avantajul tau cu cifra concreta.
+7. COMPARISON TABLE (us vs them, EXACT 4 rows)
+   usLabel = nume produs scurt max 30 char
+   themLabel = alte solutii CONCRETE (NU generic "concurenta")
+   rows: feature + them (✗ dezavantaj concret) + us (✓ avantaj cu cifra)
 
-S11 EXTRA TESTIMONIALE = restul testimoniale[] >3 in lista vertical.
+8. HOW IT WORKS — EXACT 3 STEPS
+   title imperativ 1-3 cuv + desc 1 fraza concreta
+   Format: [Actiune usoara] → [Rezultat imediat] → [Beneficiu durabil]
 
-S12 FAQ — 6 intrebari MIX:
-- Min 4 din 6 trebuie sa adreseze fricile psihologice din beliefBarriers (NU doar logistic).
-- Ex: "Daca nu merge la mine?" (frica de risc), "Cum stiu ca nu se strica in 2 luni?" (frica de durabilitate), "Pot folosi si daca nu am experienta?" (frica de incompetenta).
-- 2 din 6 = info logistica (plata ramburs, livrare 2-4 zile).
-- Raspunsuri concrete, 1-2 fraze, sub 200 char.
+9. CUSTOMER PHOTO GRID — EXACT 6 CARDS
+   Fiecare: nume + varsta + oras + review 1 fraza autentica max 120 char
 
-PATTERN-URI COPY OBSERVATE PE LP-URILE WIN:
-- "INCEPE SA [verb] [beneficiu]" (CarEco)
-- "[Beneficiu] cu un simplu [produs]" (CarEco - "Economiseste mult cu un simplu dispozitiv")
-- "Functioneaza pe ORICE [target] [conditie specifica]" (CarEco - "orice masina fabricata dupa 1996")
-- "Easy to Install" / "Plata simpla" (Plasa) - English sub-headlines pentru impact
-- "[X] CULORI DISPONIBILE" (StopFisuri)
-- "Material REZISTENT" / "Plasa AUTOINCHIDERE" — CAPS keyword + atribut
-- Stickere: "100% Multumire garantata" badge mare verde
-- CleanPro: "ROBOTUL 3-IN-1 care schimba totul" — numeric power claim
-- Plasa: "1+1 GRATIS" badge mare ROZ in colt + pret incrucisat
-- Furtun 60m: "7 motive PUTERNICE" — combinare cifra + intensifier
-- "Mai multe comentarii pe Facebook..." footer social proof — screenshot review-uri FB
-- "30 de zile - GARANTIE DE RETURNARE A BANILOR" - explicit, fara complicat
-- "Recenzii clienti" sectiune cu foto real, nu emoji avatari
+10. RISK REVERSAL
+    "[Promisiune concreta cu timeframe] sau primesti banii inapoi + [bonus] pentru deranj"
+    BUN: "Daca dupa 30 de zile nu vezi diferenta, returnam integral + 20 LEI pentru bataia de cap."
+
+11. FAQ — EXACT 6 INTREBARI
+    4 frici psihologice (din ICP beliefBarriers) + 2 logistice OBLIGATORII:
+      Q5: "Cum se face plata?" → "Plata ramburs la curier, la livrare."
+      Q6: "Cat dureaza livrarea?" → "24-48 ore lucratoare in toata Romania."
+
+12. URGENCY + FINAL CTA
+    urgencyMessage: cifra stoc concreta + presiune temporala
+    BUN: "Doar 47 de bucati ramase din lotul de noiembrie"
+    + ctaPrimary repetat (same text ca hero)
 ============================================================
 
-REGULI CRITICE PE STRUCTURA + COPYWRITING:
+GYMBEAM RO COPY PATTERNS (ce functioneaza pe milioane in vanzari RO)
 
-1. **HEADLINE — alege framework H1 conform LEVEL DE SOFISTICARE A PIETEI** (decizi tu pe baza nisei + descrierii produsului):
-   - **Level 1 (piata noua, fara competitie)**: claim direct. Ex: "Cum sa cureti masina in 15 minute"
-   - **Level 2 (competitie directa)**: claim marit. Ex: "Cum sa cureti masina in 15 minute MAI BINE decat la spalatorie"
-   - **Level 3 (focus pe mecanism)**: cum functioneaza. Ex: "Cum sa cureti masina folosind jetul cu presiune reglabila 50 bar"
-   - **Level 4 (mecanism marit)**: detaliu mecanism. Ex: "Noua tehnologie de jet variabil 30-50 bar curata interiorul masinii in 15 minute"
-   - **Level 5 (identificare emotionala)**: conectare cu durerea audientei. Ex: "Pentru parintii care obosesc sa duca masina la spalatorie in fiecare saptamana"
-   APLICA cel mai potrivit Level conform contextului produsului. Maxim 70 chars.
+heroSubheadline = 1 propozitie LUNGA cu hook senzorial + emotional + concret:
+  BUN: "O combinatie de izolat si concentrat proteic cu gust excelent care iti sustine muschii"
+  BUN: "Pasta 100% naturala pe care o vei indragi inca de la prima lingurita"
+  BUN: "Magneziu premium in forma chelata cu biodisponibilitate excelenta in organism"
 
-2. **HEADLINE — STACK 3 HOOK LEVERS din 7** (Curiosity, Pain, Promise, Specificity, Credibility, Timeframe, Simplicity):
-   - Combina 3-4 maxim, NU toate 7. Frankenhook = mort.
-   - Exemple bune (stack 3 levers):
-     "Curata masina in 15 minute fara sa ridici degetul" (Promise + Specificity + Timeframe)
-     "De ce 14.000 mame au scapat de mizeria de la masa in 7 zile?" (Curiosity + Specificity + Pain)
-     "Aspirator 800W care prinde mai mult par decat Dyson - testat 30 zile" (Specificity + Credibility + Pain)
-   - QA: < 15 cuvinte, 1 idee clara, audienta recunoscuta, fara mecanism dezvaluit
+quickBullets = MIX categorial obligatoriu, NU toate de acelasi tip:
+  • tehnic: "Formula cu Zinc + Magneziu + B12"
+  • positioning: "Recomandat de specialisti nutritionisti"
+  • compozitie: "100% naturala, fara adaos de zahar"
+  • senzorial: "Gust delicios de ciocolata cu nuci"
+  • health claim: "Sustine masa musculara dupa antrenament"
+  • lifestyle: "Potrivit pentru vegani si keto"
+  • use-case: "Excelent in smoothie-uri si deserturi"
 
-3. **SUBHEADLINE — formula "So That, Without"**: [PROMISIUNE concreta] + "Without" [OBIECTIE PRINCIPALA eliminata]. Max 100 chars.
-   BUN: "Fixezi orice piesa rupta in 8 minute - fara scule, fara dezordine, fara experienta"
-   BUN: "Functioneaza pe orice masina fabricata dupa 1996 - fara montaj la mecanic, fara abonament"
-   PROST: "Solutia care iti transforma rutina" (vag + banned)
+Verbele de actiune RO standard: "promoveaza", "sustine", "ajuta la", "contribuie la"
+Compatibility tags utile: "potrivit pentru vegani", "fara gluten", "fara adaos de zahar", "prietenos cu GLP-1"
+============================================================
 
-4. **quickBullets — EXACT 4, max 8 cuvinte, beneficii MASURABILE/VIZIBILE**:
-   BUN: "Reduce consumul cu 15-25% pe ruta urbana"
-   BUN: "Functioneaza pe orice masina fabricata dupa 1996"
-   PROST: "Calitate superioara garantata" (banned)
+FEATURE SECTIONS — REGULI EXTRA STRICTE (cel mai vulnerabil la AI-speak)
 
-5. **STRUCTURA SECTIUNILOR "The Question Ladder"** — fiecare sectiune raspunde la o obiectie naturala in MINTEA cumparatorului:
-   - Hero (headline + subheadline + price + CTA) → "Sunt in locul potrivit?"
-   - quickBullets → "Ce primesc concret?"
-   - topBenefits (3 PAS) → "Ma intelege cineva?"
-   - featureSections (image + bullets) → "Cum functioneaza?"
-   - howItWorks (3 pasi) → "Cat de simplu e?"
-   - benefits lista completa → "Ce mai primesc?"
-   - testimoniale → "De ce sa te cred?"
-   - objections (rebuttals) → "Care sunt riscurile?"
-   - risk reversal → "Ce daca nu merge?"
-   - faq → "Mai am 6 intrebari rapide"
-   - urgency banner + final CTA → "Ce fac acum?"
+TITLE — max 40 char CAPS. BENEFICIU sau frica concreta, NU spec.
+  BUN: "AJUNGI ACOLO UNDE FURTUNUL NU AJUNGE"
+  BUN: "FOLOSEȘTI O DATĂ. NU MAI VREI ALTCEVA."
+  PROST: "TEHNOLOGIE INOVATOARE PREMIUM" (banned)
 
-6. **topBenefits (TOP 3) si benefits (5-7) — framework PAS strict**: [PROBLEMA in CAPS 1-3 cuvinte] + "—" + [REZOLVARE concreta cu cifre/mecanism].
-   BUN: "FARA SCURGERI — sistem de garnitura tripla testat la 50 bar fara nici o picatura"
-   BUN: "MONTAJ IN 8 MINUTE — strecuratoare standard, fara chei speciale, fara experienta"
-   BUN: "PRINDE TOTUL — vacuum la 800W aspira par de caine, cereale, lichid in acelasi timp"
-   PROST: "Foarte util" (nu PAS, banned word "foarte")
+COPY (3 fraze):
+a) Fiecare fraza INCEPE cu verb sau cu "Tu/Te/Iți/Ai" — NICIODATA cu:
+   "Acest produs", "Această soluție", "Cu acest", "Datorită", "Mulțumită"
+b) MIN 1 cifra / detaliu fizic concret per copy (bari, ml, %, mg, m, kg)
+c) Diacritice 100%
+d) Suna ca un om care a folosit produsul, NU ca slide PowerPoint
 
-7. **featureSections — REGULI EXTRA STRICTE (cea mai vulnerabila zona la AI-speak)**:
+BANNED in feature copy:
+"Vei beneficia", "Beneficiezi de", "Această caracteristică", "Tehnologie avansată",
+"Funcționalitate optimă", "Confort sporit", "Eficiență ridicată", "Bucură-te de",
+"Te vei bucura", "Experiență optimă", "Datorită materialelor"
 
-   TITLE — max 40 char CAPS. BENEFICIU sau frica concreta, NU spec. Hook care lovește direct.
-     BUN: "AJUNGI ACOLO UNDE FURTUNUL NU AJUNGE"
-     BUN: "FOLOSEȘTI O DATĂ. NU MAI VREI ALTCEVA."
-     BUN: "ZERO ZGÂRIETURI PE BARA TA"
-     PROST: "TEHNOLOGIE INOVATOARE PREMIUM" (banned)
-     PROST: "EFICIENȚĂ SPORITĂ" (vag, AI-speak)
+BUN: "Bagi prelungirea sub bancheta și scoți praful pe care aspiratorul nu-l prinde. 50 bari împing tot ce s-a adunat luni de zile."
+BUN: "Apeși o singură dată și schimbi între jet liniar și pulverizare. Aceeași poziție a mâinii, nici un buton ascuns."
+PROST: "Această tehnologie revoluționară îți oferă o experiență optimă."
 
-   BULLETS — 2-3 fraze CONCRETE. REGULI HARD:
-   a) FIECARE bullet INCEPE cu verb sau cu "Tu/Te/Iți/Ai" — NICIODATA cu:
-      "Acest produs", "Această soluție", "Cu acest", "Datorită", "Mulțumită", "Aceasta"
-   b) FIECARE bullet contine MIN. 1 CIFRA sau DETALIU FIZIC concret:
-      - presiune (bari/PSI), durata (minute/zile), distanta (m/cm),
-        material (inox/silicon/oțel), procent (%), greutate (g/kg), capacitate (ml/L)
-   c) DIACRITICE 100% (ă, â, î, ș, ț) + punct la sfarsit.
-   d) MAX 1 em-dash per fraza. Preferă punct + frază nouă.
-   e) SUNA ca un om care a folosit produsul, NU ca un slide PowerPoint.
+VOICE CHECK per fraza:
+1. Începe cu verb / "tu" / detaliu fizic? (Nu "Acest...")
+2. Are CIFRA sau DETALIU CONCRET?
+3. Suna ca un OM, nu ca un AI?
+Daca orice "Nu", REJECT + rescrie.
+============================================================
 
-   BANNED expressions in feature bullets (auto-rejection):
-     "Vei beneficia", "Beneficiezi de", "Aceasta caracteristica", "Această funcție",
-     "Tehnologie avansată", "Funcționalitate optimă", "Calitate superioară",
-     "Performanță maximă", "Confort sporit", "Eficiență ridicată",
-     "Soluție practică", "Datorită materialelor", "Mulțumită designului",
-     "Bucură-te de", "Te vei bucura", "Experiență optimă", "Experiență deosebită"
+5 REGULI CRITICE (peste structura LOCKED)
 
-   EXEMPLE BUNE (copiaza stilul):
-     "Bagi prelungirea sub bancheta din spate și scoți praful pe care aspiratorul nu-l prinde. 50 bari de presiune împing tot ce s-a adunat luni de zile."
-     "Apeși o singură dată și schimbi între jet liniar și pulverizare. Aceeași mână, niciun buton ascuns sub."
-     "Inox AISI 304 alimentar. Nu se mănâncă în oțet, nu se decolorează la soare după 6 luni pe terasă."
-     "Te ajungi sub bancheta din portbagaj fără să cobori obiectele. Furtunul flexibil de 1,2 m face curba completă."
+R1. HEADLINE / offerName / heroSubheadline — alege Sophistication Level 1-5:
+    L1: claim direct ("Cum sa cureti masina in 15 minute")
+    L2: claim marit ("...mai bine decat la spalatorie")
+    L3: focus mecanism ("...cu jet variabil 30-50 bari")
+    L4: mecanism marit ("Noua tehnologie de jet variabil in 15 minute")
+    L5: identificare emotionala ("Pentru parintii care obosesc sa duca masina la spalatorie")
 
-   EXEMPLE PROASTE (NICIODATA):
-     "Această tehnologie revoluționară îți oferă o experiență optimă." (banned + vag + AI)
-     "Datorită materialelor de calitate superioară, vei beneficia de durabilitate." (banned)
-     "Bucură-te de eficiență sporită și confort maxim." (vag + AI)
-     "Acest produs este conceput pentru a satisface cele mai exigente cerințe." (corporate)
+R2. SUBHEADLINE = "So That, Without" — promisiune + obiectie eliminata:
+    BUN: "Cureti in 15 minute — fara scule, fara dezordine, fara experienta"
 
-   VOICE CHECK pentru FIECARE bullet inainte de a-l include:
-     1. Începe cu verb / "tu" / detaliu fizic? (Nu "Acest..." / "Această..." / "Cu...")
-     2. Are CIFRA sau DETALIU CONCRET?
-     3. Suna ca un OM, nu ca un AI?
-     Dacă orice "Nu", REJECT bullet-ul și rescrie-l.
+R3. quickBullets — EXACT 4, max 8 cuv, beneficii MASURABILE:
+    BUN: "Reduce consumul cu 15-25% pe ruta urbana"
+    PROST: "Calitate superioara garantata" (banned)
 
-8. **howItWorks — exact 3 pasi, MOTIVATOR sa cumpere ACUM, nu manual tehnic**:
-   - Fiecare pas: title scurt 3-5 cuvinte (verb imperativ) + desc 1 fraza concreta.
-   - Format: [ACTIUNEA USOARA] → [REZULTATUL IMEDIAT] → [BENEFICIUL DURABIL]
-   BUN: [{title:"Comanzi azi", desc:"Plata la livrare cu curierul, fara card, fara abonament"}, {title:"Primesti in 2-3 zile", desc:"Ambalaj sigilat, instructiuni in romana"}, {title:"Folosesti din prima zi", desc:"Setup in 8 minute, vezi rezultate de la prima utilizare"}]
+R4. Testimoniale 4-part: situatie initiala (durere) + actiune (cum a aflat) + rezultat (cifra) + emotie finala.
+    Nume + varsta + oras RO (Cluj, Iasi, Constanta, etc.)
+    BUN: "Plateam 80 LEI pe spalat la mana o data pe luna. Am vazut clipul si am comandat. In prima zi am terminat in 18 minute fata de 50 minute la mana. Acum nu mai duc masina niciunde."
+    PROST: "Produs excelent recomand." (lipsa 4-part)
 
-9. **Testimoniale — structura "Wall of Love" 4-part** (stack vertical, NU carousel):
-   [SITUATIE INITIALA: ce avea inainte, durerea concreta] + [ACTIUNE: cum a aflat / cand a comandat] + [REZULTAT cu CIFRA/TIMELINE concret] + [EMOTIE finala sintetica].
-   Nume real RO + oras (Bucuresti, Cluj, Constanta, Iasi, Timisoara, Brasov, Oradea, Sibiu, Galati, Ploiesti, Craiova, Pitesti, Arad, Bacau, Buzau).
-   BUN: "Plateam 80 LEI pe spalat la mana o data pe luna. Am vazut clipul si am comandat. In prima zi cand am incercat la masina, am terminat in 18 minute fata de 50 minute la mana. Acum nu mai duc masina niciunde."
-   PROST: "Produs excelent recomand." (lipsa 4-part, weasel "excelent")
-   FIECARE testimonial maxim 300 caractere total.
-
-10. **FAQ exact 6 intrebari in ordinea fixa**:
-    (1) Ce metoda de plata? (2) Cat dureaza livrarea? (3) Cine livreaza? (4) Garantie? (5) Pot comanda prin telefon? (6) Politica retur?
-    Raspunsuri concrete, 1-2 fraze, sub 200 char.
-
-11. **objections (4 items daca cerute) — STACK obiectie + rebuttal CONTEXTUAL**:
-    BUN: {objection: "E prea scump pentru ce ofera", rebuttal: "Calculezi: 5 LEI / utilizare pentru durata 18 luni. O cafea costa 12 LEI dar dispare in 10 minute."}
-    BUN: {objection: "Nu functioneaza la masinile vechi", rebuttal: "Compatibil OBD-II standard - orice masina fabricata dupa 1996. Verifica priza diagnostic dedesubtul volanului."}
-    PROST: {objection: "E prea scump", rebuttal: "Avem cele mai bune preturi."} (defensive + banned)
-
-12. **riskReversalText — garantie CONDITIONALA cu BANI INAPOI + bonus pentru deranj**:
-    BUN: "Daca dupa 30 zile combustibilul tau nu a scazut cu cel putin 10%, rambursam integral + 20 LEI pentru bataia de cap. Returnezi fara intrebari, fara argumente."
-    PROST: "30 de zile garantie de returnare." (generic, banned)
-
-13. **urgencyMessage — concret + cifra credibila**:
-    BUN: "ULTIMELE 47 BUC din stocul lunii octombrie"
-    BUN: "OFERTA 1+1 GRATIS valabila pana la epuizare"
+R5. urgencyMessage — concret + cifra credibila:
+    BUN: "Doar 47 buc ramase din lotul de noiembrie"
     PROST: "STOC LIMITAT" (generic, vag)
-
-14. **CTA — 1 imperativ scurt + actionabil**:
-    BUN: "Comanda acum" / "Profita acum" / "Vreau si eu"
-    EVITA: "Click aici" / "Mai multe info" / "Continua"
-
-15. **DIACRITICE OBLIGATORII** (a, i, s, t, ts) + ortografie corecta.
-
-16. **LENGTH MODE — STRICT exact N items**:
-    - scurt: 3 benefits, 3 testimoniale, 4 FAQ, 1 featureSection, 3 quickBullets
-    - mediu: 5 benefits, 4 testimoniale, 6 FAQ, 2 featureSections, 4 quickBullets
-    - lung: 7 benefits, 6 testimoniale, 8 FAQ, 3 featureSections, 4 quickBullets
-    NU MAI PUTIN. NU MAI MULT.
 
 Returneaza DOAR JSON valid (TOATE check-urile CHECKLIST FINAL respectate), fara markdown, fara backtick-uri, fara explicatii.`
 
@@ -850,124 +778,105 @@ Returneaza DOAR JSON valid (TOATE check-urile CHECKLIST FINAL respectate), fara 
 
 ============================================================
 CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
-[ ] STRUCTURA CANONICA respectata: hero (badge+rating+price+CTA+trust strip), quickBullets, testimonial early, topBenefits, featureSection 1, riskReversalText explicit conditional, featureSection 2, comparison/objections, full testimonials list, howItWorks 3 pasi, urgencyMessage cu cifra concreta, FAQ 6 standard
-[ ] offerName aplica HORMOZI M.A.G.I.C. — Container word OBLIGATORIU + 2-3 din M-A-G-I, denumire dupa REZULTAT (NU feature/spec), claritate > creativitate, max 60 char
-[ ] DIACRITICE perfect puse pe TOATE cuvintele (ă, â, î, ș, ț + majuscule). Niciun cuvant fara diacritice unde trebuie.
-[ ] PUNCTUATIE corecta: virgula inainte de "care/dar/insa", spatiu DUPA virgula, ghilimele „..." romanesti, NU em-dash excesiv.
-[ ] ADRESARE: "tu/tau/ai/vei/poti" peste tot. ZERO "dumneavoastra/dvs./va".
-[ ] TON CONVERSATIONAL: intrebari retorice + confesiuni + limbaj de zi cu zi. ZERO corporate ("solutie", "experienta", "Va invitam").
-[ ] FIECARE fraza din testimoniale + featureSections suna ca SPUSA de om real, nu scrisa de AI.
-[ ] FEATURE BULLETS: fiecare incepe cu verb/tu (NU "Acest", "Această", "Cu", "Datorită"), contine min 1 cifra/detaliu fizic, sub 300 char, voice check trecut.
-[ ] FEATURE TITLES: max 40 char CAPS, beneficiu/frică concretă (NU spec generic, NU "PREMIUM"/"INOVATOR").
-[ ] Min 3 din PATTERN-URILE WIN incluse: pattern interrupt headline ("INCEPE SA X"), CAPS keyword sub-headline ("FUNCTIONEAZA PE ORICE..."), numeric proof claim ("Folosit deja de X.XXX"), explicit garantia "30 zile - GARANTIE DE RETURNARE A BANILOR", urgency cu cifra ("ULTIMELE X BUC din lotul [luna]")
-[ ] Headline = Sophistication Level identificat + 3 hook levers stack + <70 char
-[ ] Subheadline = "So That, Without" + obiectie principala eliminata
-[ ] FIECARE camp text in VOCE ACTIVA, pers 2 singular, ZERO weasel words
-[ ] FIECARE paragraf testimonial sub 300 char + 4-part structure
-[ ] FEEL→THINK→ACT flow aplicat (hero=emotie, benefits=logica, CTA=identitate+frica pierdere)
-[ ] Hawkins level — am intrat in starea AUDIENTEI sub 200 (durere/frustrare), NU am sarit la "fii fericit"
-[ ] Identity labeling min 3 ori ("tu esti / tu meriti / tu iei")
-[ ] Min 1 belief limitativ adresat in objections sau riskReversalText
-[ ] Emotional delta arc: durere (hero) → hope (body) → frica de pierdere (urgency+CTA)
-[ ] LENGTH MODE EXACT: ${opts.lengthMode || 'mediu'} = ${({scurt:'3 benefits/3 testim/4 FAQ/1 feat/3 quickBullets', mediu:'5/4/6/2/4', lung:'7/6/8/3/4'})[opts.lengthMode || 'mediu']}
-[ ] TON aplicat consistent: ${opts.tone || 'direct'}
-[ ] NISA aplicata in nicheSections: ${opts.niche || 'generic'}
-[ ] URGENCY level: ${opts.urgencyLevel || 'medie'} reflectat in urgencyMessage + intensity copy
-[ ] CUSTOM OBJECTIONS (daca cerute) folosite EXACT in objections array, nu inventate
-[ ] BRIEF user (salesAngle/styleDesc) — durere + audienta reflectate in TESTIMONIALE + topBenefits
+[ ] STRUCTURA LOCKED — toate 12 sectiunile completate in JSON, NICIUNA omisa, ordine respectata
+[ ] offerName aplica HORMOZI M.A.G.I.C. — Container word OBLIGATORIU + 2-3 din M-A-G-I, max 60 char
+[ ] heroSubheadline = 1 propozitie LUNGA cu hook senzorial/emotional (stil GymBeam), max 140 char
+[ ] DIACRITICE 100% (ă â î ș ț + majuscule) pe TOATE cuvintele. Niciun cuvant fara.
+[ ] PUNCTUATIE RO: virgula inainte de care/dar/insa, ghilimele "...", NU em-dash excesiv.
+[ ] ADRESARE: "tu/tau/ai/vei/poti" peste tot. ZERO "dumneavoastra/dvs."
+[ ] TON CONVERSATIONAL: intrebari retorice, confesiuni, limbaj zi cu zi. ZERO corporate.
+[ ] FIECARE fraza in featureSections + testimonialsAboveFold + customerPhotoGrid suna SPUSA de om real, NU AI.
+[ ] FEATURE COPY: fiecare fraza INCEPE cu verb/tu (NU "Acest", "Această", "Cu", "Datorită"), MIN 1 cifra/detaliu fizic, voice check trecut.
+[ ] FEATURE TITLES: max 40 char CAPS, beneficiu/frica concreta (NU "PREMIUM", NU "INOVATOR").
+[ ] testimonialsAboveFold (EXACT 3-4): 4-part structure, max 280 char, nume+varsta+oras RO, OBJECTION HANDLING.
+[ ] customerPhotoGrid (EXACT 6): nume+varsta+oras + review 1 fraza autentica max 120 char.
+[ ] beforeAfter: beforeText (durere cotidiana) + afterText (rezultat cu cifra) max 180 char.
+[ ] comparison: 4 rows, themLabel CONCRET (NU "concurenta"), fiecare us cu cifra.
+[ ] howItWorks: EXACT 3 pasi imperativi + desc concret 1 fraza.
+[ ] riskReversalText: promisiune concreta + cifra timeframe + bonus pentru deranj.
+[ ] FAQ: EXACT 6 intrebari = 4 frici psihologice (ICP) + 2 logistice (plata/livrare).
+[ ] urgencyMessage: cifra concreta stoc + presiune temporala (NU "STOC LIMITAT" generic).
+[ ] identityHeadline OBLIGATORIU + introParagraphs 2-3 fraze.
+[ ] FEEL→THINK→ACT flow: hero=emotie / features+comparison=logica / urgency+CTA=loss aversion.
+[ ] Identity labeling min 3 ori ("Esti tipul de X care Y") in hero, features, urgency.
+[ ] Min 1 belief limitativ (din ICP beliefBarriers) adresat in FAQ sau riskReversalText.
 ============================================================`
 
   const schema = `{
-  "productName": "Nume tehnic / oficial al produsului (max 60 char). NU 'Produsul nostru' — foloseste numele real.",
-  "offerName": "REPACKAGING M.A.G.I.C. (Hormozi) — combina Container word OBLIGATORIU + 2-3 din M-A-G-I (max 60 char). DIFERIT de productName, denumit dupa REZULTAT. Ex: 'Sistemul de 14 Zile pentru Ten Curat', 'Kitul Mamici in Forma pentru Arderi Rapide', 'Pachetul de Baza Confort Maxim'. APLICA HORMOZI M.A.G.I.C. block.",
-  "headline": "H1 — alege Level sofisticare 1-5, stack 3 hook levers, max 70 char. APLICA Regula 1+2 din REGULI CRITICE.",
-  "subheadline": "Formula 'So That, Without': promisiune + obiectie eliminata. Max 100 char. APLICA Regula 3.",
+  "_schemaVersion": 2,
+  "offerName": "M.A.G.I.C. name (Container word OBLIGATORIU + 2-3 din M-A-G-I), max 60 char. Ex: 'Sistemul de 14 Zile pentru Ten Curat', 'Kitul Mamici in Forma pentru Arderi Rapide'.",
+  "productName": "Nume tehnic / oficial produs, max 60 char.",
+  "brandBadge": "Badge text max 25 char (ex: 'Made in EU', 'Recomandat de specialiști', 'Premium Quality')",
+  "heroSubheadline": "1 propozitie LUNGA cu hook senzorial+emotional+concret, max 140 char. Stil GymBeam: 'O combinatie de izolat si concentrat proteic cu gust excelent care iti sustine muschii' / 'Pasta 100% naturala pe care o vei indragi inca de la prima lingurita'.",
+  "ctaPrimary": "Text scurt buton CTA, max 30 char (ex: 'Comanda acum cu plata la livrare', 'Vreau si eu')",
+  "trustPills": ["Plata la livrare", "Livrare 24-48h", "Retur 30 zile"],
   "price": ${rp},
-  "oldPrice": ${Math.round(rp*1.6)},
-  "bumpPrice": ${Math.round(rp*0.2)},
-  "bumpName": "Numele accesoriului bump (max 40 char). Ex: 'Setul de Curatare Suplimentar', 'Cartus de Schimb'. Doar daca bumpPrice > 0.",
-  "giftValue": 0,
-  "stock": 7,
-  "timerMinutes": 14,
-  "reviewCount": 1247,
-  "phoneNumber": "0700 000 000",
-  "urgencyMessage": "Concret + cifra credibila. NU 'STOC LIMITAT' generic. Ex: 'ULTIMELE 47 BUC din stocul lunii octombrie'.",
-  "riskReversalText": "Garantie CONDITIONALA cu detaliu specific + bonus pentru deranj. Ex: 'Daca dupa 30 zile X nu e Y, rambursam integral + 20 LEI pentru bataia de cap.' APLICA Regula 12.",
-  "style": {"primaryColor": "#dc2626", "secondaryColor": "#111111"},
+  "oldPrice": ${Math.round(rp * 1.4)},
   "quickBullets": [
-    "MAX 8 cuvinte. Beneficiu MASURABIL/VIZIBIL cu cifra cand posibil. APLICA Regula 4.",
-    "MAX 8 cuvinte. Beneficiu specific produsului.",
-    "MAX 8 cuvinte. NU vag — concret.",
-    "MAX 8 cuvinte."
-  ],
-  "topBenefits": [
-    "PROBLEMA1 — rezolvarea concreta scurta",
-    "PROBLEMA2 — rezolvarea concreta scurta",
-    "PROBLEMA3 — rezolvarea concreta scurta"
-  ],
-  "benefits": [
-    "PAS format: PROBLEMA — REZOLVARE concreta cu cifra/mecanism. APLICA Regula 6.",
-    "Exemplu: 'FARA SCURGERI — garnitura tripla testata la 50 bar fara picatura'",
-    "5/7 items per lengthMode. Caracteristici secundare dar specifice.",
+    "max 8 cuv, beneficiu masurabil. MIX categorial obligatoriu (tehnic/positioning/compozitie/senzorial/health claim/lifestyle).",
+    "...",
     "...",
     "..."
   ],
+  "testimonialsAboveFold": [
+    {"text": "4-part max 280 char: [situatie veche cu durere] + [actiune cum a aflat] + [rezultat cu cifra] + [emotie finala]. OBJECTION HANDLING (adreseaza o frica din ICP).", "name": "Prenume", "age": 35, "city": "Cluj-Napoca", "stars": 5},
+    {"text": "Exemplu: 'Plateam 80 LEI pe spalat la mana o data pe luna. Am vazut clipul si am comandat. In prima zi am terminat in 18 minute fata de 50 minute. Acum nu mai duc masina niciunde.'", "name": "Marius", "age": 42, "city": "Cluj-Napoca", "stars": 5},
+    {"text": "...", "name": "...", "age": 0, "city": "...", "stars": 5}
+  ],
+  "asSeenIn": {
+    "mode": "media",
+    "items": ["PRO TV", "CAPITAL", "ADEVĂRUL", "ANTENA 1", "CLICK"]
+  },
+  "identityHeadline": "Pentru [Audience specifica] care vor [Result concret] fara [Objection principala]. Ex: 'Pentru mamele ocupate care vor mancare gata in 15 minute fara compromis pe gust'.",
+  "introParagraphs": [
+    "Fraza 1: ce ESTE produsul + cui i se adreseaza, conversational cu 'tu'.",
+    "Fraza 2: de ce e diferit + ce rezolva concret."
+  ],
   "featureSections": [
-    {
-      "title": "TITLU CAPS max 40 char — focus pe BENEFICIU. APLICA Regula 7.",
-      "bullets": ["punct 1: cifra/mecanism concret", "punct 2: comparison sau spec", "punct 3: rezultat tangibil"]
-    },
-    {
-      "title": "Alt beneficiu cheie",
-      "bullets": ["...", "...", "..."]
-    }
+    {"title": "MINI-HOOK CAPS max 40 char (BENEFICIU/FRICA concreta)", "copy": "3 fraze direct cu 'tu' + min 1 cifra/detaliu fizic. APLICA FEATURE SECTIONS REGULI EXTRA STRICTE."},
+    {"title": "...", "copy": "..."},
+    {"title": "...", "copy": "..."}
   ],
-  "howItWorks": [
-    {"title": "Pas 1 — 3-5 cuvinte verb imperativ", "desc": "[ACTIUNEA USOARA] o fraza. APLICA Regula 8."},
-    {"title": "Pas 2", "desc": "[REZULTATUL IMEDIAT] o fraza."},
-    {"title": "Pas 3", "desc": "[BENEFICIUL DURABIL] o fraza."}
-  ],
-  "testimonials": [
-    {"text": "4-part: [situatie initiala cu durere] + [actiune: cum a aflat/cand comandat] + [REZULTAT cu cifra/timeline] + [emotie finala]. Max 300 char. APLICA Regula 9.", "name": "Nume real RO", "city": "Oras real RO", "stars": 5},
-    {"text": "Exemplu: 'Plateam 80 LEI pe spalat la mana o data pe luna. Am vazut clipul si am comandat. In prima zi cand am incercat, am terminat in 18 minute fata de 50 minute la mana. Acum nu mai duc masina niciunde.'", "name": "Marius D.", "city": "Cluj-Napoca", "stars": 5},
-    {"text": "...", "name": "...", "city": "...", "stars": 5},
-    {"text": "...", "name": "...", "city": "...", "stars": 5}
-  ],
-  "faq": [
-    {"q": "Ce metoda de plata acceptati?", "a": "Plata se face ramburs la curier, la livrare. Verifici produsul si apoi platesti."},
-    {"q": "Cat dureaza livrarea?", "a": "Livrarea se face in 2-4 zile lucratoare in toata Romania."},
-    {"q": "Cine livreaza?", "a": "Livrarea se face prin Fan Courier / Sameday in toata tara."},
-    {"q": "Am garantie?", "a": "Da, produsul are garantie de 24 luni. In caz de defect, il inlocuim gratuit."},
-    {"q": "Pot comanda prin telefon?", "a": "Da, suni la numarul afisat pe pagina si plasezi comanda direct."},
-    {"q": "Pot returna produsul?", "a": "Ai 30 de zile pentru retur fara intrebari. Banii inapoi integral."}
-  ],
-  "objections": [
-    {"objection": "Formuleaza obiectia in cuvintele cumparatorului real, NU vag.", "rebuttal": "Rebuttal CONTEXTUAL cu cifra/spec/comparison concreta. APLICA Regula 11."},
-    {"objection": "Exemplu: 'E prea scump pentru ce ofera'", "rebuttal": "Calculezi: 5 LEI / utilizare pe durata 18 luni. O cafea costa 12 LEI dar dispare in 10 minute."},
-    {"objection": "Exemplu: 'Nu functioneaza la masinile mele vechi'", "rebuttal": "Compatibil OBD-II standard - orice masina dupa 1996. Verifica priza diagnostic dedesubtul volanului."},
-    {"objection": "...", "rebuttal": "..."}
-  ],
-  "popup": ${popupEnabled ? `{
-    "goal": "${popupGoal || 'discount'}",
-    "headline": "Titlu scurt si captivant (max 50 char)",
-    "subtext": "1-2 fraze cu beneficiul concret (max 140 char)",
-    "ctaText": "Text buton scurt (max 25 char)",
-    "discountCode": "${popupGoal === 'discount' ? 'COD_GENERAT' : ''}",
-    "discountPercent": ${popupGoal === 'discount' ? 15 : 0}
-  }` : 'null'},
-  "nicheSections": [
-    {"type": "sizeTable|infoList", "title": "...", "headers": ["..."], "rows": [["..."]], "items": [{"label": "...", "value": "..."}]}
-  ],
+  "beforeAfter": {
+    "title": "Diferenta in [timeframe]",
+    "timeframe": "30 de zile",
+    "beforeText": "Durere cotidiana concreta (ce traia INAINTE). Max 180 char. Ex: 'Te trezeai obosit la 3 dupa-amiaza chiar daca dormeai 8 ore.'",
+    "afterText": "Rezultat concret cu cifra + emotie (DUPA). Max 180 char. Ex: 'Energie pana seara fara cafea, somn profund, 7 kg slabite in 60 de zile.'"
+  },
   "comparison": {
-    "usLabel": "Numele produsului tau (max 30 char)",
-    "themLabel": "Alte solutii comune folosite (ex: 'Spalatoria auto', 'Aspiratoare wireless ieftine')",
+    "usLabel": "Nume produs scurt, max 30 char",
+    "themLabel": "Alte solutii CONCRETE (ex: 'Multivitamine farmacie', 'Aspiratoare wireless ieftine'). NU generic 'concurenta'.",
     "rows": [
-      {"feature": "Aspect comparat (ex: 'Pret pe utilizare')", "them": "Dezavantajul concret al concurentei in cuvintele lor (max 80 char)", "us": "Beneficiul TAU + cifra (max 80 char)"},
-      {"feature": "Alt aspect (ex: 'Timp setup')", "them": "...", "us": "..."},
+      {"feature": "Aspect comparat", "them": "Dezavantaj concret max 80 char", "us": "Avantaj cu cifra max 80 char"},
+      {"feature": "...", "them": "...", "us": "..."},
       {"feature": "...", "them": "...", "us": "..."},
       {"feature": "...", "them": "...", "us": "..."}
     ]
-  }
+  },
+  "howItWorks": [
+    {"title": "1-3 cuv imperativ", "desc": "1 fraza concreta. Format: [Actiune usoara] → [Rezultat imediat] → [Beneficiu durabil]"},
+    {"title": "...", "desc": "..."},
+    {"title": "...", "desc": "..."}
+  ],
+  "customerPhotoGrid": [
+    {"name": "Prenume", "age": 35, "city": "Oras RO", "review": "1 fraza autentica max 120 char (ton forum RO: 'L-am incercat dupa 2 ani de cautari. Nu am o a doua opinie.')"},
+    {"name": "...", "age": 0, "city": "...", "review": "..."},
+    {"name": "...", "age": 0, "city": "...", "review": "..."},
+    {"name": "...", "age": 0, "city": "...", "review": "..."},
+    {"name": "...", "age": 0, "city": "...", "review": "..."},
+    {"name": "...", "age": 0, "city": "...", "review": "..."}
+  ],
+  "riskReversalText": "Promisiune CONCRETA + timeframe + bonus pentru deranj. Ex: 'Daca dupa 30 de zile nu vezi diferenta, returnam integral + 20 LEI pentru bataia de cap.'",
+  "faq": [
+    {"q": "Frica psihologica 1 (din ICP beliefBarriers)", "a": "Raspuns 1-2 fraze concret."},
+    {"q": "Frica 2", "a": "..."},
+    {"q": "Frica 3", "a": "..."},
+    {"q": "Frica 4", "a": "..."},
+    {"q": "Cum se face plata?", "a": "Plata se face ramburs la curier, la livrare. Verifici produsul si apoi platesti."},
+    {"q": "Cat dureaza livrarea?", "a": "Livrare in 24-48 de ore lucratoare in toata Romania."}
+  ],
+  "urgencyMessage": "Cifra stoc concreta + presiune temporala. Ex: 'Doar 47 de bucati ramase din lotul de noiembrie' / 'Oferta 1+1 GRATIS valabila pana la epuizare stoc'.",
+  "niche": "beauty|health|pet|generic"
 }`
 
   // Detalii produs de pasat la Claude — fara ele inventeaza orb.
@@ -986,13 +895,10 @@ CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 16000,
-    // Extended thinking — Sonnet 4.5 isi rezerva 12k tokens pentru
-    // RATIONAMENT INVIZIBIL inainte de a returna JSON-ul final. Permite
-    // sa analizeze in profunzime cele 16 reguli, sa identifice Sophistication
-    // Level, hook levers de stack, Hawkins state al audientei + sa
-    // self-verifice CHECKLIST FINAL inainte de output.
-    thinking: { type: 'enabled', budget_tokens: 8000 },
+    // Schema LOCKED + structura predictabila → max_tokens reduse 16k → 8k.
+    // Extended thinking eliminat — structura nu mai necesita "gandire" pentru
+    // alegerea sectiunilor, doar populare. Latency drop ~50%, cost drop ~25%.
+    max_tokens: 8000,
     // Prompt caching — system prompt e ~12k tokens static (banned, MAGIC,
     // neuroscience, structura, reguli 1-16). Cache_control 'ephemeral' = 5min
     // TTL, 90% discount pe input cached. Second block (dynamicSystem) ramane
@@ -1006,20 +912,13 @@ CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 ${productContext}
 
 Reguli specifice produsului:
-- productName si headline trebuie sa fie despre ACEST produs (nu generic).
-- benefits si topBenefits sa fie despre features REALE ale produsului (din descriere/specs de mai sus, NU inventezi).
-- featureSections.bullets sa cite specs concrete (dimensiuni, material, mod de folosire, etc.) din descrierea / specs date.
-- testimoniale sa mentioneze cum au folosit ACEST produs (nu generic "produs bun").
-- Daca descrierea spune ceva specific (gen "5 niveluri rezistenta", "bateriile dureaza 40 ore"), foloseste exact in featureSections.
+- offerName, heroSubheadline si identityHeadline trebuie sa fie despre ACEST produs (nu generic).
+- featureSections.copy sa cite specs concrete (dimensiuni, material, mod de folosire) din descriere/specs.
+- testimonialsAboveFold + customerPhotoGrid sa mentioneze cum au folosit ACEST produs (nu generic "produs bun").
+- comparison.themLabel CONCRET (numeste solutia reala alternativa, NU "concurenta").
+- Daca descrierea spune ceva specific (gen "5 niveluri rezistenta", "40 ore baterie"), foloseste exact.
 
-IMPORTANT — FOLOSESTE EXTENDED THINKING (max 12000 tokens) pentru:
-1. Analizeaza profil cumparator + Hawkins state in care intra mesajul tau
-2. Decide Sophistication Level (1-5) al pietei pe baza nisei + produsului
-3. Selecteaza 3-4 hook levers din cele 7 + construieste 3 variante de headline, alege cea mai buna
-4. Mapeaza Feel→Think→Act per sectiune
-5. Verifica CHECKLIST FINAL inainte de a returna JSON-ul
-
-Returneaza EXACT acest JSON schema completat:
+Returneaza EXACT acest JSON schema LOCKED (12 sectiuni), populat conform structurii:
 ${schema}` }]
   })
   return new Promise((resolve, reject) => {
@@ -1136,43 +1035,80 @@ async function callClaudeWithRetry(productInfo, styleDesc, opts = {}) {
 function buildFallbackCopy(productInfo) {
   const rp = productInfo.priceUSD > 0 ? Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10 : 149
   const name = productInfo.title || 'Produsul Tău'
+  const reviewCount = randomReviewCount('generic')
   return {
-    productName: name.substring(0, 60),
+    _schemaVersion: 2,
     offerName: `Pachetul Complet ${name}`.substring(0, 60),
-    headline: `${name} — Calitate Premium`,
-    subheadline: 'Comandă acum cu livrare rapidă și plată la livrare',
-    price: rp, oldPrice: Math.round(rp * 1.6), bumpPrice: Math.round(rp * 0.2),
-    giftValue: 0, stock: 7, timerMinutes: 14, reviewCount: 1247,
-    phoneNumber: '0700 000 000',
-    urgencyMessage: 'STOC LIMITAT — SE EPUIZEAZĂ RAPID',
-    riskReversalText: 'Îți oferim 30 de zile să încerci produsul. Dacă nu ești mulțumit, îți facem rambursul integral, fără întrebări.',
-    style: { primaryColor: '#dc2626', secondaryColor: '#111111' },
-    quickBullets: ['Calitate verificată', 'Livrare rapidă în România', 'Plată la livrare cu ramburs', 'Retur gratuit 30 zile'],
-    topBenefits: ['CALITATE — Produs verificat și testat', 'LIVRARE RAPIDĂ — 2-4 zile în toată țara', 'GARANȚIE — 24 luni inclusă'],
-    benefits: ['Produs de calitate premium', 'Verificat și testat', 'Livrare rapidă în 2-4 zile', 'Plată la livrare cu ramburs', 'Garanție 24 luni inclusă'],
+    productName: name.substring(0, 60),
+    brandBadge: 'Premium Quality',
+    heroSubheadline: `Produs ${name.toLowerCase()} verificat și livrat în toată România cu plată la livrare`,
+    ctaPrimary: 'Comandă acum cu plată la livrare',
+    trustPills: ['Plată la livrare', 'Livrare 24-48h', 'Retur 30 zile'],
+    price: rp,
+    oldPrice: Math.round(rp * 1.4),
+    reviewCount,
+    quickBullets: [
+      'Calitate verificată din stoc',
+      'Livrare rapidă în toată țara',
+      'Plată la livrare cu ramburs',
+      'Retur gratuit în 30 zile'
+    ],
+    testimonialsAboveFold: [
+      { text: 'Am comandat săptămâna trecută și am primit produsul în 2 zile. Funcționează exact cum mă așteptam. Recomand cu încredere.', name: 'Maria', age: 38, city: 'București', stars: 5 },
+      { text: 'Plata la livrare a fost un plus mare. Am verificat pachetul cu curierul și totul era ok. Calitate peste așteptări.', name: 'Andrei', age: 42, city: 'Cluj-Napoca', stars: 5 },
+      { text: 'Comandă plasată simplu, livrare rapidă, calitate bună. Am avut o întrebare și au răspuns în 10 minute pe telefon.', name: 'Ioana', age: 35, city: 'Iași', stars: 5 }
+    ],
+    asSeenIn: { mode: 'trust', items: ['ANPC Certificat', 'Made in EU', 'Plată la livrare', 'Livrare 24-48h'] },
+    identityHeadline: `Pentru oamenii care vor ${name.toLowerCase()} fără riscuri și fără așteptări lungi`,
+    introParagraphs: [
+      `${name} e produsul pe care îl primești acasă cu plată la livrare, fără să avansezi bani sau să te înregistrezi nicăieri.`,
+      'L-am ales pentru calitate și pentru că funcționează exact cum descrii la fiecare comandă.'
+    ],
     featureSections: [
-      { title: 'CALITATE PREMIUM', bullets: ['Materiale durabile', 'Testat pentru utilizare zilnică', 'Garanție extinsă'] },
-      { title: 'LIVRARE RAPIDĂ', bullets: ['2-4 zile prin Fan Courier', 'Plată la livrare cu ramburs', 'Retur 30 zile fără întrebări'] }
+      { title: 'CALITATE VERIFICATĂ', copy: 'Tu primești produsul ambalat sigilat, verificat înainte să plece din stoc. Fiecare unitate trece printr-un control rapid pe linia de expediție.' },
+      { title: 'LIVRARE ÎN 24-48 ORE', copy: 'Tu comanzi azi, primești în 24-48 de ore lucrătoare prin Fan Courier sau Sameday. Adresa o completezi rapid în formularul de comandă.' },
+      { title: 'RETUR FĂRĂ INTREBĂRI', copy: 'Ai 30 de zile să te răzgândești. Dacă produsul nu îți place, îl returnezi și primești banii înapoi integral, fără explicații.' }
     ],
+    beforeAfter: {
+      title: 'Diferența o vezi din prima zi',
+      timeframe: 'prima zi',
+      beforeText: 'Comandai online și plăteai în avans, sperând că produsul ajunge cum trebuie.',
+      afterText: 'Acum verifici pachetul cu curierul și plătești doar dacă totul e ok. Zero risc.'
+    },
+    comparison: {
+      usLabel: name.substring(0, 30),
+      themLabel: 'Magazine online standard',
+      rows: [
+        { feature: 'Plată', them: 'Card în avans, fără verificare', us: 'Ramburs la livrare ✓' },
+        { feature: 'Verificare colet', them: 'Doar după ce ai plătit', us: 'Înainte de plată ✓' },
+        { feature: 'Livrare', them: '5-10 zile lucrătoare', us: '24-48 ore ✓' },
+        { feature: 'Retur', them: 'Doar în 14 zile cu factură', us: '30 zile fără întrebări ✓' }
+      ]
+    },
     howItWorks: [
-      { title: 'Comandă acum', desc: 'Apasă butonul de comandă și completează datele' },
-      { title: 'Primești produsul', desc: 'Livrare în 2-4 zile lucrătoare' },
-      { title: 'Plătești la livrare', desc: 'Verifici produsul și plătești curierului' }
+      { title: 'Comanzi acum', desc: 'Completezi datele tale în 30 de secunde, fără card.' },
+      { title: 'Primești în 24-48h', desc: 'Curierul te sună înainte și ajunge la ușa ta.' },
+      { title: 'Plătești la livrare', desc: 'Verifici produsul și plătești curierului numerar sau cu cardul.' }
     ],
-    testimonials: [
-      { text: 'Produsul a sosit rapid, exact cum a fost descris. Recomand cu încredere.', name: 'Maria D.', city: 'București', stars: 5 },
-      { text: 'Comandă plasată ușor, livrare în 3 zile. Calitate bună.', name: 'Andrei P.', city: 'Cluj-Napoca', stars: 5 },
-      { text: 'Excelent serviciu, ramburs la livrare. Sunt foarte mulțumit.', name: 'Ioana T.', city: 'Iași', stars: 5 },
-      { text: 'L-am comandat pentru cadou, persoana a fost încântată.', name: 'Mihai R.', city: 'Timișoara', stars: 5 }
+    customerPhotoGrid: [
+      { name: 'Elena', age: 41, city: 'Brașov', review: 'Am comandat și am primit în 36 de ore. Recomand.' },
+      { name: 'Vlad', age: 33, city: 'Timișoara', review: 'Plata la livrare a fost simplă, curierul foarte amabil.' },
+      { name: 'Roxana', age: 29, city: 'Constanța', review: 'Calitate bună, ambalaj sigilat. Am verificat tot înainte de plată.' },
+      { name: 'Mihai', age: 47, city: 'Oradea', review: 'L-am luat după ce am citit reviewurile. Nu regret.' },
+      { name: 'Ana', age: 36, city: 'Sibiu', review: 'Livrare rapidă, exact cum era descris.' },
+      { name: 'Cristi', age: 39, city: 'Galați', review: 'A doua comandă și sunt mulțumit la fel ca prima.' }
     ],
+    riskReversalText: 'Dacă în 30 de zile produsul nu corespunde așteptărilor tale, îl returnezi și primești banii înapoi integral. Fără întrebări, fără explicații.',
     faq: [
-      { q: 'Ce metodă de plată acceptați?', a: 'Plata se face ramburs la curier, la livrare. Verifici produsul și apoi plătești.' },
-      { q: 'Cât durează livrarea?', a: 'Livrarea se face în 2-4 zile lucrătoare în toată România.' },
-      { q: 'Cine livrează?', a: 'Livrarea se face prin Fan Courier / Sameday în toată țara.' },
-      { q: 'Am garanție?', a: 'Da, produsul are garanție de 24 luni. În caz de defect, îl înlocuim gratuit.' },
-      { q: 'Pot comanda prin telefon?', a: 'Da, suni la numărul afișat pe pagină și plasezi comanda direct.' },
-      { q: 'Pot returna produsul?', a: 'Ai 30 de zile pentru retur fără întrebări. Banii înapoi integral.' }
-    ]
+      { q: 'Și dacă produsul nu merge la mine?', a: 'Ai 30 de zile să-l returnezi fără explicații. Primești banii înapoi integral.' },
+      { q: 'Cum știu că nu se strică în 2 luni?', a: 'Produsul are garanție și e verificat înainte să plece din stoc.' },
+      { q: 'Pot folosi și dacă nu am experiență?', a: 'Da, e gândit să fie ușor de folosit din prima încercare.' },
+      { q: 'Funcționează cum se vede în poze?', a: 'Pozele sunt reale și produsul ajunge exact cum îl vezi.' },
+      { q: 'Cum se face plata?', a: 'Plata se face ramburs la curier, la livrare. Verifici produsul și apoi plătești.' },
+      { q: 'Cât durează livrarea?', a: 'Livrare în 24-48 de ore lucrătoare în toată România.' }
+    ],
+    urgencyMessage: 'Stoc limitat — verifică disponibilitatea înainte să comanzi',
+    niche: 'generic'
   }
 }
 
@@ -1329,74 +1265,85 @@ module.exports = async function handler(req, res) {
       popupEnabled: false,
       popupGoal: null
     })
-    // Sincronizare campuri din AliExpress (Claude poate sa fi inventat nume scurt)
+    // Sincronizare campuri din productInfo (Claude poate sa fi inventat nume scurt)
     if (productInfo.title) copy.productName = productInfo.title.substring(0, 60)
     if (productInfo.priceUSD > 0) {
       const rp = Math.round(productInfo.priceUSD * 5 * 2.5 / 10) * 10
-      copy.price = rp; copy.oldPrice = Math.round(rp * 1.6); copy.bumpPrice = Math.round(rp * 0.2)
+      copy.price = rp
+      copy.oldPrice = Math.round(rp * 1.4)
     }
+    // Currency format RO standard (99,00 LEI)
+    copy.priceFormatted = formatLei(copy.price || 99)
+    copy.oldPriceFormatted = formatLei(copy.oldPrice || 149)
 
-    // Combinam: AliExpress (pozele reale) + Gemini (lifestyle + UGC)
-    const pName = copy.productName || 'produs'
-    
-    // Folosim prima poza AliExpress ca input pentru Gemini
-    // Gemini vede produsul real si face lifestyle/UGC cu el
+    // Reviewer count random pe nisa daca AI nu a setat sau a setat generic
+    const condensedNiche = condenseNiche(icp?.niche || copy.niche)
+    if (!copy.reviewCount || copy.reviewCount === 1247) {
+      copy.reviewCount = randomReviewCount(condensedNiche)
+    }
+    copy.niche = condensedNiche
+
+    // ─── IMAGE STRATEGY V2 ────────────────────────────────────────────
+    // 1 HERO + 6 CUSTOMER GRID = 7 Gemini calls (paralel).
+    // Feature sections reuse imagini din grid (crop / zoom variations).
+    // Cost ~$0.28/LP (vs $0.16 vechi), latency +18s, calitate ++.
     const heroImageUrl = aliImages[0] || null
     console.log('Product image for Gemini:', heroImageUrl ? 'YES' : 'NO')
 
-    const geminiPrompts = [
-      // Poza 1: produsul in actiune/folosinta, cinematic
-      `This is a product. Create a stunning cinematic hero image showing this exact product being actively used in real life. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Show the product in action doing what it's meant to do. Magazine cover quality, 8K resolution. No text overlays.`,
-      // Poza 2: lifestyle - persoana folosind produsul
-      `This is a product. Create a lifestyle photo showing a happy attractive Romanian person 30-40 years old naturally and actively using this exact product in a modern home. Warm golden hour lighting, genuine joy on their face, shallow depth of field, photorealistic, editorial magazine quality. Product clearly visible in use.`,
-      // Poza 3: produsul simplu pe fundal alb
-      `This is a product. Create a clean simple product photo of this exact product on a pure white background. Center the product, soft even studio lighting, no shadows, no people, no props, no text. Simple commercial product photography.`,
-      // Poza 4: UGC social proof
-      `This is a product. Create an authentic UGC-style photo of a real-looking happy Romanian customer holding this exact product with a big smile and thumbs up. Casual modern home background, warm natural light. Very authentic and candid feel like a real person filmed it. Product must be clearly identifiable.`
+    const HERO_PROMPT = `This is a product. Create a stunning cinematic hero image of this exact product on a clean elegant background. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Magazine cover quality, 8K resolution. No text overlays.`
+
+    // 6 customer-grid prompts — diverse Romanian profiles 25-55 ani, lifestyle natural
+    const GRID_PROMPTS = [
+      `Authentic UGC-style photo of a happy Romanian woman 28-35 holding this exact product with a smile in her modern apartment. Soft natural daylight, candid feel, warm tones. Product clearly visible.`,
+      `Authentic UGC-style photo of a Romanian man 35-45 using this exact product at home, focused expression, casual clothes, modern interior. Natural lighting, realistic look.`,
+      `Authentic UGC-style photo of a Romanian woman 45-55 with this exact product in her kitchen or living room, warm friendly smile. Soft golden hour light, family-friendly feel.`,
+      `Authentic UGC-style photo of a young Romanian man 25-30 with this exact product, casual urban outfit, modern apartment, relaxed pose. Editorial natural light.`,
+      `Authentic UGC-style photo of a Romanian woman 32-40 actively using this exact product, joyful natural expression, modern home. Soft natural daylight, lifestyle vibe.`,
+      `Authentic UGC-style photo of a Romanian man 40-50 with this exact product, satisfied expression, professional casual look. Warm natural lighting, magazine quality.`
     ]
 
+    const allPrompts = [HERO_PROMPT, ...GRID_PROMPTS]
     const geminiPromises = geminiKey
-      ? geminiPrompts.map((p, i) => 
+      ? allPrompts.map((p, i) =>
           geminiImage(p, geminiKey, heroImageUrl)
-            .then(img => { console.log('Gemini', i+1, img ? 'OK' : 'FAIL'); return img })
+            .then(img => { console.log('Gemini', i + 1, '/', allPrompts.length, img ? 'OK' : 'FAIL'); return img })
         )
-      : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)]
+      : Array(allPrompts.length).fill(null).map(() => Promise.resolve(null))
 
     const geminiImages = await Promise.all(geminiPromises)
-    const goodGemini = geminiImages.filter(Boolean)
-    console.log('Gemini OK:', goodGemini.length, '/4')
+    const heroAI = geminiImages[0]
+    const gridAI = geminiImages.slice(1)
+    const goodGrid = gridAI.filter(Boolean)
+    console.log('Gemini Hero:', heroAI ? 'OK' : 'FAIL', '| Grid:', goodGrid.length, '/6')
 
-    // Layout final - toate 4 imagini generate cu Gemini
-    // Fallback la AliExpress daca Gemini esueaza
-    const ali = aliImages
+    // copy.images[0] = hero. copy.images[1..6] = customer grid (used by render).
+    // Feature sections reutilizeaza din grid (index 1, 3, 5 default).
     copy.images = [
-      goodGemini[0] || ali[0] || null,  // Hero - produs in actiune
-      goodGemini[1] || ali[1] || null,  // Lifestyle - persoana folosind
-      goodGemini[2] || ali[2] || null,  // Detaliu - close-up premium
-      goodGemini[3] || ali[3] || null   // UGC - client fericit
+      heroAI || aliImages[0] || null,
+      gridAI[0] || aliImages[1] || null,
+      gridAI[1] || aliImages[2] || null,
+      gridAI[2] || aliImages[3] || null,
+      gridAI[3] || aliImages[4] || null,
+      gridAI[4] || aliImages[5] || null,
+      gridAI[5] || aliImages[0] || null
     ].filter(Boolean)
     copy.aliImages = aliImages
 
-    // Style selection:
-    //  1. presetStyle (user a venit din Templates → are paleta fixata) → override
-    //  2. smart pick din descriere + nume scrape-uit → palette + hero din keywords
-    //  3. fallback random pentru diversitate
+    // Style — preset > niche-based 4-palette
     if (presetStyle && presetStyle.primaryColor) {
       copy.style = Object.assign({}, copy.style || {}, presetStyle)
-      if (!copy.heroVariant) copy.heroVariant = 'split'  // default safe daca preset nu specifica
-      console.log('Variant signature: preset palette=' + presetStyle.primaryColor + ' hero=' + (presetStyle.heroVariant || 'split'))
+      console.log('Style: preset', presetStyle.primaryColor)
     } else {
-      // styleDesc — derivat din ICP (persona + niche) pentru pick-uri smart de paleta
-      const styleDescV6 = (icp?.persona || '') + ' ' + (icp?.niche || '') + ' ' + (productInfo.title || '')
-      const variants = pickVariantsByDescription(styleDescV6, copy.productName)
+      const { niche: pickedNiche, palette } = pickNichePalette(condensedNiche)
       copy.style = Object.assign({}, copy.style || {}, {
-        primaryColor: variants.palette.primary,
-        secondaryColor: variants.palette.secondary,
-        bgAccent: variants.palette.bgAccent,
-        bgAccentBorder: variants.palette.bgAccentBorder
+        primaryColor: palette.primary,
+        secondaryColor: palette.secondary,
+        bgAccent: palette.bgAccent,
+        bgAccentBorder: palette.bgAccentBorder,
+        accent2: palette.accent2
       })
-      copy.heroVariant = variants.heroVariant
-      console.log('Variant signature: palette=' + variants.palette.primary + ' hero=' + variants.heroVariant)
+      copy.niche = pickedNiche
+      console.log('Style: niche=' + pickedNiche + ' palette=' + palette.primary)
     }
 
     // Save URL in returned data so editor's auto-save can use it as

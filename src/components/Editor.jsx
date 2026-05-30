@@ -1275,7 +1275,170 @@ function buildCSS(data) {
 // 5. Top 3 feature grid — 6. 2x image+text alternant — 7. Risk reversal
 // 8. Testimoniale "Comanda Livrata" — 9. Urgency CTA — 10. FAQ accordion
 // 11. Phone contact banner — 12. Footer cu legal links
+// V2 renderer pentru schema LOCKED 12 sectiuni (generate.js v6).
+// Backward-compat: dispatch din buildHTML() in functie de data._schemaVersion.
+function buildHTML_v2(data) {
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+  const fmtLei = (n) => {
+    const num = Math.round(Number(n) * 100) / 100
+    return num.toFixed(2).replace('.', ',') + ' LEI'
+  }
+  const imgTag = (src, style) => src ? `<img src="${esc(src)}" style="${style || 'width:100%;display:block'}" alt="" />` : ''
+
+  // Data extraction cu fallback-uri safe
+  const offerName = esc(data.offerName || data.productName || 'Produsul Tău')
+  const heroSubheadline = esc(data.heroSubheadline || data.subheadline || '')
+  const brandBadge = esc(data.brandBadge || 'Premium Quality')
+  const ctaPrimary = esc(data.ctaPrimary || 'Comandă acum cu plată la livrare')
+  const trustPills = (Array.isArray(data.trustPills) ? data.trustPills : ['Plată la livrare', 'Livrare 24-48h', 'Retur 30 zile']).slice(0, 3)
+  const price = Math.max(1, Number(data.price) || 99)
+  const oldPriceRaw = Number(data.oldPrice) || Math.round(price * 1.4)
+  const oldPrice = oldPriceRaw > price ? oldPriceRaw : Math.round(price * 1.3)
+  const savings = Math.max(0, oldPrice - price)
+  const disc = Math.max(0, Math.round((1 - price / oldPrice) * 100))
+  const reviewCount = Math.max(100, Number(data.reviewCount) || 1247)
+  const quickBullets = (data.quickBullets || []).slice(0, 4)
+  const testimAF = (data.testimonialsAboveFold || data.testimonials || []).slice(0, 4)
+  const asSeenIn = data.asSeenIn || { mode: 'trust', items: [] }
+  const identityHeadline = esc(data.identityHeadline || '')
+  const introParagraphs = (data.introParagraphs || []).slice(0, 3)
+  const featureSections = (data.featureSections || []).slice(0, 3)
+  const beforeAfter = data.beforeAfter || null
+  const comparison = data.comparison || null
+  const howItWorks = (data.howItWorks || []).slice(0, 3)
+  const customerPhotoGrid = (data.customerPhotoGrid || []).slice(0, 6)
+  const riskReversalText = esc(data.riskReversalText || 'Dacă în 30 de zile nu ești mulțumit, primești banii înapoi integral.')
+  const faq = (data.faq || []).slice(0, 6)
+  const urgencyMessage = esc(data.urgencyMessage || 'Stoc limitat — verifică disponibilitatea')
+  const imgs = (data.images || []).filter(Boolean)
+  const primary = data.style?.primaryColor || '#dc2626'
+  const accent2 = data.style?.accent2 || '#fee2e2'
+  const bgAccent = data.style?.bgAccent || '#fffbeb'
+  const secondary = data.style?.secondaryColor || '#111111'
+  const niche = esc(data.niche || 'generic')
+
+  // CTA hook Releasit COD
+  const relBtn = `<div class="_rsi-cod-form-gempages-button-hook es-form-hook unitone-cod-hook" data-cod="universal" style="min-height:54px;border:2px dashed ${primary};border-radius:8px;padding:6px;text-align:center;margin:12px 0"><span class="unitone-placeholder-text" style="color:${primary};font-size:12px;pointer-events:none;line-height:42px">&#128722; Buton COD &mdash; clientul vede butonul real</span></div>`
+
+  // Inline SVG icons compacte
+  const SVG = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline-block;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;display:inline-block;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;display:inline-block;vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>',
+    truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:inline-block;vertical-align:middle"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;display:inline-block;vertical-align:middle"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:inline-block;vertical-align:middle"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>',
+    anpc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:inline-block;vertical-align:middle"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>',
+    eu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6" r="1" fill="currentColor"/><circle cx="12" cy="18" r="1" fill="currentColor"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="18" cy="12" r="1" fill="currentColor"/></svg>'
+  }
+  const stars5 = `<span style="color:#f59e0b;display:inline-flex;gap:2px;line-height:1">${SVG.star}${SVG.star}${SVG.star}${SVG.star}${SVG.star}</span>`
+
+  // CSS block
+  const styleBlock = `<style>
+    #unitone-lp{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#fff;color:#111;line-height:1.55}
+    #unitone-lp h1,#unitone-lp h2,#unitone-lp h3{margin:0;color:#111;line-height:1.22}
+    #unitone-lp p{margin:0;line-height:1.55}
+    #unitone-lp .ue-section{padding:40px 20px}
+    #unitone-lp .ue-container{max-width:980px;margin:0 auto}
+    #unitone-lp details>summary{list-style:none;cursor:pointer}
+    #unitone-lp details>summary::-webkit-details-marker{display:none}
+    #unitone-lp details>summary::after{content:"+";float:right;font-size:22px;font-weight:900;color:#999}
+    #unitone-lp details[open]>summary::after{content:"−"}
+    #unitone-lp .ue-test-carousel::-webkit-scrollbar{display:none}
+    @media(min-width:768px){
+      #unitone-lp .ue-section{padding:64px 32px}
+      #unitone-lp .ue-hero-grid{grid-template-columns:1fr 1fr !important;gap:48px !important;align-items:center}
+      #unitone-lp .ue-features-grid{grid-template-columns:repeat(3,1fr) !important;gap:24px !important}
+      #unitone-lp .ue-ba-grid{grid-template-columns:1fr 1fr !important;gap:20px !important}
+      #unitone-lp .ue-how-grid{grid-template-columns:repeat(3,1fr) !important;gap:24px !important}
+      #unitone-lp .ue-grid-trust{grid-template-columns:repeat(4,1fr) !important;gap:14px !important}
+      #unitone-lp .ue-compare-grid{grid-template-columns:1fr 1fr !important;gap:24px !important}
+      #unitone-lp .ue-test-grid{grid-template-columns:repeat(3,1fr) !important;gap:18px !important}
+      #unitone-lp .ue-test-slide{flex:0 0 32% !important}
+    }
+  </style>`
+
+  // SECTION 1: HERO
+  const heroHtml = `<section class="ue-section" style="padding:24px 20px 32px;background:${bgAccent}"><div class="ue-container"><div class="ue-hero-grid" style="display:grid;grid-template-columns:1fr;gap:24px"><div>${imgs[0] ? imgTag(imgs[0], 'width:100%;max-height:480px;object-fit:contain;border-radius:14px;background:#fff;padding:12px') : ''}</div><div><div style="display:inline-block;background:${primary};color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">${brandBadge}</div><h1 style="font-size:30px;font-weight:900;margin:0 0 10px">${offerName}</h1>${heroSubheadline ? `<p style="font-size:16px;color:#4b5563;margin:0 0 16px">${heroSubheadline}</p>` : ''}<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">${stars5}<span style="font-size:13px;color:#6b7280;font-weight:600">${reviewCount.toLocaleString('ro-RO')}+ clienți mulțumiți</span></div>${quickBullets.length ? `<ul style="margin:0 0 20px;padding:0;list-style:none">${quickBullets.map(b => `<li style="display:flex;align-items:flex-start;gap:8px;font-size:14px;color:#1f2937;margin-bottom:8px"><span style="color:#16a34a;flex-shrink:0;margin-top:2px">${SVG.check}</span><span style="font-weight:500">${esc(b)}</span></li>`).join('')}</ul>` : ''}<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap">${savings > 0 ? `<span data-unitone-bind="compareAt" style="font-size:18px;color:#9ca3af;text-decoration:line-through">${fmtLei(oldPrice)}</span>` : ''}<span data-unitone-bind="price" style="font-size:34px;font-weight:900;color:${primary}">${fmtLei(price)}</span>${disc > 0 ? `<span data-unitone-bind="discount" style="background:${primary};color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px">-${disc}%</span>` : ''}</div>${relBtn}<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">${trustPills.map(p => `<span style="display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid #86efac"><span>${SVG.check}</span>${esc(p)}</span>`).join('')}</div></div></div></div></section>`
+
+  // SECTION 2: TESTIMONIAL CAROUSEL ABOVE-FOLD
+  const testimAFHtml = testimAF.length ? `<section style="padding:32px 0;background:#fafbfc"><div class="ue-container"><h2 style="font-size:22px;font-weight:900;text-align:center;margin:0 0 20px;padding:0 20px">Ce spun oamenii care l-au comandat</h2><div class="ue-test-carousel" style="display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 20px 14px;scrollbar-width:none">${testimAF.map(t => `<div class="ue-test-slide" style="flex:0 0 88%;scroll-snap-align:start;background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #e5e7eb;min-width:280px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,${primary},${secondary});color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">${esc((t.name || '?').charAt(0).toUpperCase())}</div><div><div style="font-size:14px;font-weight:800">${esc(t.name || 'Client')}${t.age ? ', ' + Number(t.age) : ''}</div><div style="font-size:12px;color:#6b7280">${esc(t.city || 'România')}</div></div></div><div style="margin-bottom:10px">${stars5}</div><p style="font-size:14px;color:#374151;line-height:1.6">${esc(t.text || '')}</p><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:#dcfce7;color:#15803d;border-radius:4px;padding:4px 10px;margin-top:10px;font-weight:700">${SVG.check} Achiziție verificată</span></div>`).join('')}</div></div></section>` : ''
+
+  // SECTION 3: AS SEEN IN
+  let asSeenInHtml = ''
+  const asSeenInItems = (asSeenIn.items || []).slice(0, 5)
+  if (asSeenIn.mode === 'media' && asSeenInItems.length) {
+    asSeenInHtml = `<section style="padding:24px 20px;background:#fff;border-top:1px solid #f1f2f4;border-bottom:1px solid #f1f2f4"><div class="ue-container"><p style="text-align:center;font-size:11px;letter-spacing:2px;color:#9ca3af;font-weight:700;margin:0 0 14px">VĂZUT ÎN</p><div style="display:flex;justify-content:center;gap:32px;flex-wrap:wrap">${asSeenInItems.map(it => `<span style="font-size:18px;font-weight:900;color:#374151;letter-spacing:1px;font-family:Georgia,serif">${esc(it)}</span>`).join('')}</div></div></section>`
+  } else {
+    const badges = [
+      { label: 'ANPC Certificat', icon: SVG.anpc },
+      { label: 'Made in EU', icon: SVG.eu },
+      { label: 'Plată la livrare', icon: SVG.cash },
+      { label: 'Livrare 24-48h', icon: SVG.truck }
+    ]
+    asSeenInHtml = `<section style="padding:24px 20px;background:#fff;border-top:1px solid #f1f2f4;border-bottom:1px solid #f1f2f4"><div class="ue-container"><p style="text-align:center;font-size:11px;letter-spacing:2px;color:#9ca3af;font-weight:700;margin:0 0 18px">RECOMANDAT DE SPECIALIȘTI</p><div class="ue-grid-trust" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:760px;margin:0 auto">${badges.map(b => `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px"><span style="color:${primary};flex-shrink:0">${b.icon}</span><span style="font-size:13px;font-weight:700;color:#1f2937">${b.label}</span></div>`).join('')}</div></div></section>`
+  }
+
+  // SECTION 4: IDENTITY HEADLINE + INTRO
+  const identityHtml = identityHeadline ? `<section class="ue-section" style="background:#fff"><div class="ue-container" style="max-width:760px;text-align:center"><h2 style="font-size:28px;font-weight:900;margin:0 0 18px">${identityHeadline}</h2>${introParagraphs.map(p => `<p style="font-size:16px;color:#4b5563;margin:0 0 14px">${esc(p)}</p>`).join('')}</div></section>` : ''
+
+  // SECTION 5: 3 FEATURE SECTIONS
+  const featuresHtml = featureSections.length ? `<section class="ue-section" style="background:${bgAccent}"><div class="ue-container"><h2 style="font-size:24px;font-weight:900;text-align:center;margin:0 0 28px">Ce primești cu adevărat</h2><div class="ue-features-grid" style="display:grid;grid-template-columns:1fr;gap:24px">${featureSections.map((fs, i) => `<div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid #f0f0f0;overflow:hidden">${imgs[i + 1] ? imgTag(imgs[i + 1], 'width:100%;height:200px;object-fit:cover;display:block') : ''}<div style="padding:20px"><div style="display:inline-block;background:${primary}15;color:${primary};font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:10px">${i + 1}/${featureSections.length}</div><h3 style="font-size:18px;font-weight:900;margin:0 0 10px;text-transform:uppercase;letter-spacing:.3px">${esc(fs.title || '')}</h3><p style="font-size:14px;color:#4b5563;line-height:1.65">${esc(fs.copy || (Array.isArray(fs.bullets) ? fs.bullets.join(' ') : ''))}</p></div></div>`).join('')}</div></div></section>` : ''
+
+  // SECTION 6: BEFORE / AFTER
+  const baHtml = beforeAfter ? `<section class="ue-section" style="background:#fff"><div class="ue-container"><h2 style="font-size:24px;font-weight:900;text-align:center;margin:0 0 22px">${esc(beforeAfter.title || 'Diferența o vezi rapid')}</h2><div class="ue-ba-grid" style="display:grid;grid-template-columns:1fr;gap:16px;max-width:820px;margin:0 auto"><div style="background:#fff;border:2px solid #fecaca;border-radius:14px;padding:22px"><div style="display:inline-block;background:#dc2626;color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:12px">${esc(beforeAfter.beforeLabel || 'ÎNAINTE')}</div><p style="font-size:15px;color:#7f1d1d;line-height:1.6">${esc(beforeAfter.beforeText || '')}</p></div><div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:22px"><div style="display:inline-block;background:#16a34a;color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:12px">${esc(beforeAfter.afterLabel || 'DUPĂ')}</div><p style="font-size:15px;color:#14532d;line-height:1.6;font-weight:500">${esc(beforeAfter.afterText || '')}</p></div></div></div></section>` : ''
+
+  // SECTION 7: COMPARISON
+  const compHtml = comparison && Array.isArray(comparison.rows) && comparison.rows.length ? `<section class="ue-section" style="background:${bgAccent}"><div class="ue-container"><h2 style="font-size:24px;font-weight:900;text-align:center;margin:0 0 22px">De ce ${esc(comparison.usLabel || 'noi')} <span style="color:${primary}">≠</span> ${esc(comparison.themLabel || 'altele')}</h2><div class="ue-compare-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:880px;margin:0 auto"><div style="background:#fff;border:2px solid #fecaca;border-radius:12px;padding:18px"><div style="text-align:center;font-size:12px;font-weight:800;color:#dc2626;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px">${esc(comparison.themLabel || 'Alte soluții')}</div>${comparison.rows.map(r => `<div style="display:flex;gap:8px;padding:9px 0;border-bottom:1px solid #fee2e2;font-size:13px;color:#6b7280"><span style="color:#dc2626;flex-shrink:0">${SVG.x}</span><span>${esc(r.them || '')}</span></div>`).join('')}</div><div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:18px"><div style="text-align:center;font-size:12px;font-weight:800;color:#16a34a;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px">${esc(comparison.usLabel || 'Noi')}</div>${comparison.rows.map(r => `<div style="display:flex;gap:8px;padding:9px 0;border-bottom:1px solid #dcfce7;font-size:13px;color:#14532d;font-weight:600"><span style="color:#16a34a;flex-shrink:0">${SVG.check}</span><span>${esc(r.us || '')}</span></div>`).join('')}</div></div></div></section>` : ''
+
+  // SECTION 8: HOW IT WORKS
+  const howHtml = howItWorks.length ? `<section class="ue-section" style="background:#fff"><div class="ue-container"><h2 style="font-size:24px;font-weight:900;text-align:center;margin:0 0 26px">Cum funcționează — 3 pași</h2><div class="ue-how-grid" style="display:grid;grid-template-columns:1fr;gap:16px;max-width:880px;margin:0 auto">${howItWorks.map((s, i) => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:24px 20px;text-align:center"><div style="width:56px;height:56px;background:${primary};color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;margin-bottom:14px">${i + 1}</div><h3 style="font-size:16px;font-weight:800;margin:0 0 8px;text-transform:uppercase;letter-spacing:.3px">${esc(s.title || ('Pasul ' + (i + 1)))}</h3><p style="font-size:14px;color:#4b5563;line-height:1.6">${esc(s.desc || '')}</p></div>`).join('')}</div></div></section>` : ''
+
+  // SECTION 9: CUSTOMER PHOTO GRID
+  const gridHtml = customerPhotoGrid.length ? `<section class="ue-section" style="background:${bgAccent}"><div class="ue-container"><h2 style="font-size:24px;font-weight:900;text-align:center;margin:0 0 8px">Folosit deja de mii de români</h2><p style="font-size:14px;color:#6b7280;text-align:center;margin:0 0 26px">${reviewCount.toLocaleString('ro-RO')}+ comenzi · 4,8 ${stars5}</p><div class="ue-test-grid" style="display:grid;grid-template-columns:1fr;gap:16px">${customerPhotoGrid.map((c, i) => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04)">${imgs[i + 1] ? imgTag(imgs[i + 1], 'width:100%;height:180px;object-fit:cover;display:block') : `<div style="width:100%;height:180px;background:linear-gradient(135deg,${accent2},${bgAccent});display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:900;color:${primary}">${esc((c.name || '?').charAt(0).toUpperCase())}</div>`}<div style="padding:16px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:13px;font-weight:800">${esc(c.name || 'Client')}${c.age ? ', ' + Number(c.age) : ''}</div><div style="font-size:11px;color:#9ca3af">${esc(c.city || '')}</div></div><div style="margin-bottom:8px">${stars5}</div><p style="font-size:13px;color:#374151;line-height:1.5">${esc(c.review || '')}</p><span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;background:#dcfce7;color:#15803d;border-radius:4px;padding:3px 8px;margin-top:8px;font-weight:700">${SVG.check} Verificat</span></div></div>`).join('')}</div></div></section>` : ''
+
+  // SECTION 10: RISK REVERSAL
+  const riskHtml = `<section class="ue-section" style="background:#fff"><div class="ue-container" style="max-width:780px;text-align:center"><div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid ${primary};border-radius:18px;padding:32px 24px"><div style="display:inline-flex;width:60px;height:60px;background:${primary};color:#fff;border-radius:50%;align-items:center;justify-content:center;margin-bottom:14px">${SVG.shield}</div><h2 style="font-size:24px;font-weight:900;margin:0 0 12px">Garanție 30 zile · Risk-Free</h2><p style="font-size:15px;color:#4b5563;line-height:1.7">${riskReversalText}</p></div></div></section>`
+
+  // SECTION 11: FAQ
+  const faqHtml = faq.length ? `<section class="ue-section" style="background:${bgAccent}"><div class="ue-container" style="max-width:780px"><h2 style="font-size:24px;font-weight:900;text-align:center;margin:0 0 26px">Întrebări frecvente</h2><div>${faq.map(f => `<details style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;overflow:hidden"><summary style="padding:16px 18px;font-size:15px;font-weight:700">${esc(f.q || '')}</summary><div style="padding:0 18px 16px;font-size:14px;color:#4b5563;line-height:1.65">${esc(f.a || '')}</div></details>`).join('')}</div></div></section>` : ''
+
+  // SECTION 12: URGENCY + FINAL CTA
+  const urgencyHtml = `<section class="ue-section" style="background:linear-gradient(135deg,${primary},${secondary});color:#fff;text-align:center"><div class="ue-container" style="max-width:760px"><p style="font-size:13px;letter-spacing:2px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.85);margin:0 0 12px">${urgencyMessage}</p><h2 style="font-size:30px;font-weight:900;color:#fff;margin:0 0 12px;line-height:1.2">${ctaPrimary}</h2><p style="font-size:15px;color:rgba(255,255,255,.9);margin:0 0 24px">Verifici produsul când îți ajunge. Plătești doar dacă totul e ok.</p><div style="background:#fff;border-radius:14px;padding:14px;display:inline-block;width:100%;max-width:420px;color:#111">${relBtn}</div><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:18px">${trustPills.map(p => `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#fff;font-weight:600;background:rgba(255,255,255,.15);padding:6px 12px;border-radius:20px">${SVG.check}${esc(p)}</span>`).join('')}</div></div></section>`
+
+  // FOOTER
+  const footerHtml = `<footer style="background:#0f172a;color:#94a3b8;padding:28px 20px;text-align:center;font-size:12px;line-height:1.7"><p style="margin:0 0 6px;color:#fff;font-weight:700;font-size:14px">${offerName}</p><p style="margin:0 0 12px;color:#cbd5e1">Comandă rapidă · Plată ramburs · Livrare în toată România</p><p style="margin:0 0 8px"><a href="#" style="color:#94a3b8;text-decoration:none">Termeni</a> · <a href="#" style="color:#94a3b8;text-decoration:none">Confidențialitate</a> · <a href="#" style="color:#94a3b8;text-decoration:none">Retur</a> · <a href="#" style="color:#94a3b8;text-decoration:none">Contact</a></p><p style="margin:0;font-size:11px;color:#64748b">© ${new Date().getFullYear()} · <a href="https://anpc.ro/ce-este-sal/" style="color:#64748b">ANPC SAL</a> · <a href="https://ec.europa.eu/consumers/odr/" style="color:#64748b">SOL</a></p></footer>`
+
+  return [
+    `<div id="unitone-lp" class="niche-${niche}">`,
+    styleBlock,
+    heroHtml,
+    testimAFHtml,
+    asSeenInHtml,
+    identityHtml,
+    featuresHtml,
+    baHtml,
+    compHtml,
+    howHtml,
+    gridHtml,
+    riskHtml,
+    faqHtml,
+    urgencyHtml,
+    footerHtml,
+    '</div>'
+  ].join('\n')
+}
+
 function buildHTML(data) {
+  // V2 dispatch — schema LOCKED 12-section primește renderer dedicat
+  if (data && data._schemaVersion === 2) {
+    return buildHTML_v2(data)
+  }
+
   // Sanitize text for safe interpolation inside HTML text content (NOT attrs).
   // Escapes < and > so user/AI text can't accidentally inject tags.
   // For attribute values use esc(v) AND wrap in double quotes (since esc keeps " as &quot;).
