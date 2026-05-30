@@ -756,12 +756,49 @@ REGULI CRITICE PE STRUCTURA + COPYWRITING:
    BUN: "PRINDE TOTUL — vacuum la 800W aspira par de caine, cereale, lichid in acelasi timp"
    PROST: "Foarte util" (nu PAS, banned word "foarte")
 
-7. **featureSections — mini-articole IMG+TEXT cu UN beneficiu CHEIE explicat**:
-   - title in CAPS, max 40 chars, focus pe BENEFICIU (NU pe feature).
-   - bullets: 3 puncte concrete (cifre, mecanism, comparison).
-   BUN title: "AJUNGI ACOLO UNDE FURTUNUL NU AJUNGE"
-   BUN bullets: ["Prelungire 1.2m pivotanta 360°", "Reaches under bancheta + portbagaj", "Inox 304 - rezista la presiune 50 bar"]
-   PROST title: "CALITATE PREMIUM" (banned + vag)
+7. **featureSections — REGULI EXTRA STRICTE (cea mai vulnerabila zona la AI-speak)**:
+
+   TITLE — max 40 char CAPS. BENEFICIU sau frica concreta, NU spec. Hook care lovește direct.
+     BUN: "AJUNGI ACOLO UNDE FURTUNUL NU AJUNGE"
+     BUN: "FOLOSEȘTI O DATĂ. NU MAI VREI ALTCEVA."
+     BUN: "ZERO ZGÂRIETURI PE BARA TA"
+     PROST: "TEHNOLOGIE INOVATOARE PREMIUM" (banned)
+     PROST: "EFICIENȚĂ SPORITĂ" (vag, AI-speak)
+
+   BULLETS — 2-3 fraze CONCRETE. REGULI HARD:
+   a) FIECARE bullet INCEPE cu verb sau cu "Tu/Te/Iți/Ai" — NICIODATA cu:
+      "Acest produs", "Această soluție", "Cu acest", "Datorită", "Mulțumită", "Aceasta"
+   b) FIECARE bullet contine MIN. 1 CIFRA sau DETALIU FIZIC concret:
+      - presiune (bari/PSI), durata (minute/zile), distanta (m/cm),
+        material (inox/silicon/oțel), procent (%), greutate (g/kg), capacitate (ml/L)
+   c) DIACRITICE 100% (ă, â, î, ș, ț) + punct la sfarsit.
+   d) MAX 1 em-dash per fraza. Preferă punct + frază nouă.
+   e) SUNA ca un om care a folosit produsul, NU ca un slide PowerPoint.
+
+   BANNED expressions in feature bullets (auto-rejection):
+     "Vei beneficia", "Beneficiezi de", "Aceasta caracteristica", "Această funcție",
+     "Tehnologie avansată", "Funcționalitate optimă", "Calitate superioară",
+     "Performanță maximă", "Confort sporit", "Eficiență ridicată",
+     "Soluție practică", "Datorită materialelor", "Mulțumită designului",
+     "Bucură-te de", "Te vei bucura", "Experiență optimă", "Experiență deosebită"
+
+   EXEMPLE BUNE (copiaza stilul):
+     "Bagi prelungirea sub bancheta din spate și scoți praful pe care aspiratorul nu-l prinde. 50 bari de presiune împing tot ce s-a adunat luni de zile."
+     "Apeși o singură dată și schimbi între jet liniar și pulverizare. Aceeași mână, niciun buton ascuns sub."
+     "Inox AISI 304 alimentar. Nu se mănâncă în oțet, nu se decolorează la soare după 6 luni pe terasă."
+     "Te ajungi sub bancheta din portbagaj fără să cobori obiectele. Furtunul flexibil de 1,2 m face curba completă."
+
+   EXEMPLE PROASTE (NICIODATA):
+     "Această tehnologie revoluționară îți oferă o experiență optimă." (banned + vag + AI)
+     "Datorită materialelor de calitate superioară, vei beneficia de durabilitate." (banned)
+     "Bucură-te de eficiență sporită și confort maxim." (vag + AI)
+     "Acest produs este conceput pentru a satisface cele mai exigente cerințe." (corporate)
+
+   VOICE CHECK pentru FIECARE bullet inainte de a-l include:
+     1. Începe cu verb / "tu" / detaliu fizic? (Nu "Acest..." / "Această..." / "Cu...")
+     2. Are CIFRA sau DETALIU CONCRET?
+     3. Suna ca un OM, nu ca un AI?
+     Dacă orice "Nu", REJECT bullet-ul și rescrie-l.
 
 8. **howItWorks — exact 3 pasi, MOTIVATOR sa cumpere ACUM, nu manual tehnic**:
    - Fiecare pas: title scurt 3-5 cuvinte (verb imperativ) + desc 1 fraza concreta.
@@ -820,6 +857,8 @@ CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 [ ] ADRESARE: "tu/tau/ai/vei/poti" peste tot. ZERO "dumneavoastra/dvs./va".
 [ ] TON CONVERSATIONAL: intrebari retorice + confesiuni + limbaj de zi cu zi. ZERO corporate ("solutie", "experienta", "Va invitam").
 [ ] FIECARE fraza din testimoniale + featureSections suna ca SPUSA de om real, nu scrisa de AI.
+[ ] FEATURE BULLETS: fiecare incepe cu verb/tu (NU "Acest", "Această", "Cu", "Datorită"), contine min 1 cifra/detaliu fizic, sub 300 char, voice check trecut.
+[ ] FEATURE TITLES: max 40 char CAPS, beneficiu/frică concretă (NU spec generic, NU "PREMIUM"/"INOVATOR").
 [ ] Min 3 din PATTERN-URILE WIN incluse: pattern interrupt headline ("INCEPE SA X"), CAPS keyword sub-headline ("FUNCTIONEAZA PE ORICE..."), numeric proof claim ("Folosit deja de X.XXX"), explicit garantia "30 zile - GARANTIE DE RETURNARE A BANILOR", urgency cu cifra ("ULTIMELE X BUC din lotul [luna]")
 [ ] Headline = Sophistication Level identificat + 3 hook levers stack + <70 char
 [ ] Subheadline = "So That, Without" + obiectie principala eliminata

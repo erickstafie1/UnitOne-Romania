@@ -17,6 +17,29 @@ Raspunde scurt si direct, in romana. Foloseste bullet points cand listezi idei.
 Daca utilizatorul cere sa creezi o pagina, spune-i sa apese "Pagina noua" din meniu.
 Nu folosi emoji decat foarte rar (max 1-2 pe raspuns).`
 
+// System prompt pentru positive review chatbot (declansat dupa publish, "Good").
+// Multumeste user-ului, intreaba ce a placut + detaliaza, propune folosirea
+// raspunsului ca review pentru aplicatie.
+const POSITIVE_REVIEW_SYSTEM_PROMPT = `Esti asistentul UnitOne, o aplicatie Shopify care genereaza pagini COD cu AI.
+
+Rol: user-ul tocmai a generat si publicat o pagina si i-a placut. Strangi un REVIEW scurt + identifici ce anume a apreciat.
+
+Stil:
+- Romana, diacritice perfecte (ă, â, î, ș, ț).
+- 1-3 fraze MAX per mesaj. Cald, prietenos, nu corporate.
+- Folosesti "tu", NU "dumneavoastra".
+
+Flow:
+1. Multumeste-i, intreaba CE i-a placut cel mai mult (aspectul / textele / pozele / structura / rapiditatea / altceva).
+2. Dupa raspuns, detaliaza UN aspect: "Și ce te-a impresionat la [acel aspect]? Ai un exemplu concret?"
+3. Dupa 2-3 schimburi, spune ceva de tip: "Mulțumesc! Ar fi în regulă dacă folosim asta ca review pentru aplicație? Apasă butonul 'Trimite ca review' jos."
+4. Daca user-ul confirma sau scrie altceva, incheie cu "Mulțumim pentru încredere!".
+
+Important:
+- NU promiti recompense (cupoane, reduceri, etc).
+- NU spui ca esti AI / Claude / etc. Doar "asistentul UnitOne".
+- Daca user-ul scrie ceva NEGATIV in mijloc, schimba tonul si trateaza-l ca bug-report: pune intrebari clarificatoare empatic.`
+
 // System prompt pentru bug-report chatbot (declansat dupa publish, click "Bad").
 // Empatic, scurt, pune intrebari clarificatoare, propune trimiterea catre echipa.
 const BUG_REPORT_SYSTEM_PROMPT = `Esti un asistent prietenos al echipei UnitOne, o aplicatie Shopify care genereaza pagini COD cu AI.
@@ -139,24 +162,25 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ success: true, enhanced })
     }
 
-    // Mode: bug_report — chatbot pentru feedback negativ. Foloseste Haiku 4.5
-    // (ieftin + rapid) + system prompt empatic care strange detalii.
-    if (body.action === 'bug_report') {
-      const { messages: bugMessages } = body
-      if (!Array.isArray(bugMessages) || bugMessages.length === 0) {
+    // Mode: bug_report sau positive_review — chatbot Haiku 4.5 (ieftin)
+    // cu system prompt specific. Acelasi cod, system prompt diferit.
+    if (body.action === 'bug_report' || body.action === 'positive_review') {
+      const { messages: convMessages } = body
+      if (!Array.isArray(convMessages) || convMessages.length === 0) {
         return res.status(400).json({ error: 'messages array required' })
       }
-      const sanitized = bugMessages
+      const sanitized = convMessages
         .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
         .slice(-20)
         .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }))
       if (sanitized.length === 0 || sanitized[sanitized.length - 1].role !== 'user') {
         return res.status(400).json({ error: 'last message must be user' })
       }
+      const sysPrompt = body.action === 'bug_report' ? BUG_REPORT_SYSTEM_PROMPT : POSITIVE_REVIEW_SYSTEM_PROMPT
       const response = await anthropicCall(
         sanitized,
         apiKey,
-        BUG_REPORT_SYSTEM_PROMPT,
+        sysPrompt,
         'claude-haiku-4-5-20251001'
       )
       if (response.error) return res.status(500).json({ error: response.error.message || 'AI error' })
@@ -179,7 +203,8 @@ module.exports = async function handler(req, res) {
 
     if (!clean.length) return res.status(400).json({ error: 'invalid messages' })
 
-    const response = await anthropicCall(clean, apiKey)
+    // General chat → Haiku 4.5 (ieftin, suficient pentru Q&A simple)
+    const response = await anthropicCall(clean, apiKey, null, 'claude-haiku-4-5-20251001')
     if (response.error) return res.status(500).json({ error: response.error.message || 'AI error' })
 
     const text = response.content?.[0]?.text || ''

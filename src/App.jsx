@@ -5,6 +5,7 @@ import enTranslations from '@shopify/polaris/locales/en.json'
 import Generator from './components/Generator.jsx'
 import Editor from './components/Editor.jsx'
 import Dashboard from './components/Dashboard.jsx'
+import ChatBubble from './components/ChatBubble.jsx'
 import { apiFetch } from './apiFetch.js'
 
 const PATH_TO_SECTION = {
@@ -193,6 +194,10 @@ function AppShell() {
         </NavMenu>
       )}
       {renderScreen()}
+      {/* Floating chatbot — vizibil cat timp user-ul e in aplicatie. Ascult
+          window event 'ue-open-chat' pentru declansari programatice (din
+          Editor dupa publish, etc). */}
+      {showNav && <ChatBubble shop={shop} />}
     </>
   )
 }
