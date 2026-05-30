@@ -1434,9 +1434,20 @@ function buildHTML_v2(data) {
 }
 
 function buildHTML(data) {
-  // V2 dispatch — schema LOCKED 12-section primește renderer dedicat
-  if (data && data._schemaVersion === 2) {
-    return buildHTML_v2(data)
+  // V2 dispatch — schema LOCKED 12-section primește renderer dedicat.
+  // Detectie: explicit _schemaVersion === 2 sau prezenta fielduri v2-only
+  // (offerName + customerPhotoGrid + testimonialsAboveFold) — robust la cazul
+  // in care Claude omite _schemaVersion din JSON.
+  if (data) {
+    const isV2 = data._schemaVersion === 2 ||
+                 data._schemaVersion === '2' ||
+                 (data.offerName && Array.isArray(data.customerPhotoGrid)) ||
+                 (data.heroSubheadline && Array.isArray(data.testimonialsAboveFold))
+    if (isV2) {
+      try { console.log('[buildHTML] dispatch v2', { fields: Object.keys(data).slice(0, 30) }) } catch (e) {}
+      return buildHTML_v2(data)
+    }
+    try { console.log('[buildHTML] dispatch v1 (legacy)', { fields: Object.keys(data).slice(0, 30) }) } catch (e) {}
   }
 
   // Sanitize text for safe interpolation inside HTML text content (NOT attrs).

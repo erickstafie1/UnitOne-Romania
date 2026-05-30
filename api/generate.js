@@ -1272,6 +1272,9 @@ module.exports = async function handler(req, res) {
       copy.price = rp
       copy.oldPrice = Math.round(rp * 1.4)
     }
+    // FORCE schema flag — Claude poate omite campul _schemaVersion din JSON.
+    // Setam noi server-side ca dispatcher Editor sa stie sigur ca e v2.
+    copy._schemaVersion = 2
     // Currency format RO standard (99,00 LEI)
     copy.priceFormatted = formatLei(copy.price || 99)
     copy.oldPriceFormatted = formatLei(copy.oldPrice || 149)
