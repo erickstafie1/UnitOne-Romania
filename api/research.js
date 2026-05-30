@@ -645,33 +645,59 @@ module.exports = async function handler(req, res) {
     const hasUsableInfo = (productInfo.title && productInfo.title.length >= 3) ||
                          (productInfo.description && productInfo.description.length >= 20) ||
                          (productInfo.specs && productInfo.specs.length >= 1)
-    // FALLBACK FINAL: extract title din URL slug daca tot esueaza scraping-ul.
-    // E mai bun sa avem ceva (chiar partial) decat sa esuam complet.
+
+    // Log per-stage diagnostics — vede in Vercel logs ce a fail-uit exact
+    console.log('[research] post-scrape state:', {
+      url: url ? url.slice(0, 120) : null,
+      titleLen: (productInfo.title || '').length,
+      title: (productInfo.title || '').slice(0, 80),
+      descLen: (productInfo.description || '').length,
+      specsCount: (productInfo.specs || []).length,
+      imagesCount: images.length,
+      hasUsableInfo
+    })
+
+    // FALLBACK 1: titlu din URL slug (functioneaza pe shop-uri cu nume produs in path,
+    // ex: /products/aspirator-wireless-800w → "Aspirator Wireless 800w")
     if (!hasUsableInfo && url) {
       try {
         const u = new URL(url)
-        // Extract slug din pathname si curata-l (ex: /products/aspirator-wireless-800w → "Aspirator Wireless 800w")
         const slug = (u.pathname || '').split('/').filter(Boolean).pop() || ''
-        const titleFromSlug = slug
-          .replace(/\.html?$/i, '')
-          .replace(/[-_]+/g, ' ')
-          .replace(/\d+\.html$/, '')
-          .replace(/\b\w/g, c => c.toUpperCase())
-          .trim()
-        if (titleFromSlug.length >= 4) {
-          productInfo.title = titleFromSlug.slice(0, 80)
-          productInfo.description = productInfo.description || `Produs ${titleFromSlug.toLowerCase()} disponibil cu plata la livrare`
-          console.log('[research] FALLBACK title from URL slug:', productInfo.title)
+        // Daca slug e pur numeric (AliExpress: 1005010025196968.html), NU e util ca titlu — sari peste
+        const slugCleaned = slug.replace(/\.html?$/i, '')
+        const isJustNumeric = /^\d+$/.test(slugCleaned)
+        if (!isJustNumeric) {
+          const titleFromSlug = slugCleaned
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase())
+            .trim()
+          if (titleFromSlug.length >= 4) {
+            productInfo.title = titleFromSlug.slice(0, 80)
+            productInfo.description = productInfo.description || `Produs ${titleFromSlug.toLowerCase()} disponibil cu plata la livrare in toata Romania`
+            console.log('[research] FALLBACK title from URL slug:', productInfo.title)
+          }
+        } else {
+          console.log('[research] URL slug is numeric-only (likely AliExpress), skipping slug fallback')
         }
-      } catch (e) {}
+      } catch (e) { console.log('[research] URL slug fallback error:', e.message) }
     }
+
     const hasUsableInfoAfterFallback = (productInfo.title && productInfo.title.length >= 3) ||
                                        (productInfo.description && productInfo.description.length >= 20) ||
                                        (productInfo.specs && productInfo.specs.length >= 1)
     if (!hasUsableInfoAfterFallback) {
-      return res.status(422).json({
-        error: 'Nu am putut extrage info despre produs. AI a incercat web search dar pagina e blocata sau nu e indexata. Solutii: 1) Foloseste upload poza, 2) Foloseste Shopify product (daca-l ai in magazin), 3) Incearca alt URL (varianta canonica, fara tracking params).'
-      })
+      // Error mesaj specific in functie de tip URL
+      const isAliExpress = url && /aliexpress\.(com|us|ru)/i.test(url)
+      const isAmazon = url && /amazon\.(com|de|fr|it|es|co\.uk)/i.test(url)
+      let errMsg = ''
+      if (isAliExpress) {
+        errMsg = 'AliExpress blocheaza scraping-ul automat. Solutie rapida: 1) Salveaza o poza a produsului de pe AliExpress, 2) Apasa pe "Poza produs" si fa upload, 3) AI-ul o analizeaza si genereaza pagina.'
+      } else if (isAmazon) {
+        errMsg = 'Amazon blocheaza scraping-ul. Foloseste upload poza in loc de URL.'
+      } else {
+        errMsg = 'Nu am putut extrage info despre produs. Pagina e blocata sau nu e indexata. Solutii: 1) Foloseste upload poza, 2) Shopify product, 3) Alt URL canonic fara tracking params.'
+      }
+      return res.status(422).json({ error: errMsg })
     }
     // If title bad but description ok, derive title from description first sentence
     if (!productInfo.title && productInfo.description) {
