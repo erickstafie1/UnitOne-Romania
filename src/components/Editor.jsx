@@ -513,7 +513,18 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         stableId = sid
       } catch (e) { return }  // private mode, no sessionStorage → skip drafts
     }
-    const draftKey = 'unitone_draft_' + stableId
+    // Draft key versionat — schema v2 (12 sectiuni LOCKED) NU foloseste
+    // drafturile vechi v1 (mismatch HTML shape). Bumping prefixul invalideaza
+    // drafturile vechi din localStorage automat.
+    const draftKey = 'unitone_draft_v2_' + stableId
+    // Cleanup drafturi vechi v1 (orphan in localStorage)
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('unitone_draft_') && !k.startsWith('unitone_draft_v2_')) {
+          localStorage.removeItem(k)
+        }
+      })
+    } catch (e) { /* ignore */ }
 
     const saveLocal = () => {
       if (!gjsRef.current) return
@@ -778,8 +789,9 @@ export default function Editor({ data, shop, planLimit, onBack, onPublished, onU
         dirtyRef.current = false
         // Clear draft din localStorage — publish reusit, nu mai e nevoie de fallback
         try {
-          const draftKey = 'unitone_draft_' + (data.id || data.aliUrl || 'new')
-          localStorage.removeItem(draftKey)
+          const stableId = data.id || data.aliUrl || 'new'
+          localStorage.removeItem('unitone_draft_v2_' + stableId)
+          localStorage.removeItem('unitone_draft_' + stableId)  // cleanup legacy v1 daca exista
         } catch (e) { /* ignore */ }
         setPublishedUrl(json.pageUrl)
         setPublishedDemoted(!!json.demoted)

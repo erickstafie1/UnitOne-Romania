@@ -1140,23 +1140,26 @@ function fetchImageAsBase64(url) {
 }
 
 // Genereaza imagine cu Gemini - cu sau fara imagine input
-function geminiImage(prompt, apiKey, inputImageUrl) {
+function geminiImage(prompt, apiKey, inputImage) {
   return new Promise(async (resolve) => {
     try {
-      // Daca avem URL imagine de produs, o descarcam si o trimitem ca input
+      // inputImage poate fi: URL string SAU obiect pre-fetched {base64, mimeType}.
+      // Handler-ul pre-fetch-eaza imaginea ca toate 7 call-uri Gemini sa nu
+      // descarce-uiasca acelasi URL de 7 ori (era 6× wasted fetch).
       let parts = [{ text: prompt }]
-      
-      if (inputImageUrl) {
-        console.log('Fetching product image for Gemini input:', inputImageUrl.substring(0, 60))
-        const imgData = await fetchImageAsBase64(inputImageUrl)
-        if (imgData) {
-          // Pune imaginea INAINTE de text
-          parts = [
-            { inlineData: { mimeType: imgData.mimeType, data: imgData.base64 } },
-            { text: prompt }
-          ]
-          console.log('Product image attached to Gemini request:', Math.round(imgData.base64.length/1024), 'KB')
-        }
+      let imgData = null
+
+      if (inputImage && typeof inputImage === 'object' && inputImage.base64) {
+        imgData = inputImage  // pre-fetched in handler
+      } else if (inputImage && typeof inputImage === 'string') {
+        imgData = await fetchImageAsBase64(inputImage)
+      }
+
+      if (imgData && imgData.base64) {
+        parts = [
+          { inlineData: { mimeType: imgData.mimeType, data: imgData.base64 } },
+          { text: prompt }
+        ]
       }
 
       const body = JSON.stringify({
@@ -1288,10 +1291,18 @@ module.exports = async function handler(req, res) {
 
     // ─── IMAGE STRATEGY V2 ────────────────────────────────────────────
     // 1 HERO + 6 CUSTOMER GRID = 7 Gemini calls (paralel).
-    // Feature sections reuse imagini din grid (crop / zoom variations).
-    // Cost ~$0.28/LP (vs $0.16 vechi), latency +18s, calitate ++.
+    // OPTIMIZARE: pre-fetch product image ONCE, pass base64 la toate 7
+    // (vechi: 7 calls × 1 fetch = 7 download-uri; nou: 1 download + 7 reuse).
     const heroImageUrl = aliImages[0] || null
     console.log('Product image for Gemini:', heroImageUrl ? 'YES' : 'NO')
+
+    // Pre-fetch product image o singura data
+    let productImageData = null
+    if (heroImageUrl && geminiKey) {
+      const t0 = Date.now()
+      productImageData = await fetchImageAsBase64(heroImageUrl)
+      console.log('Pre-fetched product image in', Date.now() - t0, 'ms', productImageData ? 'OK' : 'FAIL')
+    }
 
     const HERO_PROMPT = `This is a product. Create a stunning cinematic hero image of this exact product on a clean elegant background. Dynamic angle, dramatic professional lighting, rich colors, photorealistic. Magazine cover quality, 8K resolution. No text overlays.`
 
@@ -1306,14 +1317,16 @@ module.exports = async function handler(req, res) {
     ]
 
     const allPrompts = [HERO_PROMPT, ...GRID_PROMPTS]
+    const tGemini = Date.now()
     const geminiPromises = geminiKey
       ? allPrompts.map((p, i) =>
-          geminiImage(p, geminiKey, heroImageUrl)
-            .then(img => { console.log('Gemini', i + 1, '/', allPrompts.length, img ? 'OK' : 'FAIL'); return img })
+          geminiImage(p, geminiKey, productImageData || heroImageUrl)
+            .then(img => { console.log('Gemini', i + 1, '/', allPrompts.length, img ? 'OK' : 'FAIL', '(', Date.now() - tGemini, 'ms)'); return img })
         )
       : Array(allPrompts.length).fill(null).map(() => Promise.resolve(null))
 
     const geminiImages = await Promise.all(geminiPromises)
+    console.log('Gemini total parallel:', Date.now() - tGemini, 'ms')
     const heroAI = geminiImages[0]
     const gridAI = geminiImages.slice(1)
     const goodGrid = gridAI.filter(Boolean)
