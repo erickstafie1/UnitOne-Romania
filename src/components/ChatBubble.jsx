@@ -101,6 +101,9 @@ export default function ChatBubble({ shop }) {
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
 
+  // Flag pentru auto-save in mode general (evita save duplicat)
+  const savedRef = useRef(false)
+
   useEffect(() => {
     function onOpenChat(e) {
       const detail = e.detail || {}
@@ -111,6 +114,7 @@ export default function ChatBubble({ shop }) {
       setSent(false)
       setMessages([{ role: 'assistant', content: INITIAL_MESSAGES[newMode] || INITIAL_MESSAGES.general }])
       setAttachments([])
+      savedRef.current = false  // reset save flag pentru noua conv
       setTimeout(() => inputRef.current?.focus(), 350)
     }
     window.addEventListener('ue-open-chat', onOpenChat)
@@ -309,15 +313,45 @@ export default function ChatBubble({ shop }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           rating: mode === 'bad_lp' ? 'bad' : 'good',
+          mode,
           shop,
           pageUrl: context.pageUrl || '',
-          conversation: messages,  // include attachments pentru log
+          conversation: messages,
           summary
         })
       })
       setSent(true)
     } catch (e) { /* ignore */ }
     setSending(false)
+  }
+
+  // Auto-save chat general la close (daca 3+ user msgs si nu deja salvat)
+  async function saveGeneralOnClose() {
+    if (savedRef.current) return
+    if (mode !== 'general' || sent) return
+    const userMsgCount = messages.filter(m => m.role === 'user').length
+    if (userMsgCount < 3) return
+    savedRef.current = true
+    try {
+      const summary = messages.filter(m => m.role === 'user').map(m => m.content || '(atașament)').join(' | ').slice(0, 600)
+      await apiFetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: 'neutral',
+          mode: 'general',
+          shop,
+          pageUrl: '',
+          conversation: messages,
+          summary
+        })
+      })
+    } catch (e) { /* ignore */ }
+  }
+
+  function closeAndSave() {
+    saveGeneralOnClose()  // fire-and-forget; nu astept ca sa nu blocheze close
+    setOpen(false)
   }
 
   function handleKeyDown(e) {
@@ -610,7 +644,7 @@ export default function ChatBubble({ shop }) {
               <div className="ue-chat-brand-name">UnitOne</div>
               <div className="ue-chat-status">Răspuns sub 30 min</div>
             </div>
-            <button className="ue-chat-close" onClick={() => setOpen(false)} aria-label="Închide">
+            <button className="ue-chat-close" onClick={closeAndSave} aria-label="Închide">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
