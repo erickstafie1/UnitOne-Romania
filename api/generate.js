@@ -470,6 +470,61 @@ FRAZE BANNED (NU folosi NICIODATA, oriunde in JSON):
 ============================================================
 
 ============================================================
+ROMANIAN GRAMMAR & TONE — STRICT (DEAL-BREAKER)
+
+DIACRITICE OBLIGATORII pe TOATE cuvintele. Fara diacritice = JSON respins.
+  ă (a-breve): "să", "să nu", "îți", "tău", "să mergi", "să cumperi"
+  â (a-circumflex): "în", "când", "așa", "sânt", "România", "începând"
+  î (i-circumflex): "în", "început", "îți", "îmi", "împreună"
+  ș (s-cedilă, NU s-virgulă greșit): "să", "ești", "așa", "Iași", "București"
+  ț (t-cedilă, NU t-virgulă greșit): "ții", "țară", "țeapă", "începuturi", "României"
+  Forme MAJUSCULE: Ă Â Î Ș Ț (in headline-uri CAPS).
+
+PUNCTUAȚIE corectă:
+  - Virgulă ÎNAINTE de "care / dar / însă / totuși" când introduce propoziție nouă.
+  - Spațiu DUPĂ virgulă, NU înainte. Spațiu DUPĂ punct, NU înainte.
+  - NU em-dash (—) excesiv. Maxim 1 per frază. Preferă punct + frază nouă.
+  - Ghilimele românești corecte: „cuvânt" (jos-sus), NU "cuvânt" (sus-sus).
+  - Trei puncte ca "..." (trei puncte separate), NU "…" (unic Unicode).
+  - "etc." cu punct, urmat de virgulă: "X, Y, etc., ..."
+
+GRAMATICĂ:
+  - Acord subiect-verb obligatoriu: "ei merg" NU "ei merge", "tu ești" NU "tu este".
+  - Articol hotărât lipit de cuvânt: "produsul" NU "produs ul".
+  - Forme corecte: "să aibă" NU "să aiba"; "să fie" NU "să fii"; "i-am dat" NU "iam dat".
+  - Conjunctiv: "să faci", NU "să faci/sa faci" (consistență diacritică).
+  - Negativ: "nu mai" (spațiu) NU "numai" (care înseamnă "doar").
+  - Cratimă unde trebuie: "te-am", "i-a dat", "să-l iei", "într-o", "n-o pot".
+
+ADRESARE — persoana 2 singular ÎNTOTDEAUNA:
+  Permis: "tu / tu ești / te / tău / al tău / ai / vei / poți / vrei"
+  INTERZIS: "dumneavoastră", "vă", "dvs.", "voi" (plural), "noi vă"
+
+LIMBAJ NATURAL — scrii CA ȘI CUM AI VORBI cu prietenul tău la o cafea:
+
+  BUN — Conversational, autentic:
+    "Știi sentimentul când iei o cremă și după două săptămâni te uiți în oglindă și... nimic?"
+    "Sincer, am avut îndoieli. Am încercat 3 produse înainte și niciunul n-a mers."
+    "Ascultă. Dacă ai ajuns aici, e pentru că te-ai săturat să..."
+    "Am 38 de ani și până luna trecută credeam că asta e — că așa o să mă simt mereu."
+
+  PROST — Robot AI / corporate / formal:
+    "Vă invităm să descoperiți soluția revoluționară pentru..."
+    "Produsul nostru oferă o experiență optimizată pentru..."
+    "Beneficiați de o gamă completă de avantaje..."
+    "Specialiștii noștri au dezvoltat..."
+
+INDICATORI DE COPY AUTENTIC (pune-i în testimoniale + featureSections + hero):
+  - Întrebări retorice scurte care lovesc durerea
+  - Confesiuni: "Sincer", "Recunosc", "Trebuie să-ți spun"
+  - Pauze + propoziții scurte alternate cu fraze mai lungi
+  - Limbaj de zi cu zi: "mă satur", "nu mai pot", "tot timpul", "așa e mereu", "habar n-aveam"
+  - Cifre + detaliu concret peste generalitate ("3 zile", "47 LEI" NU "rapid", "ieftin")
+
+DACĂ O FRAZĂ SUNĂ CA SCRISĂ DE AI sau ca pe site corporate, REJEC-O ȘI RESCRIE.
+============================================================
+
+============================================================
 HORMOZI M.A.G.I.C. — OFFER NAMING FORMULA (campul "offerName")
 Din "$100M Offers" by Alex Hormozi. Numele ofertei VINDE rezultatul inainte
 ca user-ul sa citeasca pagina. Acronim M.A.G.I.C. = 5 elemente, FOLOSESTI 3
@@ -760,6 +815,11 @@ Returneaza DOAR JSON valid (TOATE check-urile CHECKLIST FINAL respectate), fara 
 CHECKLIST FINAL (verifica fiecare punct INAINTE de a returna JSON):
 [ ] STRUCTURA CANONICA respectata: hero (badge+rating+price+CTA+trust strip), quickBullets, testimonial early, topBenefits, featureSection 1, riskReversalText explicit conditional, featureSection 2, comparison/objections, full testimonials list, howItWorks 3 pasi, urgencyMessage cu cifra concreta, FAQ 6 standard
 [ ] offerName aplica HORMOZI M.A.G.I.C. — Container word OBLIGATORIU + 2-3 din M-A-G-I, denumire dupa REZULTAT (NU feature/spec), claritate > creativitate, max 60 char
+[ ] DIACRITICE perfect puse pe TOATE cuvintele (ă, â, î, ș, ț + majuscule). Niciun cuvant fara diacritice unde trebuie.
+[ ] PUNCTUATIE corecta: virgula inainte de "care/dar/insa", spatiu DUPA virgula, ghilimele „..." romanesti, NU em-dash excesiv.
+[ ] ADRESARE: "tu/tau/ai/vei/poti" peste tot. ZERO "dumneavoastra/dvs./va".
+[ ] TON CONVERSATIONAL: intrebari retorice + confesiuni + limbaj de zi cu zi. ZERO corporate ("solutie", "experienta", "Va invitam").
+[ ] FIECARE fraza din testimoniale + featureSections suna ca SPUSA de om real, nu scrisa de AI.
 [ ] Min 3 din PATTERN-URILE WIN incluse: pattern interrupt headline ("INCEPE SA X"), CAPS keyword sub-headline ("FUNCTIONEAZA PE ORICE..."), numeric proof claim ("Folosit deja de X.XXX"), explicit garantia "30 zile - GARANTIE DE RETURNARE A BANILOR", urgency cu cifra ("ULTIMELE X BUC din lotul [luna]")
 [ ] Headline = Sophistication Level identificat + 3 hook levers stack + <70 char
 [ ] Subheadline = "So That, Without" + obiectie principala eliminata
